@@ -198,7 +198,7 @@ const HeroSection = () => {
             </div>
 
             <div className="flex flex-wrap gap-3 mt-12">
-              {['Flask', 'React', 'SQLAlchemy', 'Docker', 'Gemini Pro', 'GPT-3.5'].map((tech) => (
+              {['FastAPI', 'React', 'MongoDB', 'Tailwind CSS', 'Gemini 2.5', 'GPT-4o'].map((tech) => (
                 <span 
                   key={tech} 
                   className="tech-badge bg-slate-800/50 border border-slate-700 px-3 py-1.5 rounded-full text-sm text-slate-400 font-medium"
