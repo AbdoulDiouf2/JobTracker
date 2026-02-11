@@ -667,6 +667,153 @@ class TestInterviews:
         print("✅ Invalid candidature_id correctly returns 404")
 
 
+class TestExport:
+    """Export endpoint tests - Phase 3 JSON/Excel export"""
+    
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        """Setup - get auth token"""
+        login_response = requests.post(f"{BASE_URL}/api/auth/login", json={
+            "email": TEST_USER_EMAIL,
+            "password": TEST_USER_PASSWORD
+        })
+        self.token = login_response.json()["access_token"]
+        self.headers = {"Authorization": f"Bearer {self.token}"}
+    
+    def test_export_json(self):
+        """Test exporting applications to JSON"""
+        response = requests.get(
+            f"{BASE_URL}/api/export/json",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        assert response.headers.get("Content-Type") == "application/json"
+        
+        # Check Content-Disposition header for download
+        content_disposition = response.headers.get("Content-Disposition", "")
+        assert "attachment" in content_disposition
+        assert ".json" in content_disposition
+        
+        # Validate JSON structure
+        data = response.json()
+        assert "export_date" in data
+        assert "total_applications" in data
+        assert "applications" in data
+        assert isinstance(data["applications"], list)
+        
+        # Check that applications have entretiens field
+        if len(data["applications"]) > 0:
+            app = data["applications"][0]
+            assert "entretiens" in app
+            assert isinstance(app["entretiens"], list)
+        
+        print(f"✅ Export JSON - Total applications: {data['total_applications']}")
+    
+    def test_export_csv(self):
+        """Test exporting applications to CSV"""
+        response = requests.get(
+            f"{BASE_URL}/api/export/csv",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        assert "text/csv" in response.headers.get("Content-Type", "")
+        
+        # Check Content-Disposition header for download
+        content_disposition = response.headers.get("Content-Disposition", "")
+        assert "attachment" in content_disposition
+        assert ".csv" in content_disposition
+        
+        # Validate CSV content
+        content = response.text
+        assert len(content) > 0
+        lines = content.strip().split('\n')
+        assert len(lines) >= 1  # At least header row
+        
+        # Check header row contains expected columns
+        header = lines[0]
+        assert "Entreprise" in header
+        assert "Poste" in header
+        assert "Statut" in header
+        
+        print(f"✅ Export CSV - Lines: {len(lines)}")
+    
+    def test_export_excel(self):
+        """Test exporting applications to Excel"""
+        response = requests.get(
+            f"{BASE_URL}/api/export/excel",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        
+        # Check Content-Type for Excel
+        content_type = response.headers.get("Content-Type", "")
+        assert "spreadsheetml" in content_type or "application/vnd" in content_type
+        
+        # Check Content-Disposition header for download
+        content_disposition = response.headers.get("Content-Disposition", "")
+        assert "attachment" in content_disposition
+        assert ".xlsx" in content_disposition
+        
+        # Validate that we got binary content
+        assert len(response.content) > 0
+        
+        # Excel files start with PK (ZIP format)
+        assert response.content[:2] == b'PK'
+        
+        print(f"✅ Export Excel - File size: {len(response.content)} bytes")
+    
+    def test_export_statistics_excel(self):
+        """Test exporting statistics to Excel"""
+        response = requests.get(
+            f"{BASE_URL}/api/export/statistics/excel",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        
+        # Check Content-Type for Excel
+        content_type = response.headers.get("Content-Type", "")
+        assert "spreadsheetml" in content_type or "application/vnd" in content_type
+        
+        # Check Content-Disposition header for download
+        content_disposition = response.headers.get("Content-Disposition", "")
+        assert "attachment" in content_disposition
+        assert ".xlsx" in content_disposition
+        
+        # Validate that we got binary content
+        assert len(response.content) > 0
+        assert response.content[:2] == b'PK'
+        
+        print(f"✅ Export Statistics Excel - File size: {len(response.content)} bytes")
+    
+    def test_export_json_includes_interviews(self):
+        """Test that JSON export includes interview data for applications"""
+        response = requests.get(
+            f"{BASE_URL}/api/export/json",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check structure
+        assert "applications" in data
+        for app in data["applications"]:
+            assert "entretiens" in app
+            assert isinstance(app["entretiens"], list)
+        
+        print(f"✅ Export JSON includes interviews data")
+    
+    def test_export_unauthorized(self):
+        """Test that export endpoints require authentication"""
+        # Test without auth header
+        response = requests.get(f"{BASE_URL}/api/export/json")
+        assert response.status_code in [401, 403]
+        
+        response = requests.get(f"{BASE_URL}/api/export/excel")
+        assert response.status_code in [401, 403]
+        
+        print("✅ Export endpoints correctly require authentication")
+
+
 class TestStatistics:
     """Statistics endpoint tests"""
     
