@@ -1,0 +1,121 @@
+{
+  "identity": {
+    "name": "Job Tracking SaaS",
+    "tone": "Professional, Technical, Confident, Elite",
+    "aesthetic": "Dark Mode, Linear-style, Glassmorphism, Bento Grids",
+    "brand_colors": {
+      "primary": "#1a365d",
+      "accent": "#c4a052",
+      "silver": "#e2e8f0",
+      "background": "#020817",
+      "surface": "#0f172a"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Outfit, sans-serif",
+      "body": "Plus Jakarta Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-5xl md:text-7xl font-bold tracking-tight",
+      "h2": "text-3xl md:text-5xl font-semibold tracking-tight",
+      "h3": "text-2xl md:text-3xl font-medium",
+      "body": "text-base md:text-lg leading-relaxed text-slate-400",
+      "caption": "text-sm font-medium uppercase tracking-widest text-slate-500"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#020817",
+      "foreground": "#f8fafc",
+      "primary": "#c4a052",
+      "primary_foreground": "#020817",
+      "secondary": "#1e293b",
+      "secondary_foreground": "#f8fafc",
+      "muted": "#0f172a",
+      "muted_foreground": "#94a3b8",
+      "accent": "#1a365d",
+      "accent_foreground": "#f8fafc",
+      "border": "#1e293b",
+      "input": "#1e293b",
+      "ring": "#c4a052"
+    },
+    "gradients": {
+      "hero_glow": "bg-gradient-to-b from-blue-900/20 via-transparent to-transparent",
+      "gold_text": "bg-clip-text text-transparent bg-gradient-to-r from-[#c4a052] to-[#e5c57f]",
+      "card_border": "bg-gradient-to-b from-slate-700 to-slate-800"
+    }
+  },
+  "layout": {
+    "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+    "section_spacing": "py-24 md:py-32",
+    "grid_gap": "gap-8",
+    "radius": "rounded-2xl"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#c4a052] text-[#020817] hover:bg-[#d4b062] font-semibold px-8 py-3 rounded-full transition-all duration-300 shadow-[0_0_20px_-5px_rgba(196,160,82,0.3)] hover:shadow-[0_0_30px_-5px_rgba(196,160,82,0.5)]",
+      "secondary": "bg-slate-800/50 text-white border border-slate-700 hover:bg-slate-800 hover:border-slate-600 px-8 py-3 rounded-full transition-all duration-300 backdrop-blur-sm",
+      "ghost": "text-slate-400 hover:text-[#c4a052] transition-colors duration-200"
+    },
+    "cards": {
+      "base": "bg-[#0f172a]/50 border border-slate-800/50 backdrop-blur-xl rounded-2xl p-8 hover:border-slate-700/50 transition-all duration-300 group",
+      "hover_effect": "hover:shadow-[0_0_30px_-10px_rgba(26,54,93,0.3)] hover:-translate-y-1"
+    },
+    "badges": {
+      "default": "inline-flex items-center rounded-full border border-slate-800 bg-slate-900/50 px-3 py-1 text-xs font-medium text-slate-300 backdrop-blur-xl"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-black/40 border border-white/10",
+    "noise_texture": "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E\")",
+    "glow_effects": "absolute -inset-1 bg-gradient-to-r from-[#c4a052] to-[#1a365d] rounded-lg blur opacity-20 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"
+  },
+  "assets": {
+    "images": {
+      "hero_dashboard": "https://images.unsplash.com/photo-1762279388988-3f8abcc7dca2?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "office_bg": "https://images.unsplash.com/photo-1702726001096-096efcf640b8?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "abstract_viz": "https://images.unsplash.com/photo-1762279388956-1c098163a2a8?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "logo": "https://customer-assets.emergentagent.com/job_careernav-3/artifacts/weqttcvo_logo_maadec_copie_bis.png"
+    },
+    "icons": "lucide-react"
+  },
+  "motion": {
+    "fade_in_up": "animate-in fade-in slide-in-from-bottom-8 duration-700 ease-out",
+    "stagger_delay": "delay-[100ms]",
+    "hover_scale": "hover:scale-105 transition-transform duration-300"
+  },
+  "instructions_to_main_agent": [
+    "1. SETUP: Install 'lucide-react', 'framer-motion', 'clsx', 'tailwind-merge' immediately.",
+    "2. FONTS: Add 'Outfit' and 'Plus Jakarta Sans' via Google Fonts in index.html or CSS.",
+    "3. THEME: Force DARK MODE. The app should look like a developer tool (Linear/Vercel).",
+    "4. HERO: Build a 'Bento Grid' style hero or a centered hero with a massive 3D-tilted dashboard image.",
+    "5. COLORS: Use the Gold (#c4a052) sparingly for high-value accents (buttons, key stats). Use Navy (#1a365d) for deep backgrounds.",
+    "6. COMPONENTS: Use Shadcn UI for the 'Accordion' (Tech Deep Dive) and 'Cards'. Heavily customize them to remove the default white borders.",
+    "7. ARCHITECTURE: Create a visual diagram using CSS Grid/Flexbox and Icons. Do not just list text.",
+    "8. AI SECTION: Use a 'Chat Interface' mockup to show the AI capabilities.",
+    "9. FOOTER: Make it massive. 4 columns. Dark background.",
+    "10. DATA-TESTID: Add data-testid to all interactive elements (buttons, links, inputs)."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
