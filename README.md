@@ -1,133 +1,127 @@
-# 🚀 JobTracker SaaS
+# JobTracker SaaS 🚀
 
-Application full-stack moderne de suivi de candidatures avec intelligence artificielle.
+Application SaaS complète de suivi de candidatures avec intelligence artificielle, développée pour démontrer des compétences en Full-Stack et AI Engineering.
 
-![MAADEC Logo](https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png)
+![Version](https://img.shields.io/badge/version-2.0-gold)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## 🎯 Présentation
+## 🎯 Fonctionnalités
 
-**JobTracker SaaS** est une plateforme complète qui permet aux chercheurs d'emploi de :
-- 📋 Gérer leurs candidatures de manière centralisée
-- 📅 Planifier et suivre leurs entretiens
-- 📊 Analyser leurs performances avec des statistiques détaillées
-- 🤖 Obtenir des conseils personnalisés grâce à l'IA (à venir)
+### Gestion des Candidatures
+- ✅ CRUD complet (créer, lire, modifier, supprimer)
+- ✅ Vue carte et vue tableau
+- ✅ Système de favoris
+- ✅ Recherche et filtres par statut
+- ✅ Changement de statut via dropdown
+
+### Gestion des Entretiens
+- ✅ CRUD complet avec liaison aux candidatures
+- ✅ Calendrier interactif mensuel
+- ✅ Indicateurs d'urgence (24h, 1h)
+- ✅ Types : RH, Technique, Manager, Final
+- ✅ Formats : Téléphone, Visio, Présentiel
+
+### Intelligence Artificielle
+- ✅ **Conseiller Carrière** (Google Gemini) - Analyse et conseils personnalisés
+- ✅ **Assistant Chatbot** (OpenAI GPT-4o) - Aide CV, entretiens, négociation
+- ✅ **Analyse de CV** - Score, compétences, recommandations, postes suggérés
+
+### Import/Export
+- ✅ Import JSON et CSV avec prévisualisation
+- ✅ Guide des colonnes attendues
+- ✅ Export Excel, JSON, CSV
+
+### Notifications
+- ✅ Cloche de notification avec compteur
+- ✅ Rappels automatiques 24h et 1h avant entretien
+- ✅ Paramètres personnalisables
+
+### Interface
+- ✅ Design dark mode premium (style Stripe/Vercel)
+- ✅ Sidebar fixe avec navigation intuitive
+- ✅ Internationalisation FR/EN
+- ✅ Responsive (desktop, tablet, mobile)
+- ✅ Statistiques avec graphiques Recharts
 
 ---
 
-## 🏗️ Architecture
-
-```
-jobtracker-saas/
-├── backend/                 # API FastAPI
-│   ├── models/              # Modèles Pydantic
-│   ├── routes/              # Endpoints API
-│   ├── utils/               # Utilitaires (auth, etc.)
-│   ├── config.py            # Configuration
-│   ├── server.py            # Point d'entrée
-│   └── README.md            # Documentation backend
-│
-├── frontend/                # Application React
-│   ├── src/
-│   │   ├── components/ui/   # Composants Shadcn
-│   │   ├── contexts/        # Contextes React (Auth)
-│   │   ├── hooks/           # Hooks personnalisés
-│   │   ├── i18n/            # Internationalisation
-│   │   ├── layouts/         # Layouts (Dashboard)
-│   │   └── pages/           # Pages de l'application
-│   └── README.md            # Documentation frontend
-│
-└── README.md                # Ce fichier
-```
-
----
-
-## 🛠️ Stack Technique
+## 🛠 Stack Technique
 
 ### Backend
 | Technologie | Usage |
 |-------------|-------|
-| FastAPI | Framework API REST |
-| MongoDB | Base de données |
+| FastAPI | Framework API REST async |
+| MongoDB | Base de données NoSQL |
 | Motor | Driver async MongoDB |
-| Pydantic | Validation données |
+| Pydantic | Validation des données |
 | JWT | Authentification |
-| bcrypt | Hash passwords |
+| bcrypt | Hash des mots de passe |
+| emergentintegrations | Intégration LLM |
+| openpyxl | Export Excel |
 
 ### Frontend
 | Technologie | Usage |
 |-------------|-------|
 | React 19 | Framework UI |
-| Tailwind CSS | Styling |
-| Shadcn/UI | Composants |
-| Framer Motion | Animations |
-| Recharts | Graphiques |
-| React Hook Form | Formulaires |
+| Tailwind CSS | Styling utility-first |
+| Shadcn/UI | Composants accessibles |
+| Framer Motion | Animations fluides |
+| Recharts | Graphiques interactifs |
+| React Hook Form | Gestion des formulaires |
+| Zod | Validation côté client |
+| i18next | Internationalisation |
+| Axios | Client HTTP |
+| date-fns | Manipulation des dates |
 
 ---
 
-## ✨ Fonctionnalités
+## 📁 Structure du Projet
 
-### ✅ Implémentées
-
-#### Authentification
-- Inscription / Connexion
-- JWT avec expiration
-- Profil utilisateur
-- Gestion clés API
-
-#### Candidatures
-- CRUD complet
-- Recherche et filtres
-- Système de favoris
-- Mise à jour en masse
-- Pagination
-
-#### Entretiens
-- CRUD complet
-- Types : RH, Technique, Manager, Final
-- Formats : Téléphone, Visio, Présentiel
-- Statuts : Planifié, Effectué, Annulé
-- Countdown avec urgence
-
-#### Statistiques
-- Dashboard KPIs
-- Évolution temporelle
-- Répartition par statut/type/méthode
-- Taux de réponse
-- Stats entretiens
-
-#### Export
-- JSON
-- CSV
-- Excel formaté
-
-#### Interface
-- Design dark mode premium
-- Multilingue FR/EN
-- Responsive (desktop/tablet/mobile)
-- Animations fluides
-
-### 🔜 À venir (Phase 3)
-- Conseiller IA (Google Gemini)
-- Chatbot IA (OpenAI GPT)
-- Analyse de CV
-- Import de données
-- Notifications
+```
+/app/
+├── backend/
+│   ├── models/              # Modèles Pydantic
+│   ├── routes/              # Endpoints API
+│   │   ├── applications.py  # CRUD candidatures
+│   │   ├── auth.py          # Authentification
+│   │   ├── interviews.py    # CRUD entretiens
+│   │   ├── statistics.py    # Statistiques
+│   │   ├── export.py        # Export données
+│   │   ├── ai.py            # IA (Gemini, GPT)
+│   │   ├── data_import.py   # Import + Analyse CV
+│   │   └── notifications.py # Notifications
+│   ├── utils/               # Utilitaires
+│   ├── config.py            # Configuration
+│   ├── server.py            # Point d'entrée
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── components/      # Composants réutilisables
+│   │   ├── contexts/        # Contextes React
+│   │   ├── hooks/           # Hooks personnalisés
+│   │   ├── i18n/            # Traductions
+│   │   ├── layouts/         # Layouts
+│   │   └── pages/           # Pages
+│   └── package.json
+└── memory/
+    └── PRD.md
+```
 
 ---
 
 ## 🚀 Installation
 
 ### Prérequis
-- Python 3.8+
+- Python 3.11+
 - Node.js 18+
-- MongoDB
+- MongoDB 6+
 
 ### Backend
 ```bash
 cd backend
 pip install -r requirements.txt
-python server.py
+cp .env.example .env  # Configurer les variables
+uvicorn server:app --reload --port 8001
 ```
 
 ### Frontend
@@ -137,89 +131,79 @@ yarn install
 yarn start
 ```
 
-### Variables d'environnement
+---
 
-**Backend** (`backend/.env`)
-```env
+## 🔑 Variables d'Environnement
+
+### Backend (.env)
+```
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=jobtracker
 JWT_SECRET=your-secret-key
+EMERGENT_LLM_KEY=sk-emergent-xxx  # Pour IA
 ```
 
-**Frontend** (`frontend/.env`)
-```env
+### Frontend (.env)
+```
 REACT_APP_BACKEND_URL=http://localhost:8001
 ```
 
 ---
 
-## 📸 Captures d'écran
+## 📊 API Endpoints
 
-### Landing Page
-Page vitrine moderne style SaaS avec sections :
-- Hero avec mockup dashboard
-- Fonctionnalités
-- Analytics
-- Intelligence IA
-- Architecture
-- Export données
-- Sécurité
-
-### Dashboard
-- KPIs en temps réel
-- Prochains entretiens
-- Candidatures récentes
+### Authentification
+- `POST /api/auth/register` - Inscription
+- `POST /api/auth/login` - Connexion
+- `GET /api/auth/me` - Profil
 
 ### Candidatures
-- Cards avec statut, type, favori
-- Recherche et filtres
-- Modal création/édition
+- `GET /api/applications` - Liste paginée
+- `POST /api/applications` - Créer
+- `PUT /api/applications/{id}` - Modifier
+- `DELETE /api/applications/{id}` - Supprimer
+- `POST /api/applications/{id}/favorite` - Toggle favori
 
-### Statistiques
-- Graphiques interactifs (Recharts)
-- Export Excel/JSON
+### Entretiens
+- `GET /api/interviews` - Liste
+- `POST /api/interviews` - Créer
+- `PUT /api/interviews/{id}` - Modifier
+- `DELETE /api/interviews/{id}` - Supprimer
 
----
+### IA
+- `POST /api/ai/career-advisor` - Conseiller (Gemini)
+- `POST /api/ai/chatbot` - Chatbot (GPT-4o)
 
-## 🎨 Design
+### Import/Export
+- `POST /api/import/json` - Import JSON
+- `POST /api/import/csv` - Import CSV
+- `POST /api/import/analyze-cv` - Analyse CV
+- `GET /api/export/json` - Export JSON
+- `GET /api/export/excel` - Export Excel
+- `GET /api/export/csv` - Export CSV
 
-### Palette de couleurs
-| Couleur | Hex | Usage |
-|---------|-----|-------|
-| Navy Dark | `#020817` | Background principal |
-| Navy | `#1a365d` | Éléments d'accent |
-| Gold | `#c4a052` | Boutons, highlights |
-| Gold Light | `#e5c57f` | Hover states |
-
-### Typographie
-- **Outfit** : Titres
-- **Plus Jakarta Sans** : Corps
-- **JetBrains Mono** : Code
-
----
-
-## 📖 Documentation
-
-- [📘 Documentation Backend](./backend/README.md)
-- [📗 Documentation Frontend](./frontend/README.md)
+### Notifications
+- `GET /api/notifications` - Liste
+- `GET /api/notifications/settings` - Paramètres
+- `PUT /api/notifications/settings` - Modifier paramètres
 
 ---
 
-## 👤 Auteur
+## 🔐 Credentials de Test
 
-**MAADEC - MAAD Engineering & Consulting**
-
-Ingénieur Full-Stack & IA spécialisé dans la création d'applications web intelligentes.
-
----
-
-## 📜 Licence
-
-© 2025 MAADEC - Tous droits réservés.
+- **Email:** demo@jobtracker.com
+- **Password:** Demo123!
 
 ---
 
-<p align="center">
-  <strong>Construit avec ❤️ par MAADEC</strong><br>
-  <em>Full-Stack & AI Engineering</em>
-</p>
+## 📄 Licence
+
+MIT © 2025 MAADEC - MAAD Engineering & Consulting
+
+---
+
+## 👨‍💻 Auteur
+
+**MAADEC**  
+Full-Stack & AI Engineering  
+[Logo MAADEC](https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png)
