@@ -133,13 +133,16 @@ async def call_gemini_emergent(api_key: str, session_id: str, system_message: st
 
 
 async def call_gemini_standard(api_key: str, system_message: str, user_question: str) -> str:
-    """Call Gemini using standard Google SDK"""
-    genai.configure(api_key=api_key)
-    model = genai.GenerativeModel(
-        model_name="gemini-1.5-flash",
-        system_instruction=system_message
+    """Call Gemini using standard Google SDK (google-genai)"""
+    client = genai.Client(api_key=api_key)
+    
+    # Combine system message and user question for Gemini
+    full_prompt = f"{system_message}\n\n---\n\nQuestion de l'utilisateur:\n{user_question}"
+    
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=full_prompt
     )
-    response = model.generate_content(user_question)
     return response.text
 
 
