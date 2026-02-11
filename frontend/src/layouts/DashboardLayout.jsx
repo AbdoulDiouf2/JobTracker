@@ -30,6 +30,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       interviews: 'Interviews',
       statistics: 'Statistics',
       aiAdvisor: 'AI Assistant',
+      importExport: 'Import/Export',
       settings: 'Settings',
       logout: 'Logout'
     }
