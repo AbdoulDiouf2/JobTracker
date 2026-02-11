@@ -591,24 +591,24 @@ const ArchitectureSection = () => {
 
   const techStack = [
     { category: categoriesT.backend, items: [
-      { name: 'Python Flask', icon: Server },
-      { name: 'SQLAlchemy ORM', icon: Database },
-      { name: 'SQLite', icon: Database },
+      { name: 'FastAPI', icon: Server },
+      { name: 'MongoDB (Motor)', icon: Database },
+      { name: 'Pydantic', icon: Database },
     ]},
     { category: categoriesT.frontend, items: [
-      { name: 'HTML5 / CSS3', icon: Code2 },
-      { name: 'Bootstrap 5.3', icon: Layers },
-      { name: 'JavaScript / jQuery', icon: Terminal },
+      { name: 'React 19', icon: Code2 },
+      { name: 'Tailwind CSS', icon: Layers },
+      { name: 'Shadcn/UI', icon: Terminal },
     ]},
     { category: categoriesT.aiApis, items: [
-      { name: 'Google Gemini Pro', icon: Brain },
-      { name: 'OpenAI GPT-3.5', icon: Bot },
-      { name: 'Chart.js', icon: BarChart3 },
+      { name: 'Google Gemini 2.5 Flash', icon: Brain },
+      { name: 'OpenAI GPT-4o', icon: Bot },
+      { name: 'Recharts', icon: BarChart3 },
     ]},
     { category: categoriesT.devops, items: [
-      { name: 'Docker', icon: Container },
-      { name: 'Docker Compose', icon: Layers },
-      { name: '.env Configuration', icon: Lock },
+      { name: 'JWT Auth', icon: Lock },
+      { name: 'i18next', icon: Globe },
+      { name: 'Framer Motion', icon: Layers },
     ]},
   ];
 
