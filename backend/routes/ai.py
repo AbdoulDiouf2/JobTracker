@@ -24,9 +24,9 @@ try:
 except ImportError:
     print("⚠️ emergentintegrations not available, using standard SDKs")
     try:
-        import google.generativeai as genai
+        from google import genai
         from openai import OpenAI
-        print("✅ Standard SDKs loaded (openai, google-generativeai)")
+        print("✅ Standard SDKs loaded (openai, google-genai)")
     except ImportError as e:
         print(f"⚠️ AI SDKs not fully available: {e}")
 
