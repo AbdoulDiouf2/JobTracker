@@ -289,25 +289,26 @@ export default function ImportExportPage() {
   };
 
   const handleConfirmImport = async () => {
-    if (!previewFile) return;
+    if (!previewData || previewData.length === 0) return;
 
     setImporting(true);
-    setPreviewData(null);
 
     try {
       const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('file', previewFile);
-
-      const endpoint = previewFile.name.endsWith('.json') ? '/api/import/json' : '/api/import/csv';
-      const response = await axios.post(`${API_URL}${endpoint}`, formData, {
+      
+      // Send parsed data directly to backend
+      const response = await axios.post(`${API_URL}/api/import/data`, {
+        applications: previewData
+      }, {
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         }
       });
 
       setImportResult(response.data);
+      setPreviewData(null);
+      setPreviewFile(null);
     } catch (error) {
       setImportResult({
         success: false,
@@ -317,7 +318,6 @@ export default function ImportExportPage() {
       });
     } finally {
       setImporting(false);
-      setPreviewFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
