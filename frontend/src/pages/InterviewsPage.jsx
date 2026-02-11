@@ -786,6 +786,7 @@ export default function InterviewsPage() {
           onInterviewClick={setViewingInterview}
           language={language}
         />
+        </div>
       ) : interviews.length > 0 ? (
         /* Card View */
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
