@@ -14,6 +14,9 @@ import StatisticsPage from "./pages/StatisticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AIAdvisorPage from "./pages/AIAdvisorPage";
 import ImportExportPage from "./pages/ImportExportPage";
+import LegalNoticePage from "./pages/LegalNoticePage";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
+import TermsOfServicePage from "./pages/TermsOfServicePage";
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -29,6 +32,9 @@ function App() {
               <Route path="/" element={<LandingPage />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
+              <Route path="/legal" element={<LegalNoticePage />} />
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
+              <Route path="/terms" element={<TermsOfServicePage />} />
               
               {/* Protected Routes */}
               <Route path="/dashboard" element={<DashboardLayout />}>
