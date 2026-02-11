@@ -59,7 +59,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ## Credentials
 - **Email:** demo@jobtracker.com
 - **Password:** Demo123!
-- **URL:** https://career-compass-735.preview.emergentagent.com
+- **URL:** https://job-hunt-hub-1.preview.emergentagent.com
 
 ---
 
