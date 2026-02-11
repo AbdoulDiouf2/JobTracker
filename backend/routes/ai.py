@@ -1,5 +1,8 @@
 """
 JobTracker SaaS - Routes IA (Google Gemini & OpenAI)
+Supporte deux modes:
+- Mode Emergent: utilise emergentintegrations (plateforme Emergent)
+- Mode Local: utilise les SDKs standards (openai, google-generativeai)
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
@@ -12,7 +15,21 @@ import uuid
 
 load_dotenv()
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+# Try to import emergentintegrations, fallback to standard SDKs
+USE_EMERGENT = False
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    USE_EMERGENT = True
+    print("✅ Using Emergent integrations for AI")
+except ImportError:
+    print("⚠️ emergentintegrations not available, using standard SDKs")
+    try:
+        import google.generativeai as genai
+        from openai import OpenAI
+        print("✅ Standard SDKs loaded (openai, google-generativeai)")
+    except ImportError as e:
+        print(f"⚠️ AI SDKs not fully available: {e}")
+
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/ai", tags=["AI"])
@@ -71,13 +88,15 @@ async def get_user_context(user_id: str, db) -> str:
     positive = await db.applications.count_documents({"user_id": user_id, "reponse": "positive"})
     negative = await db.applications.count_documents({"user_id": user_id, "reponse": "negative"})
     
+    response_rate = ((positive + negative) / total * 100) if total > 0 else 0
+    
     context = f"""
 Contexte du candidat:
 - Total candidatures: {total}
 - En attente: {pending}
 - Réponses positives: {positive}
 - Réponses négatives: {negative}
-- Taux de réponse: {((positive + negative) / total * 100):.1f}% si {total} > 0 else 0
+- Taux de réponse: {response_rate:.1f}%
 
 Dernières candidatures:
 """
@@ -98,6 +117,58 @@ Dernières candidatures:
     return context
 
 
+# ============== AI Functions (Dual Mode) ==============
+
+async def call_gemini_emergent(api_key: str, session_id: str, system_message: str, user_question: str) -> str:
+    """Call Gemini using Emergent integrations"""
+    chat = LlmChat(
+        api_key=api_key,
+        session_id=session_id,
+        system_message=system_message
+    ).with_model("gemini", "gemini-2.5-flash")
+    
+    user_message = UserMessage(text=user_question)
+    response = await chat.send_message(user_message)
+    return response
+
+
+async def call_gemini_standard(api_key: str, system_message: str, user_question: str) -> str:
+    """Call Gemini using standard Google SDK"""
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel(
+        model_name="gemini-1.5-flash",
+        system_instruction=system_message
+    )
+    response = model.generate_content(user_question)
+    return response.text
+
+
+async def call_openai_emergent(api_key: str, session_id: str, system_message: str, user_message_text: str) -> str:
+    """Call OpenAI using Emergent integrations"""
+    chat = LlmChat(
+        api_key=api_key,
+        session_id=session_id,
+        system_message=system_message
+    ).with_model("openai", "gpt-4o")
+    
+    user_message = UserMessage(text=user_message_text)
+    response = await chat.send_message(user_message)
+    return response
+
+
+async def call_openai_standard(api_key: str, system_message: str, user_message_text: str) -> str:
+    """Call OpenAI using standard SDK"""
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message_text}
+        ]
+    )
+    return response.choices[0].message.content
+
+
 # Career Advisor (Gemini)
 @router.post("/career-advisor", response_model=CareerAdviceResponse)
 async def get_career_advice(
@@ -106,11 +177,16 @@ async def get_career_advice(
     db = Depends(get_db)
 ):
     """Get career advice from AI advisor (powered by Gemini)"""
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    # Get API key based on mode
+    if USE_EMERGENT:
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+    else:
+        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+    
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AI service not configured"
+            detail="AI service not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY in .env"
         )
     
     user_id = current_user["user_id"]
@@ -136,14 +212,10 @@ Réponds toujours en français de manière professionnelle mais accessible.
 Sois concis et actionnable dans tes conseils."""
 
     try:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=session_id,
-            system_message=system_message
-        ).with_model("gemini", "gemini-2.5-flash")
-        
-        user_message = UserMessage(text=request.question)
-        response = await chat.send_message(user_message)
+        if USE_EMERGENT:
+            response = await call_gemini_emergent(api_key, session_id, system_message, request.question)
+        else:
+            response = await call_gemini_standard(api_key, system_message, request.question)
         
         # Save to chat history
         await db.chat_history.insert_one({
@@ -174,11 +246,16 @@ async def chat_with_assistant(
     db = Depends(get_db)
 ):
     """Chat with AI assistant (powered by OpenAI GPT)"""
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    # Get API key based on mode
+    if USE_EMERGENT:
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY")
+    
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="AI service not configured"
+            detail="AI service not configured. Set OPENAI_API_KEY in .env"
         )
     
     user_id = current_user["user_id"]
@@ -196,14 +273,10 @@ Réponds toujours en français de manière claire et utile.
 Si tu ne sais pas quelque chose, dis-le honnêtement."""
 
     try:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=session_id,
-            system_message=system_message
-        ).with_model("openai", "gpt-4o")
-        
-        user_message = UserMessage(text=request.message)
-        response = await chat.send_message(user_message)
+        if USE_EMERGENT:
+            response = await call_openai_emergent(api_key, session_id, system_message, request.message)
+        else:
+            response = await call_openai_standard(api_key, system_message, request.message)
         
         # Save to chat history
         await db.chat_history.update_one(
