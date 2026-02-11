@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
+import NotificationBell from '../components/NotificationBell';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
