@@ -4,7 +4,7 @@ import {
   Briefcase, BarChart3, Brain, Bot, Database, Shield, FileJson, 
   Calendar, Search, Star, Filter, Download, Upload, Terminal,
   ChevronDown, Github, Linkedin, Mail, ExternalLink, Play,
-  Sparkles, Zap, Lock, Server, Code2, Docker, Layers,
+  Sparkles, Zap, Lock, Server, Code2, Container, Layers,
   FileSpreadsheet, FileText, ArrowRight, MessageSquare, User,
   Check, TrendingUp, Target, Clock, Settings, Menu, X
 } from 'lucide-react';
