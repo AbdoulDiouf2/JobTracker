@@ -114,6 +114,7 @@ api_router.include_router(applications_router)
 api_router.include_router(interviews_router)
 api_router.include_router(statistics_router)
 api_router.include_router(export_router)
+api_router.include_router(ai_router)
 
 # Include main router
 app.include_router(api_router)
