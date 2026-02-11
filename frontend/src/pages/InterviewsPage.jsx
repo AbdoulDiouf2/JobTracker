@@ -777,6 +777,7 @@ export default function InterviewsPage() {
         </div>
       ) : viewMode === 'calendar' ? (
         /* Calendar View */
+        <div className="mt-6">
         <CalendarView
           interviews={interviews}
           currentMonth={currentMonth}
