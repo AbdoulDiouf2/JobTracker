@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Upload, Download, FileJson, FileSpreadsheet, FileText,
   CheckCircle, XCircle, AlertCircle, Loader2, Sparkles,
-  FileUp, Award, Target, TrendingUp, Lightbulb, Briefcase
+  FileUp, Award, Target, TrendingUp, Lightbulb, Briefcase,
+  HelpCircle, Eye, ArrowRight, Table
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
@@ -12,13 +13,50 @@ import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
+// Guide des colonnes attendues
+const COLUMN_GUIDE = {
+  fr: {
+    required: [
+      { name: 'entreprise', description: 'Nom de l\'entreprise', example: 'Google' },
+      { name: 'poste', description: 'Titre du poste', example: 'Développeur Full Stack' }
+    ],
+    optional: [
+      { name: 'type_poste', description: 'Type de contrat', example: 'cdi, cdd, stage, alternance, freelance' },
+      { name: 'lieu', description: 'Localisation', example: 'Paris, Remote' },
+      { name: 'moyen', description: 'Source de candidature', example: 'linkedin, indeed, email' },
+      { name: 'date_candidature', description: 'Date de candidature', example: '2025-01-15 ou 2025-01-15T10:00:00Z' },
+      { name: 'lien', description: 'Lien vers l\'offre', example: 'https://...' },
+      { name: 'commentaire', description: 'Notes personnelles', example: 'Contact: recruteur@...' },
+      { name: 'reponse', description: 'Statut de la candidature', example: 'pending, positive, negative, no_response' }
+    ]
+  },
+  en: {
+    required: [
+      { name: 'entreprise / company', description: 'Company name', example: 'Google' },
+      { name: 'poste / position', description: 'Job title', example: 'Full Stack Developer' }
+    ],
+    optional: [
+      { name: 'type_poste / type', description: 'Contract type', example: 'cdi, cdd, stage, alternance, freelance' },
+      { name: 'lieu / location', description: 'Location', example: 'Paris, Remote' },
+      { name: 'moyen / source', description: 'Application source', example: 'linkedin, indeed, email' },
+      { name: 'date_candidature / date', description: 'Application date', example: '2025-01-15 or 2025-01-15T10:00:00Z' },
+      { name: 'lien / link', description: 'Job link', example: 'https://...' },
+      { name: 'commentaire / comment', description: 'Personal notes', example: 'Contact: recruiter@...' },
+      { name: 'reponse / status', description: 'Application status', example: 'pending, positive, negative, no_response' }
+    ]
+  }
+};
+
 export default function ImportExportPage() {
   const { language } = useLanguage();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [cvAnalysis, setCvAnalysis] = useState(null);
-  const [activeTab, setActiveTab] = useState('import'); // 'import', 'export', 'cv'
+  const [activeTab, setActiveTab] = useState('import');
+  const [showGuide, setShowGuide] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  const [previewFile, setPreviewFile] = useState(null);
   const fileInputRef = useRef(null);
   const cvInputRef = useRef(null);
 
@@ -55,7 +93,22 @@ export default function ImportExportPage() {
       improvements: 'Améliorations suggérées',
       matchingJobs: 'Postes recommandés',
       recommendations: 'Recommandations',
-      experience: 'Années d\'expérience'
+      experience: 'Années d\'expérience',
+      guideTitle: 'Guide des colonnes',
+      guideDesc: 'Structure attendue pour l\'import',
+      requiredColumns: 'Colonnes obligatoires',
+      optionalColumns: 'Colonnes optionnelles',
+      column: 'Colonne',
+      description: 'Description',
+      example: 'Exemple',
+      jsonExample: 'Exemple JSON',
+      csvExample: 'Exemple CSV',
+      preview: 'Prévisualisation',
+      previewDesc: 'Vérifiez les données avant l\'import',
+      confirmImport: 'Confirmer l\'import',
+      cancelImport: 'Annuler',
+      rowsToImport: 'lignes à importer',
+      showGuide: 'Voir le guide'
     },
     en: {
       title: 'Import / Export',
@@ -89,23 +142,73 @@ export default function ImportExportPage() {
       improvements: 'Suggested improvements',
       matchingJobs: 'Recommended jobs',
       recommendations: 'Recommendations',
-      experience: 'Years of experience'
+      experience: 'Years of experience',
+      guideTitle: 'Column guide',
+      guideDesc: 'Expected structure for import',
+      requiredColumns: 'Required columns',
+      optionalColumns: 'Optional columns',
+      column: 'Column',
+      description: 'Description',
+      example: 'Example',
+      jsonExample: 'JSON Example',
+      csvExample: 'CSV Example',
+      preview: 'Preview',
+      previewDesc: 'Check data before import',
+      confirmImport: 'Confirm import',
+      cancelImport: 'Cancel',
+      rowsToImport: 'rows to import',
+      showGuide: 'Show guide'
     }
   }[language];
 
-  const handleImport = async (e) => {
+  const guide = COLUMN_GUIDE[language];
+
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setImporting(true);
+    setPreviewFile(file);
     setImportResult(null);
+
+    try {
+      const content = await file.text();
+      let data;
+
+      if (file.name.endsWith('.json')) {
+        const parsed = JSON.parse(content);
+        data = Array.isArray(parsed) ? parsed : (parsed.applications || parsed.candidatures || []);
+      } else if (file.name.endsWith('.csv')) {
+        const lines = content.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        data = lines.slice(1).map(line => {
+          const values = line.split(',');
+          const obj = {};
+          headers.forEach((h, i) => {
+            obj[h] = values[i]?.trim() || '';
+          });
+          return obj;
+        });
+      }
+
+      setPreviewData(data?.slice(0, 10) || []);
+    } catch (error) {
+      console.error('Preview error:', error);
+      setPreviewData(null);
+    }
+  };
+
+  const handleConfirmImport = async () => {
+    if (!previewFile) return;
+
+    setImporting(true);
+    setPreviewData(null);
 
     try {
       const token = localStorage.getItem('token');
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', previewFile);
 
-      const endpoint = file.name.endsWith('.json') ? '/api/import/json' : '/api/import/csv';
+      const endpoint = previewFile.name.endsWith('.json') ? '/api/import/json' : '/api/import/csv';
       const response = await axios.post(`${API_URL}${endpoint}`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -123,8 +226,15 @@ export default function ImportExportPage() {
       });
     } finally {
       setImporting(false);
+      setPreviewFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewData(null);
+    setPreviewFile(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleExport = async (format) => {
@@ -248,73 +358,253 @@ export default function ImportExportPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="glass-card rounded-xl border border-slate-800 p-6"
+            className="space-y-6"
           >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                <Upload className="text-blue-400" size={24} />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-white">{t.importTitle}</h2>
-                <p className="text-slate-400 text-sm">{t.importDesc}</p>
-              </div>
-            </div>
-
-            <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-gold/50 transition-colors">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json,.csv"
-                onChange={handleImport}
-                className="hidden"
-                id="import-file"
-              />
-              <label htmlFor="import-file" className="cursor-pointer">
-                <FileUp size={48} className="mx-auto text-slate-500 mb-4" />
-                <p className="text-white font-medium mb-2">{t.selectFile}</p>
-                <p className="text-slate-500 text-sm">{t.supportedFormats}</p>
-              </label>
-            </div>
-
-            {importing && (
-              <div className="mt-4 flex items-center gap-3 text-gold">
-                <Loader2 className="animate-spin" size={20} />
-                <span>{t.importing}</span>
-              </div>
-            )}
-
-            {importResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`mt-4 p-4 rounded-xl ${importResult.success ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}
+            {/* Guide Section */}
+            <div className="glass-card rounded-xl border border-slate-800 overflow-hidden">
+              <button
+                onClick={() => setShowGuide(!showGuide)}
+                className="w-full p-4 flex items-center justify-between hover:bg-slate-800/30 transition-colors"
               >
-                <div className="flex items-center gap-2 mb-2">
-                  {importResult.success ? (
-                    <CheckCircle className="text-green-400" size={20} />
-                  ) : (
-                    <XCircle className="text-red-400" size={20} />
-                  )}
-                  <span className={importResult.success ? 'text-green-400' : 'text-red-400'}>
-                    {importResult.success ? t.importSuccess : 'Erreur'}
-                  </span>
+                <div className="flex items-center gap-3">
+                  <HelpCircle className="text-gold" size={20} />
+                  <span className="text-white font-medium">{t.guideTitle}</span>
+                  <span className="text-slate-500 text-sm">- {t.guideDesc}</span>
                 </div>
-                <p className="text-white">
-                  <span className="text-2xl font-bold">{importResult.imported_count}</span> {t.imported}
-                  {importResult.skipped > 0 && (
-                    <span className="text-slate-400 ml-2">({importResult.skipped} {t.skipped})</span>
-                  )}
-                </p>
-                {importResult.errors?.length > 0 && (
-                  <div className="mt-2 text-sm text-red-400">
-                    <p className="font-medium">{t.errors}:</p>
-                    {importResult.errors.slice(0, 3).map((err, i) => (
-                      <p key={i}>• {err}</p>
-                    ))}
-                  </div>
+                <motion.div
+                  animate={{ rotate: showGuide ? 90 : 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ArrowRight size={20} className="text-slate-400" />
+                </motion.div>
+              </button>
+
+              <AnimatePresence>
+                {showGuide && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-slate-800"
+                  >
+                    <div className="p-6 space-y-6">
+                      {/* Required Columns */}
+                      <div>
+                        <h4 className="text-green-400 font-medium mb-3 flex items-center gap-2">
+                          <CheckCircle size={16} />
+                          {t.requiredColumns}
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-700">
+                                <th className="text-left py-2 px-3 text-slate-400">{t.column}</th>
+                                <th className="text-left py-2 px-3 text-slate-400">{t.description}</th>
+                                <th className="text-left py-2 px-3 text-slate-400">{t.example}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {guide.required.map((col, i) => (
+                                <tr key={i} className="border-b border-slate-800">
+                                  <td className="py-2 px-3 text-gold font-mono">{col.name}</td>
+                                  <td className="py-2 px-3 text-slate-300">{col.description}</td>
+                                  <td className="py-2 px-3 text-slate-500">{col.example}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Optional Columns */}
+                      <div>
+                        <h4 className="text-blue-400 font-medium mb-3 flex items-center gap-2">
+                          <AlertCircle size={16} />
+                          {t.optionalColumns}
+                        </h4>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-slate-700">
+                                <th className="text-left py-2 px-3 text-slate-400">{t.column}</th>
+                                <th className="text-left py-2 px-3 text-slate-400">{t.description}</th>
+                                <th className="text-left py-2 px-3 text-slate-400">{t.example}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {guide.optional.map((col, i) => (
+                                <tr key={i} className="border-b border-slate-800">
+                                  <td className="py-2 px-3 text-slate-300 font-mono">{col.name}</td>
+                                  <td className="py-2 px-3 text-slate-300">{col.description}</td>
+                                  <td className="py-2 px-3 text-slate-500">{col.example}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+
+                      {/* Examples */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <h4 className="text-slate-300 font-medium mb-2">{t.jsonExample}</h4>
+                          <pre className="bg-slate-900 rounded-lg p-4 text-xs text-slate-400 overflow-x-auto">
+{`{
+  "applications": [
+    {
+      "entreprise": "Google",
+      "poste": "Software Engineer",
+      "type_poste": "cdi",
+      "lieu": "Paris"
+    }
+  ]
+}`}
+                          </pre>
+                        </div>
+                        <div>
+                          <h4 className="text-slate-300 font-medium mb-2">{t.csvExample}</h4>
+                          <pre className="bg-slate-900 rounded-lg p-4 text-xs text-slate-400 overflow-x-auto">
+{`entreprise,poste,type_poste,lieu
+Google,Software Engineer,cdi,Paris
+Meta,Frontend Developer,cdi,Londres`}
+                          </pre>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
                 )}
-              </motion.div>
-            )}
+              </AnimatePresence>
+            </div>
+
+            {/* Upload Section */}
+            <div className="glass-card rounded-xl border border-slate-800 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                  <Upload className="text-blue-400" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">{t.importTitle}</h2>
+                  <p className="text-slate-400 text-sm">{t.importDesc}</p>
+                </div>
+              </div>
+
+              {/* Preview Section */}
+              {previewData && previewData.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-gold">
+                    <Eye size={20} />
+                    <h3 className="font-medium">{t.preview}</h3>
+                    <span className="text-slate-400 text-sm">
+                      ({previewData.length} {t.rowsToImport})
+                    </span>
+                  </div>
+                  
+                  <div className="overflow-x-auto border border-slate-700 rounded-lg">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-800/50">
+                          {Object.keys(previewData[0]).slice(0, 6).map((key) => (
+                            <th key={key} className="text-left py-2 px-3 text-slate-400 font-medium">
+                              {key}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {previewData.slice(0, 5).map((row, i) => (
+                          <tr key={i} className="border-t border-slate-800">
+                            {Object.values(row).slice(0, 6).map((val, j) => (
+                              <td key={j} className="py-2 px-3 text-slate-300 truncate max-w-[150px]">
+                                {String(val || '-')}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={handleCancelPreview}
+                      variant="outline"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      <XCircle size={18} className="mr-2" />
+                      {t.cancelImport}
+                    </Button>
+                    <Button
+                      onClick={handleConfirmImport}
+                      disabled={importing}
+                      className="bg-gold hover:bg-gold-light text-[#020817]"
+                    >
+                      {importing ? (
+                        <Loader2 className="animate-spin mr-2" size={18} />
+                      ) : (
+                        <CheckCircle size={18} className="mr-2" />
+                      )}
+                      {t.confirmImport}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-gold/50 transition-colors">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,.csv"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                    id="import-file"
+                  />
+                  <label htmlFor="import-file" className="cursor-pointer">
+                    <FileUp size={48} className="mx-auto text-slate-500 mb-4" />
+                    <p className="text-white font-medium mb-2">{t.selectFile}</p>
+                    <p className="text-slate-500 text-sm">{t.supportedFormats}</p>
+                  </label>
+                </div>
+              )}
+
+              {importing && (
+                <div className="mt-4 flex items-center gap-3 text-gold">
+                  <Loader2 className="animate-spin" size={20} />
+                  <span>{t.importing}</span>
+                </div>
+              )}
+
+              {importResult && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`mt-4 p-4 rounded-xl ${importResult.success ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'}`}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    {importResult.success ? (
+                      <CheckCircle className="text-green-400" size={20} />
+                    ) : (
+                      <XCircle className="text-red-400" size={20} />
+                    )}
+                    <span className={importResult.success ? 'text-green-400' : 'text-red-400'}>
+                      {importResult.success ? t.importSuccess : 'Erreur'}
+                    </span>
+                  </div>
+                  <p className="text-white">
+                    <span className="text-2xl font-bold">{importResult.imported_count}</span> {t.imported}
+                    {importResult.skipped > 0 && (
+                      <span className="text-slate-400 ml-2">({importResult.skipped} {t.skipped})</span>
+                    )}
+                  </p>
+                  {importResult.errors?.length > 0 && (
+                    <div className="mt-2 text-sm text-red-400">
+                      <p className="font-medium">{t.errors}:</p>
+                      {importResult.errors.slice(0, 3).map((err, i) => (
+                        <p key={i}>• {err}</p>
+                      ))}
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
           </motion.div>
         )}
 
