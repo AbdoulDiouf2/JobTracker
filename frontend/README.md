@@ -1,70 +1,158 @@
-# Getting Started with Create React App
+# 🎨 JobTracker SaaS - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Application React moderne pour le suivi de candidatures.
 
-## Available Scripts
+## 📋 Stack Technique
 
-In the project directory, you can run:
+| Technologie | Usage |
+|-------------|-------|
+| **React 19** | Framework UI |
+| **React Router** | Navigation SPA |
+| **Tailwind CSS** | Styling utilitaire |
+| **Shadcn/UI** | Composants (Radix UI) |
+| **Framer Motion** | Animations |
+| **Recharts** | Graphiques |
+| **React Hook Form** | Formulaires |
+| **Zod** | Validation |
+| **Axios** | Requêtes HTTP |
+| **Lucide React** | Icônes |
+| **date-fns** | Manipulation dates |
 
-### `npm start`
+## 🗂️ Structure
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+frontend/
+├── src/
+│   ├── components/
+│   │   └── ui/              # Composants Shadcn
+│   ├── contexts/
+│   │   └── AuthContext.jsx  # Gestion auth & JWT
+│   ├── hooks/
+│   │   ├── useApplications.js
+│   │   ├── useInterviews.js
+│   │   └── useStatistics.js
+│   ├── i18n/
+│   │   ├── translations.js  # Traductions FR/EN
+│   │   └── LanguageContext.jsx
+│   ├── layouts/
+│   │   └── DashboardLayout.jsx  # Layout avec sidebar
+│   ├── pages/
+│   │   ├── LandingPage.jsx      # Page vitrine
+│   │   ├── LoginPage.jsx        # Connexion
+│   │   ├── RegisterPage.jsx     # Inscription
+│   │   ├── DashboardPage.jsx    # Tableau de bord
+│   │   ├── ApplicationsPage.jsx # Liste candidatures
+│   │   ├── InterviewsPage.jsx   # Gestion entretiens
+│   │   ├── StatisticsPage.jsx   # Graphiques & stats
+│   │   └── SettingsPage.jsx     # Paramètres
+│   ├── App.js
+│   ├── App.css
+│   └── index.css
+├── public/
+├── package.json
+└── tailwind.config.js
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🛣️ Routes
 
-### `npm test`
+| Route | Page | Protection |
+|-------|------|------------|
+| `/` | Landing Page | Public |
+| `/login` | Connexion | Public |
+| `/register` | Inscription | Public |
+| `/dashboard` | Tableau de bord | 🔒 Auth |
+| `/dashboard/applications` | Candidatures | 🔒 Auth |
+| `/dashboard/interviews` | Entretiens | 🔒 Auth |
+| `/dashboard/statistics` | Statistiques | 🔒 Auth |
+| `/dashboard/settings` | Paramètres | 🔒 Auth |
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## ✨ Fonctionnalités
 
-### `npm run build`
+### 🏠 Dashboard
+- KPIs en temps réel (total, en attente, avec entretien, taux de réponse)
+- Prochains entretiens avec countdown et urgence
+- Candidatures récentes
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### 📋 Candidatures
+- Liste avec cards modernes
+- Recherche full-text (entreprise, poste)
+- Filtres par statut, type, méthode
+- Système de favoris (étoile)
+- Création/édition via modal
+- Pagination
+- Suppression avec confirmation
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 📅 Entretiens
+- Liste avec indicateur d'urgence (rouge/jaune/bleu)
+- Countdown temps restant
+- Filtres : Tous / Planifiés / Effectués
+- Liaison automatique à la candidature
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### 📊 Statistiques
+- Graphique évolution temporelle (LineChart)
+- Répartition par statut (PieChart)
+- Répartition par type de poste (BarChart)
+- Répartition par moyen de candidature (PieChart)
+- Stats entretiens (planifiés, effectués, annulés)
+- Export Excel / JSON
 
-### `npm run eject`
+### ⚙️ Paramètres
+- Modification du profil
+- Configuration clés API (Google AI, OpenAI)
+- Changement de langue FR/EN
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## 🌐 Internationalisation
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+Support complet **Français** (défaut) et **Anglais** :
+- Toutes les pages et composants traduits
+- Persistance dans localStorage
+- Switch instantané
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+## 🎨 Design System
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Couleurs
+| Couleur | Hex | Usage |
+|---------|-----|-------|
+| Navy Dark | `#020817` | Background |
+| Navy | `#1a365d` | Accents |
+| Gold | `#c4a052` | Primary, CTA |
+| Gold Light | `#e5c57f` | Hover |
 
-## Learn More
+### Typographie
+- **Outfit** : Titres (font-heading)
+- **Plus Jakarta Sans** : Corps (font-body)
+- **JetBrains Mono** : Code
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Composants Shadcn
+- Button, Input, Dialog, Select
+- Accordion, Card, Badge
+- Tooltip, Dropdown
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## ⚙️ Configuration
 
-### Code Splitting
+### Variables d'environnement (`.env`)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```env
+REACT_APP_BACKEND_URL=http://localhost:8001
+```
 
-### Analyzing the Bundle Size
+## 🚀 Installation
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+```bash
+cd frontend
 
-### Making a Progressive Web App
+# Installer les dépendances
+yarn install
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+# Lancer en développement
+yarn start
 
-### Advanced Configuration
+# Build production
+yarn build
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+## 📱 Responsive
 
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- ✅ Desktop : Sidebar fixe
+- ✅ Tablet : Sidebar collapse
+- ✅ Mobile : Menu hamburger + drawer
