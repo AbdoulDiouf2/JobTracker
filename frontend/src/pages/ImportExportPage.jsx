@@ -176,29 +176,85 @@ export default function ImportExportPage() {
       let data = [];
 
       if (file.name.endsWith('.json')) {
-        const parsed = JSON.parse(content);
-        // Handle different JSON structures
-        if (Array.isArray(parsed)) {
-          data = parsed;
-        } else if (parsed.applications) {
-          data = parsed.applications;
-        } else if (parsed.candidatures) {
-          data = parsed.candidatures;
-        } else if (typeof parsed === 'object') {
-          // Single object, wrap in array
-          data = [parsed];
+        // Try standard JSON first
+        try {
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            data = parsed;
+          } else if (parsed.applications) {
+            data = parsed.applications;
+          } else if (parsed.candidatures) {
+            data = parsed.candidatures;
+          } else if (typeof parsed === 'object') {
+            data = [parsed];
+          }
+        } catch {
+          // Try NDJSON format (one JSON object per line)
+          const lines = content.split('\n').filter(l => l.trim());
+          data = lines.map(line => {
+            try {
+              return JSON.parse(line);
+            } catch {
+              return null;
+            }
+          }).filter(obj => obj !== null);
         }
+        
+        // Map column names to expected format
+        data = data.map(row => {
+          const mapped = {};
+          Object.entries(row).forEach(([key, value]) => {
+            const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            // Map known columns
+            if (lowerKey === 'entreprise' || lowerKey === 'company') {
+              mapped.entreprise = value;
+            } else if (lowerKey === 'poste' || lowerKey === 'position' || lowerKey === 'job') {
+              mapped.poste = value;
+            } else if (lowerKey === 'type' || lowerKey === 'type_poste' || lowerKey === 'contrat') {
+              mapped.type_poste = value;
+            } else if (lowerKey === 'lieu' || lowerKey === 'location' || lowerKey === 'ville') {
+              mapped.lieu = value;
+            } else if (lowerKey === 'moyen' || lowerKey === 'source') {
+              mapped.moyen = value;
+            } else if (lowerKey.includes('date') && (lowerKey.includes('postule') || lowerKey.includes('candidature'))) {
+              // Handle timestamp or date string
+              if (typeof value === 'number') {
+                mapped.date_candidature = new Date(value).toISOString();
+              } else {
+                mapped.date_candidature = value;
+              }
+            } else if (lowerKey === 'lien' || lowerKey === 'link' || lowerKey === 'url') {
+              mapped.lien = value;
+            } else if (lowerKey === 'commentaire' || lowerKey === 'comment' || lowerKey === 'notes') {
+              mapped.commentaire = value;
+            } else if (lowerKey === 'reponse' || lowerKey === 'response' || lowerKey === 'status' || lowerKey === 'statut') {
+              // Map response status
+              const valStr = String(value || '').toLowerCase();
+              if (valStr.includes('rejet') || valStr.includes('refus') || valStr.includes('❌')) {
+                mapped.reponse = 'negative';
+              } else if (valStr.includes('accept') || valStr.includes('✅') || valStr.includes('positiv')) {
+                mapped.reponse = 'positive';
+              } else if (valStr.includes('attente') || valStr.includes('pending') || valStr.includes('⏳')) {
+                mapped.reponse = 'pending';
+              } else if (valStr.includes('no_response') || valStr.includes('sans reponse')) {
+                mapped.reponse = 'no_response';
+              } else {
+                mapped.reponse = 'pending';
+              }
+            }
+          });
+          return mapped;
+        }).filter(obj => obj.entreprise || obj.poste);
+        
       } else if (file.name.endsWith('.csv')) {
         const lines = content.split('\n').filter(l => l.trim());
         if (lines.length > 0) {
           const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
           data = lines.slice(1).map(line => {
-            // Handle CSV with quoted values
             const values = line.match(/("([^"]*)"|[^,]*)/g) || [];
             const obj = {};
             headers.forEach((h, i) => {
               let val = values[i]?.trim() || '';
-              // Remove quotes
               val = val.replace(/^"|"$/g, '');
               obj[h] = val;
             });
@@ -216,7 +272,7 @@ export default function ImportExportPage() {
         setImportResult({
           success: false,
           imported_count: 0,
-          errors: ['Aucune donnée trouvée dans le fichier'],
+          errors: ['Aucune donnée trouvée dans le fichier. Vérifiez le format.'],
           skipped: 0
         });
       }
