@@ -24,7 +24,7 @@ def get_db():
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def register(user_data: UserCreate, db = Depends(get_db)):
     """Inscription d'un nouvel utilisateur"""
     # Vérifier si l'email existe déjà
     existing_user = await db.users.find_one({"email": user_data.email})
@@ -58,7 +58,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)):
+async def login(user_data: UserLogin, db = Depends(get_db)):
     """Connexion utilisateur"""
     user = await db.users.find_one({"email": user_data.email})
     
@@ -92,7 +92,7 @@ async def login(user_data: UserLogin, db: AsyncIOMotorDatabase = Depends(get_db)
 @router.get("/me", response_model=UserResponse)
 async def get_me(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Récupère le profil de l'utilisateur connecté"""
     user = await db.users.find_one({"id": current_user["user_id"]})
@@ -118,7 +118,7 @@ async def get_me(
 async def update_profile(
     user_update: UserUpdate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Met à jour le profil utilisateur"""
     update_data = {k: v for k, v in user_update.model_dump().items() if v is not None}
@@ -152,7 +152,7 @@ async def update_api_keys(
     google_ai_key: str = None,
     openai_key: str = None,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Met à jour les clés API IA"""
     update_data = {}
