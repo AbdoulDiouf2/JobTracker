@@ -3,7 +3,6 @@ JobTracker SaaS - Routes des candidatures
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional, List
 from datetime import datetime, timezone
 import re
@@ -37,7 +36,7 @@ async def list_applications(
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Liste les candidatures avec filtres et pagination"""
     # Construire le filtre
@@ -119,7 +118,7 @@ async def list_applications(
 async def create_application(
     app_data: JobApplicationCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Crée une nouvelle candidature"""
     application = JobApplication(
@@ -150,7 +149,7 @@ async def create_application(
 async def get_application(
     application_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Récupère une candidature par ID"""
     application = await db.applications.find_one(
@@ -189,7 +188,7 @@ async def update_application(
     application_id: str,
     app_update: JobApplicationUpdate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Met à jour une candidature"""
     # Vérifier que la candidature existe
@@ -234,7 +233,7 @@ async def update_application(
 async def delete_application(
     application_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Supprime une candidature et ses entretiens associés"""
     result = await db.applications.delete_one(
@@ -255,7 +254,7 @@ async def delete_application(
 async def toggle_favorite(
     application_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Toggle le statut favori d'une candidature"""
     application = await db.applications.find_one(
@@ -282,7 +281,7 @@ async def toggle_favorite(
 async def bulk_update_applications(
     bulk_data: BulkUpdateRequest,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Met à jour le statut de plusieurs candidatures"""
     result = await db.applications.update_many(
@@ -307,7 +306,7 @@ async def bulk_update_applications(
 @router.get("/favorites/list", response_model=List[JobApplicationResponse])
 async def list_favorites(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Liste les candidatures favorites"""
     cursor = db.applications.find(
