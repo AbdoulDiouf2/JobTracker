@@ -154,7 +154,12 @@ export default function DashboardLayout() {
             alt="MAADEC" 
             className="h-8"
           />
-          <div className="w-10" />
+          <NotificationBell />
+        </header>
+
+        {/* Desktop header with notification */}
+        <header className="hidden lg:flex flex-shrink-0 items-center justify-end p-4 border-b border-slate-800 bg-[#020817]">
+          <NotificationBell />
         </header>
 
         {/* Main content - only this part scrolls */}
