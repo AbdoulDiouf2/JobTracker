@@ -56,13 +56,36 @@ uvicorn server:app --reload --host 0.0.0.0 --port 8001
 
 ## ⚙️ Configuration (.env)
 
+Copiez `.env.example` vers `.env` et configurez :
+
 ```env
+# BASE DE DONNÉES (obligatoire)
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=jobtracker
-JWT_SECRET=your-super-secret-key
+
+# SÉCURITÉ (obligatoire)
+JWT_SECRET=votre-cle-secrete-generee-avec-openssl
+
+# CORS (optionnel)
 CORS_ORIGINS=*
-EMERGENT_LLM_KEY=sk-emergent-xxx
+
+# INTELLIGENCE ARTIFICIELLE (au moins une clé requise pour l'IA)
+EMERGENT_LLM_KEY=sk-emergent-xxx    # Clé universelle Emergent
+# OU
+GOOGLE_AI_API_KEY=AIzaSy...          # Pour Gemini
+OPENAI_API_KEY=sk-...                # Pour GPT-4o
+
+# DEBUG (optionnel)
+DEBUG=false
 ```
+
+### 🔑 Obtenir les clés API
+
+| Clé | Où l'obtenir |
+|-----|--------------|
+| EMERGENT_LLM_KEY | [emergentagent.com](https://emergentagent.com) |
+| GOOGLE_AI_API_KEY | [Google AI Studio](https://makersuite.google.com/app/apikey) |
+| OPENAI_API_KEY | [OpenAI Platform](https://platform.openai.com/api-keys) |
 
 ## 📊 Endpoints API
 
