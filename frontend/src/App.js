@@ -12,6 +12,7 @@ import ApplicationsPage from "./pages/ApplicationsPage";
 import InterviewsPage from "./pages/InterviewsPage";
 import StatisticsPage from "./pages/StatisticsPage";
 import SettingsPage from "./pages/SettingsPage";
+import AIAdvisorPage from "./pages/AIAdvisorPage";
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -34,6 +35,7 @@ function App() {
                 <Route path="applications" element={<ApplicationsPage />} />
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="statistics" element={<StatisticsPage />} />
+                <Route path="ai-advisor" element={<AIAdvisorPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
             </Routes>
