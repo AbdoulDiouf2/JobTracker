@@ -21,7 +21,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ### Phase 3: Fonctionnalités Avancées
 - Calendrier interactif entretiens
 - Vue carte/table candidatures
-- Changement statut via dropdown
+- Changement de statut via dropdown
 - Vue détaillée (modal)
 - Export Excel/JSON/CSV
 
@@ -31,23 +31,28 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - Interface chat avec suggestions
 
 ### Phase 5: Import/Export & Analyse CV
-- **Import JSON/CSV** - Importer candidatures en masse
-- **Export** - JSON, Excel, CSV
-- **Analyse CV IA** - Score, compétences, points forts, améliorations, postes recommandés
+- Import JSON/CSV avec prévisualisation
+- Guide des colonnes attendues
+- Analyse CV IA (score, compétences, recommandations)
+
+### Phase 6: Notifications (NOUVEAU)
+- 🔔 Cloche de notification dans le header
+- ⚙️ Paramètres de notification dans Settings
+- 📅 Rappels automatiques 24h et 1h avant entretien
+- ✅ Sidebar fixe (ne scroll plus avec la page)
 
 ---
 
 ## APIs Disponibles
 
-### Import/Export
-- `POST /api/import/json` - Import JSON
-- `POST /api/import/csv` - Import CSV
-- `POST /api/import/analyze-cv` - Analyse CV IA
-- `GET /api/import/cv-history` - Historique analyses
-
-### IA
-- `POST /api/ai/career-advisor` - Conseiller (Gemini)
-- `POST /api/ai/chatbot` - Chatbot (GPT-4o)
+### Notifications
+- `GET /api/notifications` - Liste des notifications
+- `GET /api/notifications/settings` - Paramètres
+- `PUT /api/notifications/settings` - Modifier paramètres
+- `PUT /api/notifications/{id}/read` - Marquer comme lu
+- `PUT /api/notifications/read-all` - Tout marquer lu
+- `DELETE /api/notifications/{id}` - Supprimer
+- `POST /api/notifications/generate-reminders` - Générer rappels
 
 ---
 
@@ -59,8 +64,8 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ---
 
 ## Backlog Futur
-- [ ] Notifications rappel entretien
-- [ ] Mode offline (PWA)
+- [ ] Notifications push (PWA)
+- [ ] Mode offline
 - [ ] Déploiement production
 
 © 2025 MAADEC
