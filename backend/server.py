@@ -17,11 +17,13 @@ from routes import (
     statistics_router,
     export_router
 )
+from routes.ai import router as ai_router
 from routes.auth import get_db as auth_get_db
 from routes.applications import get_db as app_get_db
 from routes.interviews import get_db as interview_get_db
 from routes.statistics import get_db as stats_get_db
 from routes.export import get_db as export_get_db
+from routes.ai import get_db as ai_get_db
 from utils.auth import get_current_user, security
 
 # Configure logging
