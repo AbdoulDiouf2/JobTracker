@@ -649,7 +649,7 @@ const ArchitectureSection = () => {
       { name: 'Chart.js', icon: BarChart3 },
     ]},
     { category: 'DevOps', items: [
-      { name: 'Docker', icon: Docker },
+      { name: 'Docker', icon: Container },
       { name: 'Docker Compose', icon: Layers },
       { name: '.env Configuration', icon: Lock },
     ]},
@@ -755,7 +755,7 @@ const ArchitectureSection = () => {
 
           {/* Docker container indicator */}
           <div className="mt-8 pt-8 border-t border-slate-700/50 flex items-center justify-center gap-3">
-            <Docker size={20} className="text-slate-500" />
+            <Container size={20} className="text-slate-500" />
             <span className="text-sm text-slate-400">Containerized with Docker Compose</span>
           </div>
         </div>
