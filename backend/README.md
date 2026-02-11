@@ -1,181 +1,199 @@
-# 🚀 JobTracker SaaS - Backend API
+# JobTracker Backend API 🔧
 
-API FastAPI pour l'application de suivi de candidatures JobTracker.
+API REST FastAPI pour l'application JobTracker SaaS.
 
-## 📋 Stack Technique
+## 🛠 Technologies
 
-| Technologie | Usage |
-|-------------|-------|
-| **FastAPI** | Framework API REST async |
-| **MongoDB** | Base de données NoSQL |
-| **Motor** | Driver MongoDB async |
-| **Pydantic** | Validation des données |
-| **JWT** | Authentification (python-jose) |
-| **bcrypt** | Hash des mots de passe |
-| **openpyxl** | Export Excel |
+- **FastAPI** - Framework async haute performance
+- **MongoDB** - Base de données NoSQL (via Motor)
+- **Pydantic** - Validation et sérialisation
+- **JWT** - Authentification sécurisée
+- **bcrypt** - Hash des mots de passe
+- **emergentintegrations** - Intégration Google Gemini & OpenAI
+- **openpyxl** - Export Excel
 
-## 🗂️ Structure
+## 📁 Structure
 
 ```
 backend/
 ├── models/
-│   └── __init__.py      # Modèles Pydantic (User, JobApplication, Interview, etc.)
+│   ├── user.py           # Modèle utilisateur
+│   ├── application.py    # Modèle candidature
+│   └── interview.py      # Modèle entretien
 ├── routes/
-│   ├── auth.py          # Authentification (register, login, profile)
-│   ├── applications.py  # CRUD Candidatures
-│   ├── interviews.py    # CRUD Entretiens
-│   ├── statistics.py    # Statistiques et analytics
-│   └── export.py        # Export JSON/CSV/Excel
+│   ├── auth.py           # Authentification (register, login, profile)
+│   ├── applications.py   # CRUD candidatures
+│   ├── interviews.py     # CRUD entretiens
+│   ├── statistics.py     # Statistiques dashboard
+│   ├── export.py         # Export JSON/CSV/Excel
+│   ├── ai.py             # IA (Gemini, GPT-4o)
+│   ├── data_import.py    # Import JSON/CSV + Analyse CV
+│   └── notifications.py  # Système de notifications
 ├── utils/
-│   └── auth.py          # JWT et password utilities
-├── config.py            # Configuration (Settings)
-├── server.py            # Point d'entrée FastAPI
-├── requirements.txt     # Dépendances Python
-└── .env                 # Variables d'environnement
-```
-
-## 🔌 Endpoints API
-
-### Authentification (`/api/auth`)
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `POST` | `/register` | Inscription utilisateur |
-| `POST` | `/login` | Connexion (retourne JWT) |
-| `GET` | `/me` | Profil utilisateur connecté |
-| `PUT` | `/update-profile` | Mise à jour du profil |
-| `PUT` | `/update-api-keys` | Mise à jour clés API IA |
-
-### Candidatures (`/api/applications`)
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/` | Liste avec filtres et pagination |
-| `POST` | `/` | Créer une candidature |
-| `GET` | `/{id}` | Détails d'une candidature |
-| `PUT` | `/{id}` | Modifier une candidature |
-| `DELETE` | `/{id}` | Supprimer (cascade entretiens) |
-| `POST` | `/{id}/favorite` | Toggle favori |
-| `POST` | `/bulk-update` | Mise à jour en masse |
-| `GET` | `/favorites/list` | Liste des favoris |
-
-### Entretiens (`/api/interviews`)
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/` | Liste tous les entretiens |
-| `GET` | `/upcoming` | Prochains entretiens (limit) |
-| `POST` | `/` | Créer un entretien |
-| `GET` | `/{id}` | Détails d'un entretien |
-| `PUT` | `/{id}` | Modifier un entretien |
-| `DELETE` | `/{id}` | Supprimer un entretien |
-
-### Statistiques (`/api/statistics`)
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/dashboard` | Stats pour le dashboard |
-| `GET` | `/timeline` | Évolution temporelle (cumul) |
-| `GET` | `/by-status` | Répartition par statut |
-| `GET` | `/by-type` | Répartition par type de poste |
-| `GET` | `/by-method` | Répartition par moyen |
-| `GET` | `/response-rate` | Taux et temps de réponse |
-| `GET` | `/overview` | Vue complète |
-
-### Export (`/api/export`)
-
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| `GET` | `/json` | Export JSON complet |
-| `GET` | `/csv` | Export CSV |
-| `GET` | `/excel` | Export Excel formaté |
-| `GET` | `/statistics/excel` | Stats multi-sheets |
-
-## 🗃️ Modèles de Données
-
-### User
-```python
-{
-    "id": "uuid",
-    "email": "string",
-    "full_name": "string",
-    "hashed_password": "string",
-    "is_active": true,
-    "google_ai_key": "string?",
-    "openai_key": "string?",
-    "created_at": "datetime"
-}
-```
-
-### JobApplication
-```python
-{
-    "id": "uuid",
-    "entreprise": "string",
-    "poste": "string",
-    "type_poste": "cdi|cdd|stage|alternance|freelance|interim",
-    "lieu": "string?",
-    "moyen": "linkedin|company_website|email|indeed|apec|pole_emploi|other",
-    "date_candidature": "datetime",
-    "lien": "string?",
-    "reponse": "pending|positive|negative|no_response|cancelled",
-    "date_reponse": "datetime?",
-    "commentaire": "string?",
-    "is_favorite": false,
-    "user_id": "string"
-}
-```
-
-### Interview
-```python
-{
-    "id": "uuid",
-    "candidature_id": "string",
-    "date_entretien": "datetime",
-    "type_entretien": "rh|technical|manager|final|other",
-    "format_entretien": "phone|video|in_person",
-    "lieu_entretien": "string?",
-    "statut": "planned|completed|cancelled",
-    "interviewer": "string?",
-    "commentaire": "string?",
-    "user_id": "string"
-}
-```
-
-## ⚙️ Configuration
-
-### Variables d'environnement (`.env`)
-
-```env
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=jobtracker
-JWT_SECRET=your-secret-key-change-in-production
+│   └── auth.py           # Utilitaires JWT
+├── config.py             # Configuration centralisée
+├── server.py             # Point d'entrée FastAPI
+└── requirements.txt      # Dépendances Python
 ```
 
 ## 🚀 Installation
 
 ```bash
-cd backend
+# Créer environnement virtuel
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# ou: venv\Scripts\activate  # Windows
 
-# Installer les dépendances
+# Installer dépendances
 pip install -r requirements.txt
 
+# Configurer variables d'environnement
+cp .env.example .env
+
 # Lancer le serveur
-python server.py
-# ou
-uvicorn server:app --host 0.0.0.0 --port 8001 --reload
+uvicorn server:app --reload --host 0.0.0.0 --port 8001
 ```
 
-## 📖 Documentation API
+## ⚙️ Configuration (.env)
 
-Une fois le serveur lancé, accédez à :
-- **Swagger UI** : `http://localhost:8001/docs`
-- **ReDoc** : `http://localhost:8001/redoc`
+```env
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=jobtracker
+JWT_SECRET=your-super-secret-key
+CORS_ORIGINS=*
+EMERGENT_LLM_KEY=sk-emergent-xxx
+```
 
-## 🔒 Sécurité
+## 📊 Endpoints API
 
-- ✅ Hash bcrypt pour les mots de passe
-- ✅ JWT avec expiration (7 jours par défaut)
-- ✅ Validation Pydantic stricte
-- ✅ CORS configuré
-- ✅ Index MongoDB (user_id, email, dates)
+### 🔐 Authentification (`/api/auth`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/register` | Créer un compte |
+| POST | `/login` | Se connecter |
+| GET | `/me` | Profil utilisateur |
+| PUT | `/update-profile` | Modifier profil |
+| PUT | `/update-api-keys` | Modifier clés API |
+
+### 📋 Candidatures (`/api/applications`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/` | Liste paginée avec filtres |
+| POST | `/` | Créer une candidature |
+| GET | `/{id}` | Détails d'une candidature |
+| PUT | `/{id}` | Modifier une candidature |
+| DELETE | `/{id}` | Supprimer une candidature |
+| POST | `/{id}/favorite` | Toggle favori |
+| PUT | `/bulk-update` | Mise à jour en masse |
+
+### 📅 Entretiens (`/api/interviews`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/` | Liste avec filtres |
+| POST | `/` | Créer un entretien |
+| GET | `/{id}` | Détails d'un entretien |
+| PUT | `/{id}` | Modifier un entretien |
+| DELETE | `/{id}` | Supprimer un entretien |
+| GET | `/upcoming` | Prochains entretiens |
+
+### 📈 Statistiques (`/api/statistics`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/dashboard` | KPIs dashboard |
+| GET | `/overview` | Vue complète |
+| GET | `/timeline` | Évolution temporelle |
+
+### 📤 Export (`/api/export`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/json` | Export JSON |
+| GET | `/csv` | Export CSV |
+| GET | `/excel` | Export Excel (.xlsx) |
+
+### 📥 Import (`/api/import`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/json` | Import depuis JSON |
+| POST | `/csv` | Import depuis CSV |
+| POST | `/analyze-cv` | Analyse CV avec IA |
+| GET | `/cv-history` | Historique analyses CV |
+
+### 🤖 IA (`/api/ai`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/career-advisor` | Conseiller carrière (Gemini) |
+| POST | `/chatbot` | Assistant chatbot (GPT-4o) |
+| GET | `/chat-history/{session_id}` | Historique conversation |
+| GET | `/chat-sessions` | Liste des sessions |
+| DELETE | `/chat-session/{session_id}` | Supprimer session |
+
+### 🔔 Notifications (`/api/notifications`)
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/` | Liste des notifications |
+| GET | `/settings` | Paramètres notifications |
+| PUT | `/settings` | Modifier paramètres |
+| PUT | `/{id}/read` | Marquer comme lu |
+| PUT | `/read-all` | Tout marquer comme lu |
+| DELETE | `/{id}` | Supprimer notification |
+| POST | `/generate-reminders` | Générer rappels |
+
+## 🧪 Tests
+
+```bash
+# Tester l'API
+curl http://localhost:8001/api/health
+
+# Login
+curl -X POST http://localhost:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"demo@jobtracker.com","password":"Demo123!"}'
+```
+
+## 📝 Modèles de Données
+
+### User
+```json
+{
+  "id": "uuid",
+  "email": "string",
+  "full_name": "string",
+  "hashed_password": "string",
+  "is_active": true,
+  "has_google_ai_key": false,
+  "has_openai_key": false
+}
+```
+
+### Application
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "entreprise": "string",
+  "poste": "string",
+  "type_poste": "cdi|cdd|stage|alternance|freelance",
+  "lieu": "string",
+  "moyen": "linkedin|email|...",
+  "date_candidature": "datetime",
+  "reponse": "pending|positive|negative|no_response",
+  "is_favorite": false
+}
+```
+
+### Interview
+```json
+{
+  "id": "uuid",
+  "user_id": "uuid",
+  "candidature_id": "uuid",
+  "date_entretien": "datetime",
+  "type_entretien": "rh|technical|manager|final",
+  "format_entretien": "phone|video|in_person",
+  "statut": "planned|completed|cancelled"
+}
+```
+
+---
+
+© 2025 MAADEC - MAAD Engineering & Consulting
