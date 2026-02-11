@@ -1,0 +1,188 @@
+import { useState } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../i18n';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { User, Key, Globe, Save, Loader2 } from 'lucide-react';
+
+export default function SettingsPage() {
+  const { user, updateProfile, api } = useAuth();
+  const { language, toggleLanguage } = useLanguage();
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  
+  const [formData, setFormData] = useState({
+    full_name: user?.full_name || '',
+    google_ai_key: '',
+    openai_key: ''
+  });
+
+  const t = {
+    fr: {
+      title: 'Paramètres',
+      subtitle: 'Gérez votre compte',
+      profile: 'Profil',
+      fullName: 'Nom complet',
+      email: 'Email',
+      apiKeys: 'Clés API',
+      googleKey: 'Clé Google AI (Gemini)',
+      openaiKey: 'Clé OpenAI',
+      language: 'Langue',
+      currentLang: 'Français',
+      save: 'Enregistrer',
+      saved: 'Enregistré !',
+      switchTo: 'Passer en anglais'
+    },
+    en: {
+      title: 'Settings',
+      subtitle: 'Manage your account',
+      profile: 'Profile',
+      fullName: 'Full name',
+      email: 'Email',
+      apiKeys: 'API Keys',
+      googleKey: 'Google AI Key (Gemini)',
+      openaiKey: 'OpenAI Key',
+      language: 'Language',
+      currentLang: 'English',
+      save: 'Save',
+      saved: 'Saved!',
+      switchTo: 'Switch to French'
+    }
+  }[language];
+
+  const handleSave = async () => {
+    setLoading(true);
+    setMessage('');
+    
+    try {
+      // Update profile name
+      if (formData.full_name !== user?.full_name) {
+        await updateProfile({ full_name: formData.full_name });
+      }
+      
+      // Update API keys
+      if (formData.google_ai_key || formData.openai_key) {
+        await api.put('/api/auth/update-api-keys', null, {
+          params: {
+            google_ai_key: formData.google_ai_key || undefined,
+            openai_key: formData.openai_key || undefined
+          }
+        });
+      }
+      
+      setMessage(t.saved);
+      setFormData(prev => ({ ...prev, google_ai_key: '', openai_key: '' }));
+    } catch (error) {
+      setMessage('Erreur');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-2xl space-y-8" data-testid="settings-page">
+      <div>
+        <h1 className="font-heading text-3xl font-bold text-white">{t.title}</h1>
+        <p className="text-slate-400 mt-1">{t.subtitle}</p>
+      </div>
+
+      {/* Profile Section */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <User size={20} className="text-gold" />
+          {t.profile}
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">{t.fullName}</label>
+            <Input
+              value={formData.full_name}
+              onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">{t.email}</label>
+            <Input
+              value={user?.email || ''}
+              disabled
+              className="bg-slate-900/50 border-slate-700 text-slate-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* API Keys Section */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Key size={20} className="text-gold" />
+          {t.apiKeys}
+        </h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              {t.googleKey}
+              {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+            </label>
+            <Input
+              type="password"
+              value={formData.google_ai_key}
+              onChange={(e) => setFormData(prev => ({ ...prev, google_ai_key: e.target.value }))}
+              placeholder="AIza..."
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              {t.openaiKey}
+              {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+            </label>
+            <Input
+              type="password"
+              value={formData.openai_key}
+              onChange={(e) => setFormData(prev => ({ ...prev, openai_key: e.target.value }))}
+              placeholder="sk-..."
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Language Section */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Globe size={20} className="text-gold" />
+          {t.language}
+        </h2>
+        
+        <div className="flex items-center justify-between">
+          <span className="text-slate-300">{t.currentLang}</span>
+          <Button 
+            onClick={toggleLanguage}
+            variant="outline"
+            className="border-slate-700 text-slate-300"
+          >
+            {t.switchTo}
+          </Button>
+        </div>
+      </div>
+
+      {/* Save Button */}
+      <div className="flex items-center gap-4">
+        <Button 
+          onClick={handleSave}
+          disabled={loading}
+          className="bg-gold hover:bg-gold-light text-[#020817]"
+        >
+          {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="mr-2" />}
+          {t.save}
+        </Button>
+        {message && <span className="text-green-400 text-sm">{message}</span>}
+      </div>
+    </div>
+  );
+}
