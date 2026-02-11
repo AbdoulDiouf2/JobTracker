@@ -120,6 +120,7 @@ api_router.include_router(statistics_router)
 api_router.include_router(export_router)
 api_router.include_router(ai_router)
 api_router.include_router(import_router)
+api_router.include_router(notifications_router)
 
 # Include main router
 app.include_router(api_router)
