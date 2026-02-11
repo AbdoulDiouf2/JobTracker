@@ -329,6 +329,7 @@ export default function ImportExportPage() {
 
   const handleCancelPreview = () => {
     setPreviewData(null);
+    setFullData(null);
     setPreviewFile(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
