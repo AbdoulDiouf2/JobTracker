@@ -10,6 +10,7 @@ import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Progress } from '../components/ui/progress';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
