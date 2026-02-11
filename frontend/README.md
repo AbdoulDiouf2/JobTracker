@@ -73,9 +73,17 @@ yarn build
 
 ## ⚙️ Configuration (.env)
 
+Copiez `.env.example` vers `.env` :
+
 ```env
+# URL de l'API Backend (obligatoire)
 REACT_APP_BACKEND_URL=http://localhost:8001
 ```
+
+### Notes importantes
+- Toutes les variables **DOIVENT** commencer par `REACT_APP_`
+- **Redémarrez** le serveur après modification du `.env`
+- Ne committez **JAMAIS** le fichier `.env` dans git
 
 ## 📄 Pages
 
