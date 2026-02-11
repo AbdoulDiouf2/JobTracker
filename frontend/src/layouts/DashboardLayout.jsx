@@ -61,11 +61,9 @@ const Sidebar = ({ isOpen, onClose }) => {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ x: isOpen ? 0 : '-100%' }}
+      <aside
         className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0a0f1a] border-r border-slate-800 flex flex-col
-          lg:transform-none lg:opacity-100 transition-transform duration-300`}
+          transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo */}
         <div className="p-6 border-b border-slate-800">
