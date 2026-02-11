@@ -713,22 +713,25 @@ const ArchitectureSection = () => {
           <h3 className="font-heading text-xl font-semibold text-white mb-6">{t('architecture.folderStructure')}</h3>
           <div className="font-mono text-sm overflow-x-auto">
             <pre className="text-slate-400">
-{`job-tracking/
-├── app/
-│   ├── __init__.py
+{`jobtracker-saas/
+├── backend/
 │   ├── routes/
-│   │   ├── applications.py
-│   │   ├── interviews.py
-│   │   └── ai_advisor.py
+│   │   ├── applications.py   # CRUD candidatures
+│   │   ├── interviews.py     # CRUD entretiens
+│   │   ├── ai.py             # Gemini & GPT-4o
+│   │   ├── data_import.py    # Import + Analyse CV
+│   │   └── notifications.py  # Notifications
 │   ├── models/
-│   ├── services/
-│   │   ├── gemini_service.py
-│   │   └── openai_service.py
-│   └── templates/
-├── static/
-├── docker-compose.yml
-├── Dockerfile
-├── requirements.txt
+│   ├── utils/
+│   ├── server.py             # FastAPI app
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── components/       # Shadcn/UI
+│   │   ├── pages/            # React pages
+│   │   ├── hooks/            # Custom hooks
+│   │   └── i18n/             # FR/EN
+│   └── package.json
 └── .env`}
             </pre>
           </div>
