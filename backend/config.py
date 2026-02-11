@@ -4,7 +4,11 @@ JobTracker SaaS - Configuration
 
 from pydantic_settings import BaseSettings
 from typing import Optional
+from dotenv import load_dotenv
 import os
+
+# Load .env file
+load_dotenv()
 
 
 class Settings(BaseSettings):
@@ -21,6 +25,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = os.environ.get('CORS_ORIGINS', '*')
     
     # AI APIs
+    EMERGENT_LLM_KEY: Optional[str] = os.environ.get('EMERGENT_LLM_KEY')
     GOOGLE_AI_API_KEY: Optional[str] = os.environ.get('GOOGLE_AI_API_KEY')
     OPENAI_API_KEY: Optional[str] = os.environ.get('OPENAI_API_KEY')
     
