@@ -328,7 +328,7 @@ Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal`
           <p className="text-slate-500 mb-6">{t.lastUpdate}</p>
           <p className="text-slate-400 mb-12 text-lg leading-relaxed">{t.intro}</p>
 
-          <div className="space-y-8">
+          <div className="space-y-6">
             {t.sections.map((section, index) => {
               const Icon = section.icon;
               return (
@@ -337,7 +337,7 @@ Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal`
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.05 }}
-                  className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-6"
+                  className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-6 mb-2"
                   data-testid={`privacy-section-${index}`}
                 >
                   <div className="flex items-center gap-3 mb-4">

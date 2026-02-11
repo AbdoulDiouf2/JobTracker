@@ -451,7 +451,7 @@ Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal`
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: index * 0.03 }}
-                  className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-6"
+                  className="bg-slate-800/30 border border-slate-700/50 rounded-xl p-6 mb-2"
                   data-testid={`terms-section-${index}`}
                 >
                   <div className="flex items-center gap-3 mb-4">
