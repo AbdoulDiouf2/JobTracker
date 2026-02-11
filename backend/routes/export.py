@@ -4,7 +4,6 @@ JobTracker SaaS - Routes d'export
 
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import StreamingResponse
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List
 from datetime import datetime, timezone
 import json
@@ -24,7 +23,7 @@ def get_db():
 @router.get("/json")
 async def export_json(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Export toutes les candidatures en JSON"""
     user_id = current_user["user_id"]
@@ -64,7 +63,7 @@ async def export_json(
 @router.get("/csv")
 async def export_csv(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Export toutes les candidatures en CSV"""
     user_id = current_user["user_id"]
@@ -118,7 +117,7 @@ async def export_csv(
 @router.get("/excel")
 async def export_excel(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Export toutes les candidatures en Excel"""
     try:
@@ -223,7 +222,7 @@ async def export_excel(
 @router.get("/statistics/excel")
 async def export_statistics_excel(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Export des statistiques en Excel multi-sheets"""
     try:
