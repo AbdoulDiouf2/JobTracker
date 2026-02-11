@@ -9,7 +9,8 @@ API REST FastAPI pour l'application JobTracker SaaS.
 - **Pydantic** - Validation et sérialisation
 - **JWT** - Authentification sécurisée
 - **bcrypt** - Hash des mots de passe
-- **emergentintegrations** - Intégration Google Gemini & OpenAI
+- **Google Generative AI** - Intégration Gemini
+- **OpenAI** - Intégration GPT-4o
 - **openpyxl** - Export Excel
 
 ## 📁 Structure
@@ -26,7 +27,7 @@ backend/
 │   ├── interviews.py     # CRUD entretiens
 │   ├── statistics.py     # Statistiques dashboard
 │   ├── export.py         # Export JSON/CSV/Excel
-│   ├── ai.py             # IA (Gemini, GPT-4o)
+│   ├── ai.py             # IA (Gemini, GPT-4o) - Mode dual
 │   ├── data_import.py    # Import JSON/CSV + Analyse CV
 │   └── notifications.py  # Système de notifications
 ├── utils/
@@ -36,7 +37,7 @@ backend/
 └── requirements.txt      # Dépendances Python
 ```
 
-## 🚀 Installation
+## 🚀 Installation Locale
 
 ```bash
 # Créer environnement virtuel
@@ -44,14 +45,39 @@ python -m venv venv
 source venv/bin/activate  # Linux/Mac
 # ou: venv\Scripts\activate  # Windows
 
-# Installer dépendances
+# Installer dépendances de base
 pip install -r requirements.txt
+
+# ⚠️ Le package 'emergentintegrations' n'est disponible QUE sur la plateforme Emergent
+# En local, installez les SDKs standards pour l'IA :
+pip install openai google-generativeai
 
 # Configurer variables d'environnement
 cp .env.example .env
+# Éditez .env avec vos clés API
 
 # Lancer le serveur
 uvicorn server:app --reload --host 0.0.0.0 --port 8001
+```
+
+## 🤖 Modes d'IA
+
+Le backend supporte **deux modes** pour les fonctionnalités IA :
+
+### Mode Emergent (Plateforme)
+Utilisé automatiquement quand le package `emergentintegrations` est disponible.
+- Clé API : `EMERGENT_LLM_KEY`
+- Avantage : Une seule clé pour Gemini et GPT-4o
+
+### Mode Local (SDKs Standards)
+Utilisé quand `emergentintegrations` n'est pas installé.
+- Clés API requises : `GOOGLE_API_KEY` + `OPENAI_API_KEY`
+- Installez : `pip install openai google-generativeai`
+
+Le mode est détecté **automatiquement** au démarrage :
+```
+✅ Using Emergent integrations for AI    # Mode Emergent
+⚠️ emergentintegrations not available    # Mode Local
 ```
 
 ## ⚙️ Configuration (.env)
