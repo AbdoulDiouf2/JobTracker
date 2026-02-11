@@ -1,34 +1,217 @@
-.App-logo {
-    height: 40vmin;
+/* Main app styles */
+
+/* Hero section background */
+.hero-bg {
+    position: relative;
+    background: linear-gradient(180deg, #020817 0%, #0f172a 50%, #020817 100%);
+}
+
+.hero-bg::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 1200px;
+    height: 100%;
+    background: radial-gradient(ellipse at center top, rgba(26, 54, 93, 0.3) 0%, transparent 60%);
     pointer-events: none;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+/* Dashboard mockup styles */
+.dashboard-mockup {
+    perspective: 1000px;
+}
+
+.dashboard-mockup-inner {
+    transform: rotateX(5deg) rotateY(-5deg);
+    transform-style: preserve-3d;
+}
+
+/* Card hover effects */
+.feature-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(196, 160, 82, 0.05), transparent);
+    transition: left 0.5s ease;
+}
+
+.feature-card:hover::before {
+    left: 100%;
+}
+
+/* Architecture diagram */
+.arch-node {
+    position: relative;
+}
+
+.arch-connector {
+    position: absolute;
+    background: linear-gradient(90deg, #1e293b, #c4a052, #1e293b);
+    height: 2px;
+}
+
+/* Chat mockup */
+.chat-bubble {
+    position: relative;
+}
+
+.chat-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+}
+
+.chat-bubble.user::after {
+    right: 16px;
+    border-top: 8px solid rgba(196, 160, 82, 0.2);
+}
+
+.chat-bubble.ai::after {
+    left: 16px;
+    border-top: 8px solid rgba(26, 54, 93, 0.5);
+}
+
+/* Tech badges */
+.tech-badge {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.tech-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px -5px rgba(196, 160, 82, 0.3);
+}
+
+/* Section dividers */
+.section-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #1e293b, #c4a052, #1e293b, transparent);
+}
+
+/* Animated border gradient */
+.animated-border {
+    position: relative;
+}
+
+.animated-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, #c4a052, #1a365d, #c4a052);
+    background-size: 200% 200%;
+    animation: gradient-shift 4s ease infinite;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+}
+
+/* KPI card glow */
+.kpi-card {
+    position: relative;
+}
+
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(196, 160, 82, 0.1), transparent);
+    pointer-events: none;
+}
+
+/* Accordion custom styles */
+.accordion-trigger[data-state="open"] .accordion-chevron {
+    transform: rotate(180deg);
+}
+
+/* Floating particles (CSS only) */
+.particles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: rgba(196, 160, 82, 0.3);
+    border-radius: 50%;
+    animation: float 8s ease-in-out infinite;
+}
+
+.particle:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+.particle:nth-child(2) { top: 20%; left: 80%; animation-delay: 1s; }
+.particle:nth-child(3) { top: 40%; left: 20%; animation-delay: 2s; }
+.particle:nth-child(4) { top: 60%; left: 70%; animation-delay: 3s; }
+.particle:nth-child(5) { top: 80%; left: 40%; animation-delay: 4s; }
+.particle:nth-child(6) { top: 30%; left: 50%; animation-delay: 5s; }
+
+/* Footer background */
+.footer-bg {
+    background: linear-gradient(180deg, #0f172a 0%, #020817 100%);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dashboard-mockup-inner {
+        transform: none;
     }
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+/* Button ripple effect */
+.btn-ripple {
+    position: relative;
+    overflow: hidden;
 }
 
-.App-link {
-    color: #61dafb;
+.btn-ripple::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 50%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+.btn-ripple:hover::after {
+    opacity: 1;
+}
+
+/* Code block styling */
+.code-block {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.7;
+}
+
+/* Progress bar animation */
+.progress-fill {
+    animation: progress-grow 2s ease-out forwards;
+}
+
+@keyframes progress-grow {
+    from { width: 0; }
+    to { width: var(--progress); }
 }
