@@ -70,6 +70,73 @@ class ApplicationImport(BaseModel):
     reponse: Optional[str] = "pending"
 
 
+class DataImportRequest(BaseModel):
+    applications: List[dict]
+
+
+# Import from pre-parsed data (from frontend preview)
+@router.post("/data", response_model=ImportResult)
+async def import_data(
+    request: DataImportRequest,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Import applications from pre-parsed data"""
+    imported = 0
+    errors = []
+    skipped = 0
+    
+    for idx, app_data in enumerate(request.applications):
+        try:
+            entreprise = app_data.get('entreprise') or app_data.get('Entreprise')
+            poste = app_data.get('poste') or app_data.get('Poste')
+            
+            if not entreprise or not poste:
+                errors.append(f"Ligne {idx+1}: entreprise et poste requis")
+                skipped += 1
+                continue
+            
+            # Get date
+            date_val = app_data.get('date_candidature') or app_data.get('Date (Postulé)')
+            if isinstance(date_val, (int, float)):
+                date_str = datetime.fromtimestamp(date_val / 1000, tz=timezone.utc).isoformat()
+            elif date_val:
+                date_str = str(date_val)
+            else:
+                date_str = datetime.now(timezone.utc).isoformat()
+            
+            app_doc = {
+                "id": str(uuid.uuid4()),
+                "user_id": current_user["user_id"],
+                "entreprise": entreprise,
+                "poste": poste,
+                "type_poste": app_data.get('type_poste') or app_data.get('Type') or 'cdi',
+                "lieu": app_data.get('lieu') or app_data.get('Lieu'),
+                "moyen": app_data.get('moyen') or app_data.get('Moyen'),
+                "date_candidature": date_str,
+                "lien": app_data.get('lien') or app_data.get('Lien'),
+                "commentaire": app_data.get('commentaire') or app_data.get('Commentaire'),
+                "reponse": app_data.get('reponse', 'pending'),
+                "is_favorite": False,
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.applications.insert_one(app_doc)
+            imported += 1
+            
+        except Exception as e:
+            errors.append(f"Ligne {idx+1}: {str(e)}")
+            skipped += 1
+    
+    return ImportResult(
+        success=True,
+        imported_count=imported,
+        errors=errors[:10],
+        skipped=skipped
+    )
+
+
 # ============== AI Helper Functions ==============
 
 async def analyze_cv_with_emergent(api_key: str, user_id: str, cv_text: str, apps_context: str) -> dict:
