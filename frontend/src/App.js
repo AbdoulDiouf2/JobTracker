@@ -13,6 +13,7 @@ import InterviewsPage from "./pages/InterviewsPage";
 import StatisticsPage from "./pages/StatisticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AIAdvisorPage from "./pages/AIAdvisorPage";
+import ImportExportPage from "./pages/ImportExportPage";
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
