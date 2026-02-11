@@ -293,16 +293,16 @@ export default function ImportExportPage() {
   };
 
   const handleConfirmImport = async () => {
-    if (!previewData || previewData.length === 0) return;
+    if (!fullData || fullData.length === 0) return;
 
     setImporting(true);
 
     try {
       const token = localStorage.getItem('token');
       
-      // Send parsed data directly to backend
+      // Send ALL parsed data to backend (not just preview)
       const response = await axios.post(`${API_URL}/api/import/data`, {
-        applications: previewData
+        applications: fullData
       }, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -312,6 +312,7 @@ export default function ImportExportPage() {
 
       setImportResult(response.data);
       setPreviewData(null);
+      setFullData(null);
       setPreviewFile(null);
     } catch (error) {
       setImportResult({
