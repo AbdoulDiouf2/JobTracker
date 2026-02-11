@@ -88,11 +88,18 @@ const Navigation = () => {
           <div className="hidden md:flex items-center gap-4">
             <LanguageSwitcher />
             <a
-              href="#contact"
+              href="/login"
+              data-testid="nav-login-button"
+              className="text-slate-400 hover:text-gold font-medium transition-colors duration-200"
+            >
+              {language === 'fr' ? 'Connexion' : 'Login'}
+            </a>
+            <a
+              href="/register"
               data-testid="nav-cta-button"
               className="bg-gold text-[#020817] hover:bg-gold-light px-6 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(196,160,82,0.3)] hover:shadow-[0_0_30px_-5px_rgba(196,160,82,0.5)]"
             >
-              {t('nav.getInTouch')}
+              {language === 'fr' ? 'Commencer' : 'Get Started'}
             </a>
           </div>
 
