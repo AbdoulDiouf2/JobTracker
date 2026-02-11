@@ -135,18 +135,42 @@ yarn start
 
 ## 🔑 Variables d'Environnement
 
-### Backend (.env)
-```
+### Backend (`/backend/.env`)
+```env
+# BASE DE DONNÉES (obligatoire)
 MONGO_URL=mongodb://localhost:27017
 DB_NAME=jobtracker
-JWT_SECRET=your-secret-key
-EMERGENT_LLM_KEY=sk-emergent-xxx  # Pour IA
+
+# SÉCURITÉ (obligatoire)
+# Générez avec: openssl rand -hex 32
+JWT_SECRET=votre-cle-secrete-tres-longue
+
+# CORS (optionnel, défaut: *)
+CORS_ORIGINS=*
+
+# IA - Au moins une clé requise pour les fonctionnalités IA
+EMERGENT_LLM_KEY=sk-emergent-xxx   # Clé universelle Emergent (recommandé)
+# OU
+GOOGLE_AI_API_KEY=AIzaSy...        # Google AI Studio
+OPENAI_API_KEY=sk-...              # OpenAI Platform
 ```
 
-### Frontend (.env)
-```
+### Frontend (`/frontend/.env`)
+```env
+# URL de l'API Backend (obligatoire)
 REACT_APP_BACKEND_URL=http://localhost:8001
+
+# En production:
+# REACT_APP_BACKEND_URL=https://api.votre-domaine.com
 ```
+
+### 🔗 Où obtenir les clés API
+
+| Service | URL |
+|---------|-----|
+| Emergent LLM Key | [emergentagent.com](https://emergentagent.com) |
+| Google AI (Gemini) | [makersuite.google.com](https://makersuite.google.com/app/apikey) |
+| OpenAI (GPT) | [platform.openai.com](https://platform.openai.com/api-keys) |
 
 ---
 
