@@ -342,7 +342,7 @@ class TestApplicationsCRUD:
 
 
 class TestInterviews:
-    """Interview endpoint tests"""
+    """Interview endpoint tests - Phase 3 CRUD complet"""
     
     @pytest.fixture(autouse=True)
     def setup(self):
@@ -367,9 +367,17 @@ class TestInterviews:
             json=app_data
         )
         self.test_app_id = app_response.json()["id"]
+        self.created_interview_ids = []
     
     def teardown_method(self, method):
-        """Cleanup test application"""
+        """Cleanup test application and interviews"""
+        # Cleanup interviews
+        for interview_id in getattr(self, 'created_interview_ids', []):
+            requests.delete(
+                f"{BASE_URL}/api/interviews/{interview_id}",
+                headers=self.headers
+            )
+        
         if hasattr(self, 'test_app_id'):
             requests.delete(
                 f"{BASE_URL}/api/applications/{self.test_app_id}",
@@ -409,10 +417,190 @@ class TestInterviews:
         assert data["type_entretien"] == "technical"
         assert data["format_entretien"] == "video"
         assert "id" in data
+        assert "entreprise" in data  # Enriched with application data
+        assert "poste" in data
         print(f"✅ Create interview - ID: {data['id']}")
         
-        # Cleanup
-        requests.delete(f"{BASE_URL}/api/interviews/{data['id']}", headers=self.headers)
+        self.created_interview_ids.append(data["id"])
+        return data["id"]
+    
+    def test_create_interview_with_all_types(self):
+        """Test creating interviews with different types (RH, technical, manager, final)"""
+        types = ["rh", "technical", "manager", "final", "other"]
+        
+        for interview_type in types:
+            interview_data = {
+                "candidature_id": self.test_app_id,
+                "date_entretien": (datetime.now() + timedelta(days=7)).isoformat(),
+                "type_entretien": interview_type,
+                "format_entretien": "video"
+            }
+            
+            response = requests.post(
+                f"{BASE_URL}/api/interviews",
+                headers=self.headers,
+                json=interview_data
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert data["type_entretien"] == interview_type
+            self.created_interview_ids.append(data["id"])
+            print(f"✅ Create interview type '{interview_type}' - ID: {data['id']}")
+    
+    def test_create_interview_with_all_formats(self):
+        """Test creating interviews with different formats (phone, video, in_person)"""
+        formats = ["phone", "video", "in_person"]
+        
+        for interview_format in formats:
+            interview_data = {
+                "candidature_id": self.test_app_id,
+                "date_entretien": (datetime.now() + timedelta(days=7)).isoformat(),
+                "type_entretien": "technical",
+                "format_entretien": interview_format
+            }
+            
+            response = requests.post(
+                f"{BASE_URL}/api/interviews",
+                headers=self.headers,
+                json=interview_data
+            )
+            assert response.status_code == 201
+            data = response.json()
+            assert data["format_entretien"] == interview_format
+            self.created_interview_ids.append(data["id"])
+            print(f"✅ Create interview format '{interview_format}' - ID: {data['id']}")
+    
+    def test_get_interview_by_id(self):
+        """Test getting a specific interview by ID"""
+        # First create one
+        interview_id = self.test_create_interview()
+        
+        response = requests.get(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == interview_id
+        assert "entreprise" in data
+        assert "poste" in data
+        assert "time_remaining" in data or data["statut"] != "planned"
+        print(f"✅ Get interview by ID passed - {data['entreprise']}")
+    
+    def test_update_interview_status(self):
+        """Test updating interview status (planned -> completed)"""
+        # First create one
+        interview_id = self.test_create_interview()
+        
+        # Update status to completed
+        update_data = {"statut": "completed"}
+        response = requests.put(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers,
+            json=update_data
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["statut"] == "completed"
+        print(f"✅ Update interview status to 'completed' passed")
+        
+        # Verify persistence
+        get_response = requests.get(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers
+        )
+        fetched = get_response.json()
+        assert fetched["statut"] == "completed"
+        print("✅ Status update persisted correctly")
+    
+    def test_update_interview_to_cancelled(self):
+        """Test updating interview status to cancelled"""
+        interview_id = self.test_create_interview()
+        
+        update_data = {"statut": "cancelled"}
+        response = requests.put(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers,
+            json=update_data
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["statut"] == "cancelled"
+        print(f"✅ Update interview status to 'cancelled' passed")
+    
+    def test_update_interview_details(self):
+        """Test updating interview details (interviewer, location)"""
+        interview_id = self.test_create_interview()
+        
+        update_data = {
+            "interviewer": "Jane Smith",
+            "lieu_entretien": "Zoom Meeting",
+            "commentaire": "Prepare technical questions"
+        }
+        response = requests.put(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers,
+            json=update_data
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["interviewer"] == "Jane Smith"
+        assert data["lieu_entretien"] == "Zoom Meeting"
+        print(f"✅ Update interview details passed")
+    
+    def test_delete_interview(self):
+        """Test deleting an interview"""
+        interview_id = self.test_create_interview()
+        
+        response = requests.delete(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers
+        )
+        assert response.status_code == 204
+        print(f"✅ Delete interview passed")
+        
+        # Verify deletion
+        get_response = requests.get(
+            f"{BASE_URL}/api/interviews/{interview_id}",
+            headers=self.headers
+        )
+        assert get_response.status_code == 404
+        print("✅ Interview correctly removed from database")
+        
+        # Remove from cleanup list since already deleted
+        if interview_id in self.created_interview_ids:
+            self.created_interview_ids.remove(interview_id)
+    
+    def test_filter_interviews_by_status_planned(self):
+        """Test filtering interviews by status=planned"""
+        # Create a planned interview
+        self.test_create_interview()
+        
+        response = requests.get(
+            f"{BASE_URL}/api/interviews",
+            headers=self.headers,
+            params={"status": "planned"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        for interview in data:
+            assert interview["statut"] == "planned"
+        print(f"✅ Filter interviews by status=planned - Found: {len(data)}")
+    
+    def test_filter_interviews_by_status_completed(self):
+        """Test filtering interviews by status=completed"""
+        response = requests.get(
+            f"{BASE_URL}/api/interviews",
+            headers=self.headers,
+            params={"status": "completed"}
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        for interview in data:
+            assert interview["statut"] == "completed"
+        print(f"✅ Filter interviews by status=completed - Found: {len(data)}")
     
     def test_get_upcoming_interviews(self):
         """Test getting upcoming interviews"""
@@ -424,7 +612,59 @@ class TestInterviews:
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
+        # All should be planned and have time_remaining
+        for interview in data:
+            assert interview["statut"] == "planned"
+            assert "time_remaining" in interview
+            assert "urgency" in interview
         print(f"✅ Get upcoming interviews - Found: {len(data)}")
+    
+    def test_interview_urgency_indicator(self):
+        """Test that urgency indicator is calculated correctly"""
+        # Create interview for tomorrow (should be warning)
+        interview_data = {
+            "candidature_id": self.test_app_id,
+            "date_entretien": (datetime.now() + timedelta(hours=12)).isoformat(),
+            "type_entretien": "technical",
+            "format_entretien": "video"
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/interviews",
+            headers=self.headers,
+            json=interview_data
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["urgency"] in ["danger", "warning", "info", "normal"]
+        self.created_interview_ids.append(data["id"])
+        print(f"✅ Interview urgency indicator: {data['urgency']} - time remaining: {data['time_remaining']}")
+    
+    def test_interview_not_found(self):
+        """Test getting non-existent interview"""
+        response = requests.get(
+            f"{BASE_URL}/api/interviews/non-existent-id",
+            headers=self.headers
+        )
+        assert response.status_code == 404
+        print("✅ Non-existent interview correctly returns 404")
+    
+    def test_interview_invalid_candidature(self):
+        """Test creating interview with invalid candidature_id"""
+        interview_data = {
+            "candidature_id": "invalid-candidature-id",
+            "date_entretien": (datetime.now() + timedelta(days=7)).isoformat(),
+            "type_entretien": "technical",
+            "format_entretien": "video"
+        }
+        
+        response = requests.post(
+            f"{BASE_URL}/api/interviews",
+            headers=self.headers,
+            json=interview_data
+        )
+        assert response.status_code == 404
+        print("✅ Invalid candidature_id correctly returns 404")
 
 
 class TestStatistics:
