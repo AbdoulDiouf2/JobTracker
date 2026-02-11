@@ -592,7 +592,7 @@ Meta,Frontend Developer,cdi,Londres`}
                     <Eye size={20} />
                     <h3 className="font-medium">{t.preview}</h3>
                     <span className="text-slate-400 text-sm">
-                      ({previewData.length} {t.rowsToImport})
+                      ({fullData?.length || 0} {t.rowsToImport}{previewData.length < (fullData?.length || 0) ? ` - ${language === 'fr' ? 'aperçu des 10 premières' : 'showing first 10'}` : ''})
                     </span>
                   </div>
                   
