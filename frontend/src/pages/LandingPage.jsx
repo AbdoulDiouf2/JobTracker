@@ -944,6 +944,11 @@ const Footer = () => {
       { label: t('nav.ai'), href: '#ai' },
       { label: t('nav.architecture'), href: '#architecture' },
     ],
+    legal: [
+      { label: language === 'fr' ? 'Mentions légales' : 'Legal Notice', href: '/legal' },
+      { label: language === 'fr' ? 'Politique de confidentialité' : 'Privacy Policy', href: '/privacy' },
+      { label: language === 'fr' ? 'CGU' : 'Terms of Service', href: '/terms' },
+    ],
     tech: ['FastAPI', 'MongoDB', 'Google Gemini', 'OpenAI GPT-4o', 'React', 'Tailwind CSS'],
     connect: [
       { label: 'GitHub', href: '#', icon: Github },
@@ -955,7 +960,7 @@ const Footer = () => {
   return (
     <footer data-testid="footer" className="footer-bg border-t border-slate-800/50 pt-20 pb-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
+        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
           <div className="lg:col-span-1">
             <img 
               src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
@@ -985,6 +990,23 @@ const Footer = () => {
               {footerLinks.project.map((link) => (
                 <li key={link.href}>
                   <a href={link.href} className="text-slate-400 hover:text-gold transition-colors text-sm">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="font-heading font-semibold text-white mb-6">{language === 'fr' ? 'Légal' : 'Legal'}</h4>
+            <ul className="space-y-3">
+              {footerLinks.legal.map((link) => (
+                <li key={link.href}>
+                  <a 
+                    href={link.href} 
+                    className="text-slate-400 hover:text-gold transition-colors text-sm"
+                    data-testid={`footer-legal-${link.href.replace('/', '')}`}
+                  >
                     {link.label}
                   </a>
                 </li>
@@ -1023,9 +1045,17 @@ const Footer = () => {
           <p className="text-slate-500 text-sm">
             {footerT.copyright.replace('{year}', new Date().getFullYear())}
           </p>
-          <p className="text-slate-600 text-sm">
-            {footerT.builtWith}
-          </p>
+          <div className="flex items-center gap-6">
+            <a href="/legal" className="text-slate-600 hover:text-slate-400 text-sm transition-colors">
+              {language === 'fr' ? 'Mentions légales' : 'Legal'}
+            </a>
+            <a href="/privacy" className="text-slate-600 hover:text-slate-400 text-sm transition-colors">
+              {language === 'fr' ? 'Confidentialité' : 'Privacy'}
+            </a>
+            <a href="/terms" className="text-slate-600 hover:text-slate-400 text-sm transition-colors">
+              {language === 'fr' ? 'CGU' : 'Terms'}
+            </a>
+          </div>
         </div>
       </div>
     </footer>
