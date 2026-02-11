@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { User, Key, Globe, Save, Loader2 } from 'lucide-react';
+import { Switch } from '../components/ui/switch';
+import { User, Key, Globe, Save, Loader2, Bell } from 'lucide-react';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
@@ -15,6 +19,13 @@ export default function SettingsPage() {
     full_name: user?.full_name || '',
     google_ai_key: '',
     openai_key: ''
+  });
+
+  const [notifSettings, setNotifSettings] = useState({
+    email_notifications: true,
+    reminder_24h: true,
+    reminder_1h: true,
+    browser_notifications: true
   });
 
   const t = {
@@ -31,7 +42,12 @@ export default function SettingsPage() {
       currentLang: 'Français',
       save: 'Enregistrer',
       saved: 'Enregistré !',
-      switchTo: 'Passer en anglais'
+      switchTo: 'Passer en anglais',
+      notifications: 'Notifications',
+      emailNotif: 'Notifications par email',
+      reminder24h: 'Rappel 24h avant l\'entretien',
+      reminder1h: 'Rappel 1h avant l\'entretien',
+      browserNotif: 'Notifications navigateur'
     },
     en: {
       title: 'Settings',
@@ -46,9 +62,30 @@ export default function SettingsPage() {
       currentLang: 'English',
       save: 'Save',
       saved: 'Saved!',
-      switchTo: 'Switch to French'
+      switchTo: 'Switch to French',
+      notifications: 'Notifications',
+      emailNotif: 'Email notifications',
+      reminder24h: 'Reminder 24h before interview',
+      reminder1h: 'Reminder 1h before interview',
+      browserNotif: 'Browser notifications'
     }
   }[language];
+
+  // Fetch notification settings
+  useEffect(() => {
+    const fetchNotifSettings = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/notifications/settings`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setNotifSettings(response.data);
+      } catch (error) {
+        console.error('Error fetching notification settings:', error);
+      }
+    };
+    fetchNotifSettings();
+  }, []);
 
   const handleSave = async () => {
     setLoading(true);
@@ -69,6 +106,12 @@ export default function SettingsPage() {
           }
         });
       }
+
+      // Update notification settings
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/api/notifications/settings`, notifSettings, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
       setMessage(t.saved);
       setFormData(prev => ({ ...prev, google_ai_key: '', openai_key: '' }));
@@ -77,6 +120,10 @@ export default function SettingsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNotifChange = (key, value) => {
+    setNotifSettings(prev => ({ ...prev, [key]: value }));
   };
 
   return (
@@ -109,6 +156,40 @@ export default function SettingsPage() {
               value={user?.email || ''}
               disabled
               className="bg-slate-900/50 border-slate-700 text-slate-500"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Notifications Section */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Bell size={20} className="text-gold" />
+          {t.notifications}
+        </h2>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <label className="text-slate-300">{t.reminder24h}</label>
+            <Switch 
+              checked={notifSettings.reminder_24h}
+              onCheckedChange={(checked) => handleNotifChange('reminder_24h', checked)}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-slate-300">{t.reminder1h}</label>
+            <Switch 
+              checked={notifSettings.reminder_1h}
+              onCheckedChange={(checked) => handleNotifChange('reminder_1h', checked)}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <label className="text-slate-300">{t.browserNotif}</label>
+            <Switch 
+              checked={notifSettings.browser_notifications}
+              onCheckedChange={(checked) => handleNotifChange('browser_notifications', checked)}
             />
           </div>
         </div>
