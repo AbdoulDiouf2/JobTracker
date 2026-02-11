@@ -668,7 +668,7 @@ const ArchitectureSection = () => {
                 <Code2 size={24} className="text-gold mb-2" />
                 <span className="text-sm text-slate-300">{diagramT.frontend}</span>
               </div>
-              <span className="text-xs text-slate-500 mt-2">Bootstrap + JS</span>
+              <span className="text-xs text-slate-500 mt-2">React + Tailwind</span>
             </div>
 
             <ArrowRight className="text-slate-600 hidden lg:block" />
@@ -679,7 +679,7 @@ const ArchitectureSection = () => {
                 <Server size={24} className="text-gold mb-2" />
                 <span className="text-sm text-slate-300">{diagramT.backend}</span>
               </div>
-              <span className="text-xs text-slate-500 mt-2">Flask API</span>
+              <span className="text-xs text-slate-500 mt-2">FastAPI</span>
             </div>
 
             <ArrowRight className="text-slate-600 hidden lg:block" />
@@ -691,21 +691,21 @@ const ArchitectureSection = () => {
                   <Database size={24} className="text-gold mb-2" />
                   <span className="text-sm text-slate-300">{diagramT.database}</span>
                 </div>
-                <span className="text-xs text-slate-500 mt-2">SQLite</span>
+                <span className="text-xs text-slate-500 mt-2">MongoDB</span>
               </div>
               <div className="flex flex-col items-center">
                 <div className="w-32 h-24 bg-slate-800/50 border border-slate-700 rounded-xl flex flex-col items-center justify-center">
                   <Brain size={24} className="text-gold mb-2" />
                   <span className="text-sm text-slate-300">{diagramT.aiApis}</span>
                 </div>
-                <span className="text-xs text-slate-500 mt-2">Gemini + GPT</span>
+                <span className="text-xs text-slate-500 mt-2">Gemini + GPT-4o</span>
               </div>
             </div>
           </div>
 
           <div className="mt-8 pt-8 border-t border-slate-700/50 flex items-center justify-center gap-3">
-            <Container size={20} className="text-slate-500" />
-            <span className="text-sm text-slate-400">{diagramT.dockerized}</span>
+            <Lock size={20} className="text-slate-500" />
+            <span className="text-sm text-slate-400">JWT Authentication + Emergent LLM Integration</span>
           </div>
         </div>
 
