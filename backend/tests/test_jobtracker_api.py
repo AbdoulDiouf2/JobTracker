@@ -909,6 +909,37 @@ class TestStatistics:
         assert "by_method" in data
         assert "interviews_stats" in data
         print(f"✅ Statistics overview - Complete data received")
+    
+    def test_statistics_interviews_stats(self):
+        """Test that statistics overview includes interview stats"""
+        response = requests.get(
+            f"{BASE_URL}/api/statistics/overview",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        # Check interviews_stats structure
+        interviews_stats = data.get("interviews_stats", {})
+        assert "total" in interviews_stats
+        assert "planned" in interviews_stats
+        assert "completed" in interviews_stats
+        assert "cancelled" in interviews_stats
+        
+        print(f"✅ Interview stats - Total: {interviews_stats['total']}, Planned: {interviews_stats['planned']}, Completed: {interviews_stats['completed']}")
+    
+    def test_dashboard_with_interview_count(self):
+        """Test dashboard stats includes with_interview count"""
+        response = requests.get(
+            f"{BASE_URL}/api/statistics/dashboard",
+            headers=self.headers
+        )
+        assert response.status_code == 200
+        data = response.json()
+        
+        assert "with_interview" in data
+        assert isinstance(data["with_interview"], int)
+        print(f"✅ Dashboard with_interview count: {data['with_interview']}")
 
 
 # Cleanup function to remove test data
