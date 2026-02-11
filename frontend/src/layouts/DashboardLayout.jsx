@@ -135,12 +135,12 @@ export default function DashboardLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#020817] flex">
+    <div className="h-screen bg-[#020817] flex overflow-hidden">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Mobile header */}
-        <header className="lg:hidden flex items-center justify-between p-4 border-b border-slate-800 bg-[#0a0f1a]">
+        <header className="lg:hidden flex-shrink-0 flex items-center justify-between p-4 border-b border-slate-800 bg-[#0a0f1a]">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 text-slate-400 hover:text-white"
@@ -156,8 +156,8 @@ export default function DashboardLayout() {
           <div className="w-10" />
         </header>
 
-        {/* Main content */}
-        <main className="flex-1 p-4 lg:p-8 overflow-auto">
+        {/* Main content - only this part scrolls */}
+        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           <Outlet />
         </main>
       </div>
