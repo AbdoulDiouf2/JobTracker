@@ -81,10 +81,11 @@ async def import_data(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Import applications from pre-parsed data"""
+    """Import applications from pre-parsed data with duplicate detection"""
     imported = 0
     errors = []
     skipped = 0
+    duplicates = 0
     
     for idx, app_data in enumerate(request.applications):
         try:
@@ -104,6 +105,17 @@ async def import_data(
                 date_str = str(date_val)
             else:
                 date_str = datetime.now(timezone.utc).isoformat()
+            
+            # Check for duplicate (same company + position for same user)
+            existing = await db.applications.find_one({
+                "user_id": current_user["user_id"],
+                "entreprise": {"$regex": f"^{entreprise}$", "$options": "i"},
+                "poste": {"$regex": f"^{poste}$", "$options": "i"}
+            })
+            
+            if existing:
+                duplicates += 1
+                continue
             
             app_doc = {
                 "id": str(uuid.uuid4()),
@@ -129,11 +141,15 @@ async def import_data(
             errors.append(f"Ligne {idx+1}: {str(e)}")
             skipped += 1
     
+    # Add duplicate info to errors if any
+    if duplicates > 0:
+        errors.insert(0, f"{duplicates} candidature(s) déjà existante(s) ignorée(s)")
+    
     return ImportResult(
         success=True,
         imported_count=imported,
         errors=errors[:10],
-        skipped=skipped
+        skipped=skipped + duplicates
     )
 
 
