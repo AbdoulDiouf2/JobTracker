@@ -3,7 +3,6 @@ JobTracker SaaS - Routes d'authentification
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from datetime import timedelta
 
 from models import (
