@@ -68,11 +68,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0a0f1a] border-r border-slate-800 flex flex-col
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-64 bg-[#0a0f1a] border-r border-slate-800 flex flex-col h-screen
           transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
-        {/* Logo */}
-        <div className="p-6 border-b border-slate-800">
+        {/* Logo - Fixed at top */}
+        <div className="flex-shrink-0 p-6 border-b border-slate-800">
           <Link to="/" className="flex items-center gap-3">
             <img 
               src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
@@ -82,8 +82,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1">
+        {/* Navigation - Scrollable */}
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.path}
@@ -102,8 +102,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           ))}
         </nav>
 
-        {/* User & Logout */}
-        <div className="p-4 border-t border-slate-800">
+        {/* User & Logout - Fixed at bottom */}
+        <div className="flex-shrink-0 p-4 border-t border-slate-800 bg-[#0a0f1a]">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
             <div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center">
               <User size={20} className="text-gold" />
