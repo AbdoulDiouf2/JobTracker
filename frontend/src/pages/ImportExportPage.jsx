@@ -169,31 +169,66 @@ export default function ImportExportPage() {
 
     setPreviewFile(file);
     setImportResult(null);
+    setPreviewData(null);
 
     try {
       const content = await file.text();
-      let data;
+      let data = [];
 
       if (file.name.endsWith('.json')) {
         const parsed = JSON.parse(content);
-        data = Array.isArray(parsed) ? parsed : (parsed.applications || parsed.candidatures || []);
+        // Handle different JSON structures
+        if (Array.isArray(parsed)) {
+          data = parsed;
+        } else if (parsed.applications) {
+          data = parsed.applications;
+        } else if (parsed.candidatures) {
+          data = parsed.candidatures;
+        } else if (typeof parsed === 'object') {
+          // Single object, wrap in array
+          data = [parsed];
+        }
       } else if (file.name.endsWith('.csv')) {
         const lines = content.split('\n').filter(l => l.trim());
-        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-        data = lines.slice(1).map(line => {
-          const values = line.split(',');
-          const obj = {};
-          headers.forEach((h, i) => {
-            obj[h] = values[i]?.trim() || '';
-          });
-          return obj;
-        });
+        if (lines.length > 0) {
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+          data = lines.slice(1).map(line => {
+            // Handle CSV with quoted values
+            const values = line.match(/("([^"]*)"|[^,]*)/g) || [];
+            const obj = {};
+            headers.forEach((h, i) => {
+              let val = values[i]?.trim() || '';
+              // Remove quotes
+              val = val.replace(/^"|"$/g, '');
+              obj[h] = val;
+            });
+            return obj;
+          }).filter(obj => obj.entreprise || obj.company || obj.poste || obj.position);
+        }
       }
 
-      setPreviewData(data?.slice(0, 10) || []);
+      console.log('Parsed data:', data);
+      
+      if (data && data.length > 0) {
+        setPreviewData(data.slice(0, 10));
+      } else {
+        setPreviewData([]);
+        setImportResult({
+          success: false,
+          imported_count: 0,
+          errors: ['Aucune donnée trouvée dans le fichier'],
+          skipped: 0
+        });
+      }
     } catch (error) {
       console.error('Preview error:', error);
       setPreviewData(null);
+      setImportResult({
+        success: false,
+        imported_count: 0,
+        errors: [`Erreur de lecture: ${error.message}`],
+        skipped: 0
+      });
     }
   };
 
