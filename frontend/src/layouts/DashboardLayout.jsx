@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
-  Settings, LogOut, Menu, X, ChevronRight, User
+  Settings, LogOut, Menu, X, ChevronRight, User, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
@@ -19,6 +19,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       applications: 'Candidatures',
       interviews: 'Entretiens',
       statistics: 'Statistiques',
+      aiAdvisor: 'Assistant IA',
       settings: 'Paramètres',
       logout: 'Déconnexion'
     },
@@ -27,6 +28,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       applications: 'Applications',
       interviews: 'Interviews',
       statistics: 'Statistics',
+      aiAdvisor: 'AI Assistant',
       settings: 'Settings',
       logout: 'Logout'
     }
@@ -37,6 +39,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/dashboard/applications', icon: Briefcase, label: t.applications },
     { path: '/dashboard/interviews', icon: Calendar, label: t.interviews },
     { path: '/dashboard/statistics', icon: BarChart3, label: t.statistics },
+    { path: '/dashboard/ai-advisor', icon: Sparkles, label: t.aiAdvisor },
     { path: '/dashboard/settings', icon: Settings, label: t.settings },
   ];
 
