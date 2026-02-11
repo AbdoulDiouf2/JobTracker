@@ -3,7 +3,6 @@ JobTracker SaaS - Routes des statistiques
 """
 
 from fastapi import APIRouter, Depends
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import List
 from datetime import datetime, timezone
 from collections import defaultdict
@@ -26,7 +25,7 @@ def get_db():
 @router.get("/dashboard", response_model=DashboardStats)
 async def get_dashboard_stats(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Statistiques pour le dashboard"""
     user_id = current_user["user_id"]
@@ -79,7 +78,7 @@ async def get_dashboard_stats(
 @router.get("/timeline", response_model=List[TimelineDataPoint])
 async def get_timeline_stats(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Évolution temporelle des candidatures (cumul)"""
     cursor = db.applications.find(
@@ -115,7 +114,7 @@ async def get_timeline_stats(
 @router.get("/by-status", response_model=List[StatusDistribution])
 async def get_status_distribution(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Répartition par statut"""
     pipeline = [
@@ -149,7 +148,7 @@ async def get_status_distribution(
 @router.get("/by-type", response_model=List[TypeDistribution])
 async def get_type_distribution(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Répartition par type de poste"""
     pipeline = [
@@ -183,7 +182,7 @@ async def get_type_distribution(
 @router.get("/by-method", response_model=List[MethodDistribution])
 async def get_method_distribution(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Répartition par moyen de candidature"""
     pipeline = [
@@ -218,7 +217,7 @@ async def get_method_distribution(
 @router.get("/response-rate")
 async def get_response_rate_stats(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Taux de réponse et temps moyen de réponse"""
     user_id = current_user["user_id"]
@@ -266,7 +265,7 @@ async def get_response_rate_stats(
 @router.get("/overview", response_model=StatisticsOverview)
 async def get_statistics_overview(
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Vue d'ensemble complète des statistiques"""
     # Dashboard stats
