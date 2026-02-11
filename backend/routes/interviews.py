@@ -3,7 +3,6 @@ JobTracker SaaS - Routes des entretiens
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 
@@ -65,7 +64,7 @@ async def list_interviews(
     interview_format: Optional[InterviewFormat] = None,
     candidature_id: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Liste tous les entretiens"""
     filter_query = {"user_id": current_user["user_id"]}
@@ -112,7 +111,7 @@ async def list_interviews(
 async def get_upcoming_interviews(
     limit: int = Query(5, ge=1, le=20),
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Récupère les prochains entretiens planifiés"""
     now = datetime.now(timezone.utc).isoformat()
@@ -152,7 +151,7 @@ async def get_upcoming_interviews(
 async def create_interview(
     interview_data: InterviewCreate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Crée un nouvel entretien"""
     # Vérifier que la candidature existe et appartient à l'utilisateur
@@ -197,7 +196,7 @@ async def create_interview(
 async def get_interview(
     interview_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Récupère un entretien par ID"""
     interview = await db.interviews.find_one(
@@ -233,7 +232,7 @@ async def update_interview(
     interview_id: str,
     interview_update: InterviewUpdate,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Met à jour un entretien"""
     existing = await db.interviews.find_one(
@@ -273,7 +272,7 @@ async def update_interview(
 async def delete_interview(
     interview_id: str,
     current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
+    db = Depends(get_db)
 ):
     """Supprime un entretien"""
     result = await db.interviews.delete_one(
