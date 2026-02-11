@@ -56,6 +56,7 @@ export default function ImportExportPage() {
   const [activeTab, setActiveTab] = useState('import');
   const [showGuide, setShowGuide] = useState(false);
   const [previewData, setPreviewData] = useState(null);
+  const [fullData, setFullData] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
   const fileInputRef = useRef(null);
   const cvInputRef = useRef(null);
