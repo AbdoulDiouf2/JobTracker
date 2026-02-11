@@ -3,11 +3,6 @@
 ## Problème Original
 Construire un site web SaaS professionnel V2 pour présenter le projet "Job Tracking". L'objectif est d'impressionner les recruteurs tech en démontrant des compétences en full-stack et ingénierie IA. Le site doit avoir une esthétique moderne, premium, dark-mode, inspirée de Stripe et Vercel.
 
-## Personas Utilisateur
-1. **Recruteurs Tech** - Évaluant les capacités techniques du candidat
-2. **Hiring Managers** - Recherchant des compétences full-stack & IA
-3. **Professionnels Techniques** - Intéressés par l'architecture et l'implémentation
-
 ## Stack Technique
 
 ### Backend
@@ -19,6 +14,7 @@ Construire un site web SaaS professionnel V2 pour présenter le projet "Job Trac
 | Pydantic | Validation données |
 | JWT | Authentification |
 | bcrypt | Hash passwords |
+| openpyxl | Export Excel |
 
 ### Frontend
 | Technologie | Usage |
@@ -34,7 +30,7 @@ Construire un site web SaaS professionnel V2 pour présenter le projet "Job Trac
 
 ---
 
-## Fonctionnalités Implémentées
+## Phases Implémentées
 
 ### ✅ Phase 1 - Backend (Complété)
 - [x] Architecture FastAPI avec routes modulaires
@@ -44,65 +40,71 @@ Construire un site web SaaS professionnel V2 pour présenter le projet "Job Trac
 - [x] CRUD Entretiens
 - [x] API Statistiques
 - [x] API Export (JSON, CSV, Excel)
-- [x] Toggle favoris
-- [x] Bulk update
 
-### ✅ Phase 2 - Frontend UI (Complété - Février 2025)
+### ✅ Phase 2 - Frontend UI (Complété)
 - [x] Landing page style SaaS premium
-- [x] Navigation avec scroll smooth
 - [x] Dashboard avec KPIs temps réel
-- [x] Page Candidatures avec cards modernes
-- [x] Formulaire création/édition via modal
+- [x] Page Candidatures avec CRUD complet
+- [x] Formulaires modal création/édition
 - [x] Recherche et filtres
 - [x] Système de favoris
-- [x] Page Statistiques avec graphiques Recharts
-- [x] Page Entretiens
-- [x] Page Paramètres
+- [x] Page Statistiques avec graphiques
 - [x] Internationalisation FR/EN
-- [x] Design responsive (desktop/tablet/mobile)
-- [x] Dark mode premium avec couleurs MAADEC
+- [x] Design responsive
+
+### ✅ Phase 3 - Fonctionnalités Avancées (Complété - 11 Février 2025)
+- [x] **CRUD Entretiens UI complet**
+  - Modal création avec sélection candidature
+  - Types : RH, Technique, Manager, Final
+  - Formats : Téléphone, Visio, Présentiel
+  - Indicateur d'urgence (rouge/jaune/bleu)
+  - Filtres : Tous / Planifiés / Effectués
+- [x] **Export de données**
+  - Export JSON avec candidatures + entretiens
+  - Export Excel formaté (.xlsx)
+  - Export CSV
+- [x] **Statistiques entretiens**
+  - Compteurs : Planifiés, Effectués, Annulés
+  - KPI "Avec entretien" sur dashboard
+  - Section "Prochains entretiens" sur dashboard
 
 ---
 
 ## Tests Validés (11 Février 2025)
 
-### Backend API - 27/27 Tests (100%)
-- Health check et version API
-- Authentification (login, register, profile)
-- CRUD Applications complet
-- Toggle favoris
-- Recherche et filtres
-- Statistiques (timeline, distribution)
-- CRUD Entretiens
+### Phase 3 - Backend API : 47/47 Tests (100%)
+- CRUD Entretiens complet
+- Tous les types et formats d'entretien
+- Filtres par statut
+- Indicateur d'urgence
+- Export JSON/Excel/CSV
+- Statistiques entretiens
 
-### Frontend UI - 100% Fonctionnel
-- Landing page avec logo MAADEC
-- Navigation et language switcher
-- Authentification complète
-- Dashboard avec KPIs
-- CRUD Candidatures via UI
-- Recherche et favoris
-- Statistiques avec graphiques
-- Entretiens et paramètres
+### Phase 3 - Frontend UI : 100% Fonctionnel
+- Modal création entretien
+- Cards avec urgence
+- Filtres entretiens
+- Boutons export
+- Stats entretiens
 
 ---
 
 ## Backlog Priorisé
 
-### P0 - Critique (À venir)
-- [ ] Gestion complète des entretiens (UI)
-- [ ] Export données (Excel, CSV, JSON)
-- [ ] Import données
-
-### P1 - Haute Priorité (À venir)
+### P0 - Critique (Prochaine Phase)
 - [ ] Intégration Google Gemini (conseiller IA)
 - [ ] Intégration OpenAI GPT (chatbot)
-- [ ] Notifications
+- [ ] Interface chatbot dans le dashboard
+
+### P1 - Haute Priorité
+- [ ] Import de données (JSON, CSV)
+- [ ] Notifications (rappel entretien)
+- [ ] Analyse de CV avec IA
 
 ### P2 - Nice to Have
-- [ ] Analyse de CV
-- [ ] Animations avancées
+- [ ] Calendrier interactif entretiens
 - [ ] Mode offline (PWA)
+- [ ] Templates de messages
 
 ### P3 - Futur
 - [ ] Déploiement production
@@ -125,6 +127,11 @@ Construire un site web SaaS professionnel V2 pour présenter le projet "Job Trac
 ├── backend/
 │   ├── models/           # Pydantic models
 │   ├── routes/           # API endpoints
+│   │   ├── applications.py
+│   │   ├── auth.py
+│   │   ├── interviews.py
+│   │   ├── export.py
+│   │   └── statistics.py
 │   ├── utils/            # Auth utilities
 │   ├── tests/            # Pytest tests
 │   ├── config.py
@@ -134,21 +141,54 @@ Construire un site web SaaS professionnel V2 pour présenter le projet "Job Trac
 │   │   ├── components/ui/  # Shadcn components
 │   │   ├── contexts/       # Auth context
 │   │   ├── hooks/          # Custom hooks
+│   │   │   ├── useApplications.js
+│   │   │   ├── useInterviews.js
+│   │   │   └── useStatistics.js
 │   │   ├── i18n/           # Translations
 │   │   ├── layouts/        # Dashboard layout
 │   │   └── pages/          # All pages
 │   └── package.json
-└── memory/
-    └── PRD.md
+├── memory/
+│   └── PRD.md
+└── test_reports/
+    ├── iteration_2.json
+    └── iteration_3.json
 ```
 
 ---
 
-## Notes Techniques
-- Le sidebar navigation utilise des éléments statiques (animation framer-motion désactivée pour compatibilité)
-- MongoDB exclut `_id` dans toutes les réponses API
-- JWT tokens avec expiration configurable
-- Internationalisation persistée dans localStorage
+## Endpoints API
+
+### Authentification
+- `POST /api/auth/register` - Inscription
+- `POST /api/auth/login` - Connexion
+- `GET /api/auth/me` - Profil utilisateur
+
+### Candidatures
+- `GET /api/applications` - Liste paginée
+- `POST /api/applications` - Créer
+- `GET /api/applications/{id}` - Détail
+- `PUT /api/applications/{id}` - Modifier
+- `DELETE /api/applications/{id}` - Supprimer
+- `POST /api/applications/{id}/favorite` - Toggle favori
+
+### Entretiens
+- `GET /api/interviews` - Liste avec filtres
+- `POST /api/interviews` - Créer
+- `GET /api/interviews/{id}` - Détail
+- `PUT /api/interviews/{id}` - Modifier
+- `DELETE /api/interviews/{id}` - Supprimer
+- `GET /api/interviews/upcoming` - Prochains entretiens
+
+### Export
+- `GET /api/export/json` - Export JSON
+- `GET /api/export/csv` - Export CSV
+- `GET /api/export/excel` - Export Excel
+
+### Statistiques
+- `GET /api/statistics/dashboard` - KPIs
+- `GET /api/statistics/overview` - Vue complète
+- `GET /api/statistics/timeline` - Évolution temporelle
 
 ---
 
