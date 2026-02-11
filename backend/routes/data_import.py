@@ -1,5 +1,8 @@
 """
 JobTracker SaaS - Routes Import/Export et Analyse CV
+Supporte deux modes:
+- Mode Emergent: utilise emergentintegrations (plateforme Emergent)
+- Mode Local: utilise les SDKs standards (openai, google-generativeai)
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
@@ -15,7 +18,17 @@ import uuid
 
 load_dotenv()
 
-from emergentintegrations.llm.chat import LlmChat, UserMessage
+# Try to import emergentintegrations, fallback to standard SDKs
+USE_EMERGENT = False
+try:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    USE_EMERGENT = True
+except ImportError:
+    try:
+        from openai import OpenAI
+    except ImportError:
+        pass
+
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/import", tags=["Import"])
@@ -55,6 +68,91 @@ class ApplicationImport(BaseModel):
     lien: Optional[str] = None
     commentaire: Optional[str] = None
     reponse: Optional[str] = "pending"
+
+
+# ============== AI Helper Functions ==============
+
+async def analyze_cv_with_emergent(api_key: str, user_id: str, cv_text: str, apps_context: str) -> dict:
+    """Analyze CV using Emergent integrations"""
+    system_message = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
+
+Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans texte avant ou après):
+{
+    "score": <nombre entre 0 et 100>,
+    "summary": "<résumé du profil en 2-3 phrases>",
+    "skills": ["compétence1", "compétence2", ...],
+    "experience_years": <nombre d'années d'expérience estimé ou null>,
+    "strengths": ["point fort 1", "point fort 2", ...],
+    "improvements": ["amélioration 1", "amélioration 2", ...],
+    "matching_jobs": [
+        {"title": "Titre du poste", "match_score": <0-100>, "reason": "Raison du match"},
+        ...
+    ],
+    "recommendations": "<conseils détaillés pour améliorer le CV et la recherche d'emploi>"
+}
+
+Sois précis et constructif. Le score doit refléter la qualité globale du CV."""
+
+    user_prompt = f"""Analyse ce CV en détail:
+
+--- CONTENU DU CV ---
+{cv_text[:4000]}
+
+--- CANDIDATURES RÉCENTES DU CANDIDAT ---
+{apps_context}
+
+Retourne l'analyse au format JSON demandé."""
+
+    chat = LlmChat(
+        api_key=api_key,
+        session_id=f"cv-analysis-{user_id}-{uuid.uuid4().hex[:8]}",
+        system_message=system_message
+    ).with_model("openai", "gpt-4o")
+    
+    response = await chat.send_message(UserMessage(text=user_prompt))
+    return response
+
+
+async def analyze_cv_with_openai(api_key: str, cv_text: str, apps_context: str) -> str:
+    """Analyze CV using standard OpenAI SDK"""
+    system_message = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
+
+Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans texte avant ou après):
+{
+    "score": <nombre entre 0 et 100>,
+    "summary": "<résumé du profil en 2-3 phrases>",
+    "skills": ["compétence1", "compétence2", ...],
+    "experience_years": <nombre d'années d'expérience estimé ou null>,
+    "strengths": ["point fort 1", "point fort 2", ...],
+    "improvements": ["amélioration 1", "amélioration 2", ...],
+    "matching_jobs": [
+        {"title": "Titre du poste", "match_score": <0-100>, "reason": "Raison du match"},
+        ...
+    ],
+    "recommendations": "<conseils détaillés pour améliorer le CV et la recherche d'emploi>"
+}
+
+Sois précis et constructif. Le score doit refléter la qualité globale du CV."""
+
+    user_prompt = f"""Analyse ce CV en détail:
+
+--- CONTENU DU CV ---
+{cv_text[:4000]}
+
+--- CANDIDATURES RÉCENTES DU CANDIDAT ---
+{apps_context}
+
+Retourne l'analyse au format JSON demandé."""
+
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    return response.choices[0].message.content
 
 
 # Import JSON
@@ -225,9 +323,14 @@ async def analyze_cv(
     db = Depends(get_db)
 ):
     """Analyze CV with AI and provide detailed feedback"""
-    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    # Get API key based on mode
+    if USE_EMERGENT:
+        api_key = os.environ.get("EMERGENT_LLM_KEY")
+    else:
+        api_key = os.environ.get("OPENAI_API_KEY")
+    
     if not api_key:
-        raise HTTPException(status_code=500, detail="AI service not configured")
+        raise HTTPException(status_code=500, detail="AI service not configured. Set OPENAI_API_KEY in .env")
     
     # Check file type
     allowed_types = ['.pdf', '.docx', '.doc', '.txt']
@@ -259,42 +362,11 @@ async def analyze_cv(
         
         apps_context = "\n".join([f"- {a['poste']} chez {a['entreprise']}" for a in applications]) if applications else "Aucune candidature"
         
-        system_message = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
-
-Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans texte avant ou après):
-{
-    "score": <nombre entre 0 et 100>,
-    "summary": "<résumé du profil en 2-3 phrases>",
-    "skills": ["compétence1", "compétence2", ...],
-    "experience_years": <nombre d'années d'expérience estimé ou null>,
-    "strengths": ["point fort 1", "point fort 2", ...],
-    "improvements": ["amélioration 1", "amélioration 2", ...],
-    "matching_jobs": [
-        {"title": "Titre du poste", "match_score": <0-100>, "reason": "Raison du match"},
-        ...
-    ],
-    "recommendations": "<conseils détaillés pour améliorer le CV et la recherche d'emploi>"
-}
-
-Sois précis et constructif. Le score doit refléter la qualité globale du CV."""
-
-        user_prompt = f"""Analyse ce CV en détail:
-
---- CONTENU DU CV ---
-{cv_text[:4000]}
-
---- CANDIDATURES RÉCENTES DU CANDIDAT ---
-{apps_context}
-
-Retourne l'analyse au format JSON demandé."""
-
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"cv-analysis-{current_user['user_id']}-{uuid.uuid4().hex[:8]}",
-            system_message=system_message
-        ).with_model("openai", "gpt-4o")
-        
-        response = await chat.send_message(UserMessage(text=user_prompt))
+        # Call AI based on mode
+        if USE_EMERGENT:
+            response = await analyze_cv_with_emergent(api_key, current_user["user_id"], cv_text, apps_context)
+        else:
+            response = await analyze_cv_with_openai(api_key, cv_text, apps_context)
         
         # Parse JSON response
         try:
@@ -337,7 +409,7 @@ Retourne l'analyse au format JSON demandé."""
                 strengths=["CV uploadé avec succès"],
                 improvements=["Veuillez réessayer pour une analyse détaillée"],
                 matching_jobs=[],
-                recommendations=response[:500]
+                recommendations=response[:500] if response else "Analyse non disponible"
             )
         
     except Exception as e:
