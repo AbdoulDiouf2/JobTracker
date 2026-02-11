@@ -6,8 +6,11 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 import os
 import uuid
+
+load_dotenv()
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from utils.auth import get_current_user
