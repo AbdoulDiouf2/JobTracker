@@ -944,7 +944,7 @@ const Footer = () => {
       { label: t('nav.ai'), href: '#ai' },
       { label: t('nav.architecture'), href: '#architecture' },
     ],
-    tech: ['Flask', 'SQLAlchemy', 'Google Gemini', 'OpenAI GPT'],
+    tech: ['FastAPI', 'MongoDB', 'Google Gemini', 'OpenAI GPT-4o', 'React', 'Tailwind CSS'],
     connect: [
       { label: 'GitHub', href: '#', icon: Github },
       { label: 'LinkedIn', href: '#', icon: Linkedin },
