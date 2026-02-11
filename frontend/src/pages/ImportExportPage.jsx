@@ -267,8 +267,10 @@ export default function ImportExportPage() {
       console.log('Parsed data:', data);
       
       if (data && data.length > 0) {
-        setPreviewData(data.slice(0, 10));
+        setFullData(data); // Store ALL data for import
+        setPreviewData(data.slice(0, 10)); // Only preview first 10
       } else {
+        setFullData(null);
         setPreviewData([]);
         setImportResult({
           success: false,
@@ -280,6 +282,7 @@ export default function ImportExportPage() {
     } catch (error) {
       console.error('Preview error:', error);
       setPreviewData(null);
+      setFullData(null);
       setImportResult({
         success: false,
         imported_count: 0,
