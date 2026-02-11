@@ -8,10 +8,9 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from config import settings
-from models import TokenData, User
+from models import TokenData
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -55,8 +54,7 @@ def decode_token(token: str) -> Optional[TokenData]:
 
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncIOMotorDatabase = None
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> dict:
     """Récupère l'utilisateur actuel depuis le token"""
     credentials_exception = HTTPException(
