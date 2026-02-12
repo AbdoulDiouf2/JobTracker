@@ -177,107 +177,329 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
   );
 };
 
-// Calendar View Component
-const CalendarView = ({ interviews, currentMonth, onMonthChange, onDayClick, onInterviewClick, language }) => {
-  const start = startOfMonth(currentMonth);
-  const end = endOfMonth(currentMonth);
-  const days = eachDayOfInterval({ start, end });
-  
-  // Get first day of week offset (Monday = 0)
-  const startDayOfWeek = (start.getDay() + 6) % 7;
-  const emptyDays = Array(startDayOfWeek).fill(null);
-  
+// Calendar View Component with multiple view modes
+const CalendarView = ({ interviews, currentDate, onDateChange, onDayClick, onInterviewClick, language, calendarView, onCalendarViewChange }) => {
   const weekDays = language === 'fr' 
     ? ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
     : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  const viewLabels = {
+    fr: { day: 'Jour', week: 'Semaine', month: 'Mois', year: 'Année' },
+    en: { day: 'Day', week: 'Week', month: 'Month', year: 'Year' }
+  }[language];
 
   const getInterviewsForDay = (day) => {
     return interviews.filter(i => isSameDay(new Date(i.date_entretien), day));
   };
 
-  return (
-    <div className="glass-card rounded-xl border border-slate-800 p-6">
-      {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-6">
-        <button 
-          onClick={() => onMonthChange(subMonths(currentMonth, 1))}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-        >
-          <ChevronLeft size={20} />
-        </button>
-        <h3 className="font-heading text-xl font-semibold text-white">
-          {format(currentMonth, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
-        </h3>
-        <button 
-          onClick={() => onMonthChange(addMonths(currentMonth, 1))}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-        >
-          <ChevronRight size={20} />
-        </button>
-      </div>
+  const navigatePrev = () => {
+    switch (calendarView) {
+      case 'day': onDateChange(subDays(currentDate, 1)); break;
+      case 'week': onDateChange(subWeeks(currentDate, 1)); break;
+      case 'month': onDateChange(subMonths(currentDate, 1)); break;
+      case 'year': onDateChange(subYears(currentDate, 1)); break;
+    }
+  };
 
-      {/* Week Days Header */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {weekDays.map(day => (
+  const navigateNext = () => {
+    switch (calendarView) {
+      case 'day': onDateChange(addDays(currentDate, 1)); break;
+      case 'week': onDateChange(addWeeks(currentDate, 1)); break;
+      case 'month': onDateChange(addMonths(currentDate, 1)); break;
+      case 'year': onDateChange(addYears(currentDate, 1)); break;
+    }
+  };
+
+  const getTitle = () => {
+    switch (calendarView) {
+      case 'day': return format(currentDate, 'EEEE dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS });
+      case 'week': {
+        const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+        return `${format(start, 'dd MMM', { locale: language === 'fr' ? fr : enUS })} - ${format(end, 'dd MMM yyyy', { locale: language === 'fr' ? fr : enUS })}`;
+      }
+      case 'month': return format(currentDate, 'MMMM yyyy', { locale: language === 'fr' ? fr : enUS });
+      case 'year': return format(currentDate, 'yyyy');
+    }
+  };
+
+  // Day View
+  const renderDayView = () => {
+    const dayInterviews = getInterviewsForDay(currentDate);
+    const isToday = isSameDay(currentDate, new Date());
+    
+    return (
+      <div className="space-y-4">
+        <div className={`p-4 rounded-xl ${isToday ? 'bg-gold/10 border border-gold/30' : 'bg-slate-900/30'}`}>
+          <h4 className={`text-lg font-medium mb-4 ${isToday ? 'text-gold' : 'text-white'}`}>
+            {format(currentDate, 'EEEE dd MMMM', { locale: language === 'fr' ? fr : enUS })}
+            {isToday && <span className="ml-2 text-sm text-gold/70">({language === 'fr' ? "Aujourd'hui" : 'Today'})</span>}
+          </h4>
+          {dayInterviews.length > 0 ? (
+            <div className="space-y-3">
+              {dayInterviews.map(interview => {
+                const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut);
+                return (
+                  <div
+                    key={interview.id}
+                    onClick={() => onInterviewClick(interview)}
+                    className="p-4 bg-slate-800/50 rounded-lg border border-slate-700 hover:border-gold/50 cursor-pointer transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-medium text-white">{interview.entreprise}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${statusInfo?.color}`}>
+                        {statusInfo?.label}
+                      </span>
+                    </div>
+                    <p className="text-gold text-sm">{interview.poste}</p>
+                    <p className="text-slate-400 text-sm mt-2">
+                      <Clock size={14} className="inline mr-1" />
+                      {format(new Date(interview.date_entretien), 'HH:mm')}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-slate-500 text-center py-8">
+              {language === 'fr' ? 'Aucun entretien ce jour' : 'No interviews this day'}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Week View
+  const renderWeekView = () => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const end = endOfWeek(currentDate, { weekStartsOn: 1 });
+    const days = eachDayOfInterval({ start, end });
+
+    return (
+      <div className="grid grid-cols-7 gap-2">
+        {/* Week days header */}
+        {weekDays.map((day, idx) => (
           <div key={day} className="text-center text-sm font-medium text-slate-500 py-2">
             {day}
           </div>
         ))}
-      </div>
-
-      {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {/* Empty cells for offset */}
-        {emptyDays.map((_, i) => (
-          <div key={`empty-${i}`} className="aspect-square p-1"></div>
-        ))}
-        
-        {/* Day cells */}
+        {/* Days */}
         {days.map(day => {
           const dayInterviews = getInterviewsForDay(day);
           const isToday = isSameDay(day, new Date());
-          const hasInterviews = dayInterviews.length > 0;
           
           return (
             <div
               key={day.toISOString()}
-              onClick={() => hasInterviews && onDayClick(day, dayInterviews)}
+              onClick={() => dayInterviews.length > 0 && onDayClick(day, dayInterviews)}
               className={`
-                aspect-square p-1 rounded-lg transition-all relative
-                ${isToday ? 'bg-gold/10 border border-gold/30' : 'hover:bg-slate-800/50'}
-                ${hasInterviews ? 'cursor-pointer' : ''}
+                min-h-[120px] p-2 rounded-lg transition-all
+                ${isToday ? 'bg-gold/10 border border-gold/30' : 'bg-slate-900/30 border border-slate-800'}
+                ${dayInterviews.length > 0 ? 'cursor-pointer hover:border-gold/50' : ''}
               `}
             >
-              <div className={`
-                text-sm text-center mb-1
-                ${isToday ? 'text-gold font-bold' : 'text-slate-400'}
-              `}>
+              <div className={`text-sm mb-2 ${isToday ? 'text-gold font-bold' : 'text-slate-400'}`}>
                 {format(day, 'd')}
               </div>
-              
-              {/* Interview indicators */}
-              {dayInterviews.length > 0 && (
-                <div className="flex flex-wrap gap-0.5 justify-center">
-                  {dayInterviews.slice(0, 3).map((interview, idx) => {
-                    const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut);
-                    return (
-                      <div
-                        key={idx}
-                        onClick={(e) => { e.stopPropagation(); onInterviewClick(interview); }}
-                        className={`w-2 h-2 rounded-full ${statusInfo?.dotColor || 'bg-blue-400'} cursor-pointer hover:scale-125 transition-transform`}
-                        title={`${interview.entreprise} - ${interview.poste}`}
-                      />
-                    );
-                  })}
-                  {dayInterviews.length > 3 && (
-                    <span className="text-[10px] text-slate-500">+{dayInterviews.length - 3}</span>
-                  )}
+              <div className="space-y-1">
+                {dayInterviews.slice(0, 3).map((interview, idx) => {
+                  const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut);
+                  return (
+                    <div
+                      key={idx}
+                      onClick={(e) => { e.stopPropagation(); onInterviewClick(interview); }}
+                      className={`text-xs p-1.5 rounded ${statusInfo?.color} truncate cursor-pointer hover:opacity-80`}
+                      title={`${interview.entreprise} - ${interview.poste}`}
+                    >
+                      {format(new Date(interview.date_entretien), 'HH:mm')} {interview.entreprise}
+                    </div>
+                  );
+                })}
+                {dayInterviews.length > 3 && (
+                  <div className="text-xs text-slate-500 text-center">+{dayInterviews.length - 3}</div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // Month View (original)
+  const renderMonthView = () => {
+    const start = startOfMonth(currentDate);
+    const end = endOfMonth(currentDate);
+    const days = eachDayOfInterval({ start, end });
+    const startDayOfWeek = (start.getDay() + 6) % 7;
+    const emptyDays = Array(startDayOfWeek).fill(null);
+
+    return (
+      <>
+        {/* Week Days Header */}
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {weekDays.map(day => (
+            <div key={day} className="text-center text-sm font-medium text-slate-500 py-2">
+              {day}
+            </div>
+          ))}
+        </div>
+
+        {/* Calendar Grid */}
+        <div className="grid grid-cols-7 gap-1">
+          {emptyDays.map((_, i) => (
+            <div key={`empty-${i}`} className="aspect-square p-1"></div>
+          ))}
+          
+          {days.map(day => {
+            const dayInterviews = getInterviewsForDay(day);
+            const isToday = isSameDay(day, new Date());
+            const hasInterviews = dayInterviews.length > 0;
+            
+            return (
+              <div
+                key={day.toISOString()}
+                onClick={() => hasInterviews && onDayClick(day, dayInterviews)}
+                className={`
+                  aspect-square p-1 rounded-lg transition-all relative
+                  ${isToday ? 'bg-gold/10 border border-gold/30' : 'hover:bg-slate-800/50'}
+                  ${hasInterviews ? 'cursor-pointer' : ''}
+                `}
+              >
+                <div className={`
+                  text-sm text-center mb-1
+                  ${isToday ? 'text-gold font-bold' : 'text-slate-400'}
+                `}>
+                  {format(day, 'd')}
                 </div>
+                
+                {dayInterviews.length > 0 && (
+                  <div className="flex flex-wrap gap-0.5 justify-center">
+                    {dayInterviews.slice(0, 3).map((interview, idx) => {
+                      const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut);
+                      return (
+                        <div
+                          key={idx}
+                          onClick={(e) => { e.stopPropagation(); onInterviewClick(interview); }}
+                          className={`w-2 h-2 rounded-full ${statusInfo?.dotColor || 'bg-blue-400'} cursor-pointer hover:scale-125 transition-transform`}
+                          title={`${interview.entreprise} - ${interview.poste}`}
+                        />
+                      );
+                    })}
+                    {dayInterviews.length > 3 && (
+                      <span className="text-[10px] text-slate-500">+{dayInterviews.length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </>
+    );
+  };
+
+  // Year View
+  const renderYearView = () => {
+    const start = startOfYear(currentDate);
+    const end = endOfYear(currentDate);
+    const months = eachMonthOfInterval({ start, end });
+
+    return (
+      <div className="grid grid-cols-3 md:grid-cols-4 gap-4">
+        {months.map(month => {
+          const monthStart = startOfMonth(month);
+          const monthEnd = endOfMonth(month);
+          const monthInterviews = interviews.filter(i => {
+            const date = new Date(i.date_entretien);
+            return date >= monthStart && date <= monthEnd;
+          });
+          const isCurrentMonth = isSameMonth(month, new Date());
+          
+          return (
+            <div
+              key={month.toISOString()}
+              onClick={() => {
+                onDateChange(month);
+                onCalendarViewChange('month');
+              }}
+              className={`
+                p-4 rounded-xl cursor-pointer transition-all
+                ${isCurrentMonth ? 'bg-gold/10 border border-gold/30' : 'bg-slate-900/30 border border-slate-800 hover:border-gold/50'}
+              `}
+            >
+              <h4 className={`font-medium mb-2 ${isCurrentMonth ? 'text-gold' : 'text-white'}`}>
+                {format(month, 'MMMM', { locale: language === 'fr' ? fr : enUS })}
+              </h4>
+              {monthInterviews.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1">
+                    {monthInterviews.slice(0, 3).map((interview, idx) => {
+                      const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut);
+                      return (
+                        <div
+                          key={idx}
+                          className={`w-3 h-3 rounded-full ${statusInfo?.dotColor || 'bg-blue-400'} border border-slate-900`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm text-slate-400">{monthInterviews.length}</span>
+                </div>
+              ) : (
+                <span className="text-sm text-slate-500">-</span>
               )}
             </div>
           );
         })}
       </div>
+    );
+  };
+
+  return (
+    <div className="glass-card rounded-xl border border-slate-800 p-6">
+      {/* Header with Navigation and View Selector */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+        {/* Navigation */}
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={navigatePrev}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <h3 className="font-heading text-xl font-semibold text-white min-w-[200px] text-center">
+            {getTitle()}
+          </h3>
+          <button 
+            onClick={navigateNext}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        {/* View Selector */}
+        <div className="flex items-center bg-slate-800/50 rounded-lg p-1">
+          {['day', 'week', 'month', 'year'].map(view => (
+            <button
+              key={view}
+              onClick={() => onCalendarViewChange(view)}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors
+                ${calendarView === view ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+            >
+              {viewLabels[view]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Calendar Content */}
+      {calendarView === 'day' && renderDayView()}
+      {calendarView === 'week' && renderWeekView()}
+      {calendarView === 'month' && renderMonthView()}
+      {calendarView === 'year' && renderYearView()}
 
       {/* Legend */}
       <div className="mt-4 pt-4 border-t border-slate-800 flex items-center justify-center gap-4">
