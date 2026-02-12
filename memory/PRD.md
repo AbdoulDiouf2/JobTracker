@@ -167,8 +167,8 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ---
 
 ## Credentials
-- **Email:** demo@jobtracker.com
-- **Password:** Demo123!
+- **Email Test:** demo@test.com
+- **Password Test:** demo123
 - **URL:** https://careertrail-7.preview.emergentagent.com
 
 ---
@@ -177,7 +177,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - [ ] Notifications push (PWA)
 - [ ] Mode offline
 - [ ] Auto-Fill formulaires candidature (Lever, Greenhouse)
-- [ ] Intégration calendrier (Google Calendar, Outlook)
+- [x] Intégration Google Calendar (backend prêt, nécessite OAuth credentials)
 - [ ] Déploiement production (Vercel + MongoDB Atlas)
 - [ ] Monétisation (Stripe)
 
