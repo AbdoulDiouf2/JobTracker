@@ -183,7 +183,13 @@ export default function AIAdvisorPage() {
                     ? 'bg-gold text-[#020817]' 
                     : 'bg-slate-800/80 text-white'
                 }`}>
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm prose-invert max-w-none prose-headings:text-gold prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:text-white prose-a:text-gold">
+                      <Markdown>{msg.content}</Markdown>
+                    </div>
+                  ) : (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                  )}
                 </div>
                 {msg.role === 'user' && (
                   <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
