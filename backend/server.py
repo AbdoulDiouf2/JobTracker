@@ -22,6 +22,7 @@ from routes.data_import import router as import_router
 from routes.notifications import router as notifications_router
 from routes.admin import router as admin_router
 from routes.tracking import router as tracking_router
+from routes.documents import router as documents_router
 from routes.auth import get_db as auth_get_db
 from routes.applications import get_db as app_get_db
 from routes.interviews import get_db as interview_get_db
