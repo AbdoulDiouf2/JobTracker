@@ -3,9 +3,95 @@
 ## 🎨 Design & Branding
 - [x] Supprimer le badge "Made with Emergent" dans `frontend/public/index.html` (lignes 63-107) pour avoir un look marque blanche.
 
-## 🚀 Prochaines Étapes
-- [ ] Configurer le déploiement Vercel pour `jobtracker.maadec.com` (ajout `vercel.json`, `mangum`, config DNS Hostinger).
+## 🔴 Bugs & Corrections UI (P0)
+- [ ] Tableau de bord : Ajouter espacement entre les cartes de la section "Candidatures récentes"
+- [ ] Page Entretiens : Responsive des liens longs (Teams, Zoom) - En cours de correction
+
+## 🔐 Administration Multi-Tenant (P1)
+> Fonctionnalités essentielles pour un SaaS multi-tenant
+
+### Système de Rôles
+- [ ] Créer un modèle `Role` (admin, standard, premium?)
+- [ ] Ajouter le champ `role` au modèle User (défaut: "standard")
+- [ ] Créer un compte admin initial (migration/seed)
+- [ ] Middleware de vérification des permissions admin
+
+### Panel Admin
+- [ ] Dashboard Admin avec statistiques globales :
+  - Nombre total d'utilisateurs
+  - Nombre de candidatures sur la plateforme
+  - Nombre d'entretiens planifiés
+  - Utilisateurs actifs (dernière connexion < 7 jours)
+  - Graphiques d'évolution (inscriptions, activité)
+- [ ] Gestion des utilisateurs :
+  - Liste des utilisateurs avec recherche/filtres
+  - Voir le profil détaillé d'un utilisateur
+  - Activer/Désactiver un compte
+  - Changer le rôle d'un utilisateur
+  - Supprimer un utilisateur (soft delete)
+- [ ] Gestion du contenu :
+  - Modération des données si nécessaire
+  - Export des statistiques globales (CSV/Excel)
+- [ ] Logs d'activité admin (audit trail)
+
+## 🎓 Fonctionnalités pour Étudiants (P1)
+> En se mettant à la place d'un étudiant en recherche de stage/alternance/emploi
+
+### 📊 Suivi Avancé des Candidatures
+- [ ] **Timeline visuelle** : Voir l'historique complet d'une candidature (envoyé → réponse → entretien → offre)
+- [ ] **Rappels automatiques** : Notification si pas de réponse après X jours (configurable)
+- [ ] **Relance suggérée** : Bouton "Relancer" avec template d'email pré-rempli
+- [ ] **Score de matching** : IA analyse le CV vs offre d'emploi et donne un pourcentage de compatibilité
+
+### 📅 Gestion du Temps
+- [ ] **Intégration calendrier** : Sync avec Google Calendar / Outlook
+- [ ] **Vue agenda** : Voir tous les entretiens de la semaine en un coup d'œil
+- [ ] **Rappels par email/SMS** : 24h et 1h avant l'entretien
+- [ ] **Préparation entretien** : Checklist personnalisée avant chaque entretien
+
+### 📝 Préparation & Ressources
+- [ ] **Banque de questions** : Questions fréquentes par type d'entretien (RH, technique, manager)
+- [ ] **Notes d'entretien** : Espace pour prendre des notes pendant/après l'entretien
+- [ ] **Feedback post-entretien** : Auto-évaluation (comment ça s'est passé, points à améliorer)
+- [ ] **Fiches entreprise** : Infos sur l'entreprise (secteur, taille, culture, avis Glassdoor)
+
+### 🎯 Objectifs & Motivation
+- [ ] **Objectifs hebdomadaires** : "Envoyer 10 candidatures cette semaine"
+- [ ] **Statistiques personnelles** : Taux de réponse, taux de conversion entretien
+- [ ] **Badges/Achievements** : Gamification pour maintenir la motivation
+- [ ] **Conseils personnalisés** : L'IA suggère des améliorations basées sur les stats
+
+### 📄 Gestion des Documents
+- [ ] **Stockage CV** : Plusieurs versions de CV (par secteur/poste)
+- [ ] **Lettres de motivation** : Templates personnalisables + historique
+- [ ] **Portfolio** : Lien vers projets GitHub, portfolio en ligne
+- [ ] **Suivi des documents envoyés** : Quel CV/LM envoyé à quelle entreprise
+
+### 🔍 Recherche d'Emploi Intelligente
+- [ ] **Agrégation d'offres** : Import automatique depuis LinkedIn, Indeed, APEC, Welcome to the Jungle
+- [ ] **Alertes personnalisées** : Notification quand une offre correspond au profil
+- [ ] **Candidature en 1 clic** : Pré-remplir les formulaires avec les infos du profil
+- [ ] **Suivi des offres sauvegardées** : Bookmarker des offres pour postuler plus tard
+
+### 👥 Réseau & Contacts
+- [ ] **Carnet de contacts** : Stocker les contacts (recruteurs, RH, managers)
+- [ ] **Historique des échanges** : Notes sur chaque interaction
+- [ ] **LinkedIn integration** : Voir le profil LinkedIn du recruteur
+
+### 📱 Mobile & Accessibilité
+- [ ] **PWA** : Application installable sur mobile
+- [ ] **Mode hors-ligne** : Consulter ses candidatures sans connexion
+- [ ] **Notifications push** : Alertes en temps réel
+
+## 🚀 Déploiement & Production (P2)
+- [ ] Configurer le déploiement Vercel pour `jobtracker.maadec.com` (ajout `vercel.json`, `mangum`, config DNS Hostinger)
 - [ ] Tester l'application complète (Backend + Frontend)
 - [ ] Configurer MongoDB Atlas pour la production
 - [ ] Tester l'analyse de CV avec un vrai fichier
 - [ ] Vérifier les notifications (email et navigateur)
+
+## 💰 Monétisation Future (P3)
+- [ ] **Plan Gratuit** : Limite de X candidatures/mois
+- [ ] **Plan Premium** : Illimité + fonctionnalités IA avancées
+- [ ] **Intégration Stripe** : Paiement par abonnement
+
