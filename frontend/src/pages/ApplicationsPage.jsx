@@ -602,6 +602,38 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
     }
   });
 
+  // CV selector state
+  const [cvs, setCvs] = useState([]);
+  const [selectedCvId, setSelectedCvId] = useState('');
+  const [loadingCvs, setLoadingCvs] = useState(false);
+
+  // Fetch CVs when modal opens
+  useEffect(() => {
+    const fetchCvs = async () => {
+      if (!isOpen) return;
+      setLoadingCvs(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${process.env.REACT_APP_BACKEND_URL}/api/documents/cv`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCvs(response.data);
+        // Auto-select default CV for new applications
+        if (!editingApp) {
+          const defaultCv = response.data.find(cv => cv.is_default);
+          if (defaultCv) {
+            setSelectedCvId(defaultCv.id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching CVs:', error);
+      } finally {
+        setLoadingCvs(false);
+      }
+    };
+    fetchCvs();
+  }, [isOpen, editingApp]);
+
   useEffect(() => {
     if (editingApp) {
       Object.entries(editingApp).forEach(([key, value]) => {
@@ -613,11 +645,16 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
           setValue(key, value);
         }
       });
+      // Set CV if editing
+      if (editingApp.cv_id) {
+        setSelectedCvId(editingApp.cv_id);
+      }
     } else {
       reset({
         type_poste: 'cdi',
         date_candidature: new Date().toISOString().split('T')[0]
       });
+      setSelectedCvId('');
     }
   }, [editingApp, setValue, reset]);
 

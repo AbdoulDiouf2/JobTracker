@@ -405,6 +405,59 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Google Calendar Section */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+          <Calendar size={20} className="text-gold" />
+          {t.calendar}
+        </h2>
+        <p className="text-slate-400 text-sm mb-4">{t.calendarDesc}</p>
+        
+        {!calendarStatus.configured ? (
+          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+            <p className="text-yellow-400 text-sm">{t.calendarNotConfigured}</p>
+          </div>
+        ) : calendarStatus.connected ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                <Calendar size={20} className="text-green-400" />
+              </div>
+              <div>
+                <p className="text-green-400 font-medium">{t.calendarConnected}</p>
+                {calendarStatus.email && (
+                  <p className="text-slate-500 text-sm">{calendarStatus.email}</p>
+                )}
+              </div>
+            </div>
+            <Button
+              onClick={handleDisconnectCalendar}
+              disabled={calendarLoading}
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.disconnectCalendar}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                <Calendar size={20} className="text-slate-400" />
+              </div>
+              <p className="text-slate-400">{t.calendarDisconnected}</p>
+            </div>
+            <Button
+              onClick={handleConnectCalendar}
+              disabled={calendarLoading}
+              className="bg-gold hover:bg-gold-light text-[#020817]"
+            >
+              {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
+            </Button>
+          </div>
+        )}
+      </div>
+
       {/* Language Section */}
       <div className="glass-card rounded-xl p-6 border border-slate-800">
         <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
