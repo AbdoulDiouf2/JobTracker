@@ -126,6 +126,7 @@ api_router.include_router(ai_router)
 api_router.include_router(import_router)
 api_router.include_router(notifications_router)
 api_router.include_router(admin_router)
+api_router.include_router(tracking_router)
 
 # Include main router
 app.include_router(api_router)
@@ -140,6 +141,7 @@ app.dependency_overrides[ai_get_db] = override_get_db
 app.dependency_overrides[import_get_db] = override_get_db
 app.dependency_overrides[notif_get_db] = override_get_db
 app.dependency_overrides[admin_get_db] = override_get_db
+app.dependency_overrides[tracking_get_db] = override_get_db
 
 # CORS middleware
 app.add_middleware(
