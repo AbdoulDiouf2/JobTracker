@@ -852,6 +852,9 @@ export default function InterviewsPage() {
         onInterviewClick={setViewingInterview}
         language={language}
       />
+
+      {/* Confirm Dialog */}
+      {ConfirmDialog}
     </div>
   );
 }
