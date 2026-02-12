@@ -45,6 +45,7 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
 
   const isAuthenticated = !!token && !!user;
+  const isAdmin = user?.role === 'admin';
 
   const login = async (email, password) => {
     setLoading(true);
