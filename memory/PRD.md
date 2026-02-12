@@ -68,6 +68,16 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - **Endpoint `/api/ai/extract-job`** : Extraction IA depuis contenu de page
 - **Endpoint `/api/ai/available-models`** : Liste des modèles disponibles
 
+### Phase 10: Gestion des Documents (12 Février 2025)
+- **Stockage multi-CV** : Upload de fichiers PDF/DOC/DOCX (max 10 MB)
+- **Étiquettes CV** : Organiser par secteur/poste (CV Tech, CV Data, etc.)
+- **CV par défaut** : Définir un CV principal
+- **Templates LM** : Créer des templates de lettres de motivation avec variables
+- **Variables dynamiques** : {entreprise}, {poste}, {date}, {nom}, {email}
+- **Portfolio & Liens** : Stocker liens GitHub, LinkedIn, Portfolio
+- **Détection automatique** : Icônes selon le type de lien
+- **Liaison candidatures** : Tracker quel CV/LM envoyé à quelle entreprise
+
 ---
 
 ## APIs Disponibles
