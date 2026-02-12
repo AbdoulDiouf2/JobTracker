@@ -449,6 +449,18 @@ const DayInterviewsModal = ({ date, interviews, isOpen, onClose, onInterviewClic
 // Interview Form Modal
 const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, applications, loading, t }) => {
   const { register, handleSubmit, reset, setValue, watch } = useForm();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedApp, setSelectedApp] = useState(null);
+
+  // Filter applications based on search query (contains logic)
+  const filteredApplications = applications.filter(app => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    const entreprise = (app.entreprise || '').toLowerCase();
+    const poste = (app.poste || '').toLowerCase();
+    return entreprise.includes(query) || poste.includes(query);
+  }).slice(0, 10); // Limit to 10 suggestions
 
   useEffect(() => {
     if (editingInterview) {
@@ -459,14 +471,29 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, appli
           setValue(key, value);
         }
       });
+      // Find and set the selected application
+      const app = applications.find(a => a.id === editingInterview.candidature_id);
+      if (app) {
+        setSelectedApp(app);
+        setSearchQuery(`${app.entreprise} - ${app.poste}`);
+      }
     } else {
       reset({
         type_entretien: 'technical',
         format_entretien: 'video',
         date_entretien: new Date().toISOString().slice(0, 16)
       });
+      setSelectedApp(null);
+      setSearchQuery('');
     }
-  }, [editingInterview, setValue, reset]);
+  }, [editingInterview, setValue, reset, applications]);
+
+  const handleSelectApplication = (app) => {
+    setSelectedApp(app);
+    setSearchQuery(`${app.entreprise} - ${app.poste}`);
+    setValue('candidature_id', app.id);
+    setShowSuggestions(false);
+  };
 
   const handleFormSubmit = (data) => {
     const formattedData = {
@@ -487,20 +514,69 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, appli
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 mt-4">
           {!editingInterview && (
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium text-slate-300 mb-2">{t.application} *</label>
-              <Select onValueChange={(v) => setValue('candidature_id', v)}>
-                <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white">
-                  <SelectValue placeholder="Sélectionner une candidature..." />
-                </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700 max-h-60">
-                  {applications.map(app => (
-                    <SelectItem key={app.id} value={app.id}>
-                      {app.entreprise} - {app.poste}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setShowSuggestions(true);
+                    if (!e.target.value) {
+                      setSelectedApp(null);
+                      setValue('candidature_id', '');
+                    }
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  placeholder="Rechercher une entreprise ou un poste..."
+                  className="bg-slate-900/50 border-slate-700 text-white"
+                  autoComplete="off"
+                />
+                {selectedApp && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedApp(null);
+                      setSearchQuery('');
+                      setValue('candidature_id', '');
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+              
+              {/* Suggestions dropdown */}
+              {showSuggestions && !selectedApp && searchQuery && (
+                <div className="absolute z-50 w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                  {filteredApplications.length > 0 ? (
+                    filteredApplications.map(app => (
+                      <button
+                        key={app.id}
+                        type="button"
+                        onClick={() => handleSelectApplication(app)}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-800 border-b border-slate-800 last:border-0 transition-colors"
+                      >
+                        <div className="font-medium text-white">{app.entreprise}</div>
+                        <div className="text-sm text-slate-400">{app.poste}</div>
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-4 py-3 text-slate-500 text-center">
+                      Aucune candidature trouvée
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Click outside to close */}
+              {showSuggestions && (
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setShowSuggestions(false)}
+                />
+              )}
             </div>
           )}
 
