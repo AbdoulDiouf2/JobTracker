@@ -462,17 +462,25 @@ export default function ImportExportPage() {
   const handleExport = async (format) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/export/${format}`, {
+      
+      // Build endpoint based on export type
+      const endpoint = exportType === 'applications' 
+        ? `${API_URL}/api/export/${format}`
+        : `${API_URL}/api/export/interviews/${format}`;
+      
+      const response = await axios.get(endpoint, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: format === 'json' ? 'json' : 'blob'
       });
 
+      const prefix = exportType === 'applications' ? 'candidatures' : 'entretiens';
+      
       if (format === 'json') {
         const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
-        downloadBlob(blob, `jobtracker_export_${new Date().toISOString().split('T')[0]}.json`);
+        downloadBlob(blob, `${prefix}_${new Date().toISOString().split('T')[0]}.json`);
       } else {
         const ext = format === 'excel' ? 'xlsx' : 'csv';
-        downloadBlob(response.data, `jobtracker_export_${new Date().toISOString().split('T')[0]}.${ext}`);
+        downloadBlob(response.data, `${prefix}_${new Date().toISOString().split('T')[0]}.${ext}`);
       }
     } catch (error) {
       console.error('Export error:', error);
