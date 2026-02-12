@@ -124,11 +124,12 @@ export default function SettingsPage() {
       }
       
       // Update API keys
-      if (formData.google_ai_key || formData.openai_key) {
+      if (formData.google_ai_key || formData.openai_key || formData.groq_key) {
         await api.put('/api/auth/update-api-keys', null, {
           params: {
             google_ai_key: formData.google_ai_key || undefined,
-            openai_key: formData.openai_key || undefined
+            openai_key: formData.openai_key || undefined,
+            groq_key: formData.groq_key || undefined
           }
         });
       }
