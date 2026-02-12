@@ -4,7 +4,7 @@ import {
   Upload, Download, FileJson, FileSpreadsheet, FileText,
   CheckCircle, XCircle, AlertCircle, Loader2, Sparkles,
   FileUp, Award, Target, TrendingUp, Lightbulb, Briefcase,
-  HelpCircle, Eye, ArrowRight, Table
+  HelpCircle, Eye, ArrowRight, Table, Calendar
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
@@ -14,7 +14,7 @@ import * as XLSX from 'xlsx';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
-// Guide des colonnes attendues
+// Guide des colonnes pour candidatures
 const COLUMN_GUIDE = {
   fr: {
     required: [
@@ -44,6 +44,38 @@ const COLUMN_GUIDE = {
       { name: 'lien / link', description: 'Job link', example: 'https://...' },
       { name: 'commentaire / comment', description: 'Personal notes', example: 'Contact: recruiter@...' },
       { name: 'reponse / status', description: 'Application status', example: 'pending, positive, negative, no_response' }
+    ]
+  }
+};
+
+// Guide des colonnes pour entretiens
+const INTERVIEW_COLUMN_GUIDE = {
+  fr: {
+    required: [
+      { name: 'entreprise', description: 'Nom de l\'entreprise (doit correspondre à une candidature existante)', example: 'Google' },
+      { name: 'date_entretien', description: 'Date et heure de l\'entretien', example: '2025-01-20T14:00:00' }
+    ],
+    optional: [
+      { name: 'type_entretien', description: 'Type d\'entretien', example: 'technical, hr, manager, final' },
+      { name: 'format_entretien', description: 'Format', example: 'video, phone, onsite' },
+      { name: 'lieu_lien', description: 'Lieu ou lien visio', example: 'https://meet.google.com/...' },
+      { name: 'interviewer', description: 'Nom du recruteur', example: 'Marie Dupont' },
+      { name: 'statut', description: 'Statut de l\'entretien', example: 'planned, completed, cancelled' },
+      { name: 'commentaire', description: 'Notes', example: 'Préparer questions techniques' }
+    ]
+  },
+  en: {
+    required: [
+      { name: 'entreprise / company', description: 'Company name (must match existing application)', example: 'Google' },
+      { name: 'date_entretien / date', description: 'Interview date and time', example: '2025-01-20T14:00:00' }
+    ],
+    optional: [
+      { name: 'type_entretien / type', description: 'Interview type', example: 'technical, hr, manager, final' },
+      { name: 'format_entretien / format', description: 'Format', example: 'video, phone, onsite' },
+      { name: 'lieu_lien / location', description: 'Location or video link', example: 'https://meet.google.com/...' },
+      { name: 'interviewer', description: 'Recruiter name', example: 'Marie Dupont' },
+      { name: 'statut / status', description: 'Interview status', example: 'planned, completed, cancelled' },
+      { name: 'commentaire / comment', description: 'Notes', example: 'Prepare technical questions' }
     ]
   }
 };
