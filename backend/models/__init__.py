@@ -182,7 +182,9 @@ class User(UserBase):
     
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     hashed_password: str
+    role: UserRole = UserRole.STANDARD
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    last_login: Optional[datetime] = None
     is_active: bool = True
     google_ai_key: Optional[str] = None
     openai_key: Optional[str] = None
@@ -190,10 +192,18 @@ class User(UserBase):
 
 class UserResponse(UserBase):
     id: str
+    role: UserRole = UserRole.STANDARD
     created_at: datetime
+    last_login: Optional[datetime] = None
     is_active: bool
     has_google_ai_key: bool = False
     has_openai_key: bool = False
+
+
+class UserAdminResponse(UserResponse):
+    """Extended user response for admin panel"""
+    applications_count: int = 0
+    interviews_count: int = 0
 
 
 # ============================================
