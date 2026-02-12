@@ -18,23 +18,23 @@ API REST FastAPI pour l'application JobTracker SaaS.
 ```
 backend/
 ├── models/
-│   ├── user.py           # Modèle utilisateur
-│   ├── application.py    # Modèle candidature
-│   └── interview.py      # Modèle entretien
+│   └── __init__.py         # Modèles Pydantic (User, Application, Interview, Admin)
 ├── routes/
-│   ├── auth.py           # Authentification (register, login, profile)
-│   ├── applications.py   # CRUD candidatures
-│   ├── interviews.py     # CRUD entretiens
-│   ├── statistics.py     # Statistiques dashboard
-│   ├── export.py         # Export JSON/CSV/Excel
-│   ├── ai.py             # IA (Gemini, GPT-4o) - Mode dual
-│   ├── data_import.py    # Import JSON/CSV + Analyse CV
-│   └── notifications.py  # Système de notifications
+│   ├── admin.py            # 🔐 Panel administration
+│   ├── auth.py             # Authentification (register, login, profile)
+│   ├── applications.py     # CRUD candidatures
+│   ├── interviews.py       # CRUD entretiens
+│   ├── statistics.py       # Statistiques dashboard
+│   ├── export.py           # Export JSON/CSV/Excel
+│   ├── ai.py               # IA (Gemini, GPT-4o) - Mode dual
+│   ├── data_import.py      # Import JSON/CSV/Excel + Analyse CV
+│   └── notifications.py    # Système de notifications
 ├── utils/
-│   └── auth.py           # Utilitaires JWT
-├── config.py             # Configuration centralisée
-├── server.py             # Point d'entrée FastAPI
-└── requirements.txt      # Dépendances Python
+│   └── auth.py             # Utilitaires JWT
+├── config.py               # Configuration centralisée
+├── server.py               # Point d'entrée FastAPI
+├── seed_admin.py           # Script d'initialisation admin (voir docs privées)
+└── requirements.txt        # Dépendances Python
 ```
 
 ## 🚀 Installation Locale
