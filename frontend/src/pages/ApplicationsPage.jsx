@@ -285,6 +285,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
   const [showTimeline, setShowTimeline] = useState(false);
   const [showFollowupModal, setShowFollowupModal] = useState(false);
   const [showMatchingModal, setShowMatchingModal] = useState(false);
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   
   if (!app) return null;
   
