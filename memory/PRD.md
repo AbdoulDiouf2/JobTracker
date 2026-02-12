@@ -78,6 +78,19 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - **Détection automatique** : Icônes selon le type de lien
 - **Liaison candidatures** : Tracker quel CV/LM envoyé à quelle entreprise
 
+### Phase 10.5: Intégration CV & Calendrier (12 Février 2025)
+- **Sélecteur CV dans candidatures** : Dropdown pour associer un CV à chaque candidature
+- **Génération LM par IA** : Modal pour générer une lettre de motivation personnalisée
+  - Sélection CV optionnelle pour contexte
+  - Choix du ton (professionnel, enthousiaste, formel)
+  - Génération via OpenAI/Google/Groq selon clés configurées
+- **Google Calendar** : 
+  - Section dédiée dans les Paramètres
+  - Statut de connexion (connecté/non connecté)
+  - OAuth 2.0 flow complet (backend prêt)
+  - Sync entretiens vers Google Calendar
+  - **Note:** Nécessite GOOGLE_CALENDAR_CLIENT_ID et GOOGLE_CALENDAR_CLIENT_SECRET
+
 ---
 
 ## APIs Disponibles
