@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -131,20 +131,20 @@ export const ApplicationTimeline = ({ applicationId, isOpen, onClose }) => {
   const [timeline, setTimeline] = useState(null);
   const [expanded, setExpanded] = useState(true);
 
-  useEffect(() => {
-    if (applicationId && isOpen) {
-      loadTimeline();
-    }
-  }, [applicationId, isOpen]);
-
-  const loadTimeline = async () => {
+  const loadTimeline = useCallback(async () => {
     try {
       const data = await getTimeline(applicationId);
       setTimeline(data);
     } catch (err) {
       console.error('Erreur chargement timeline:', err);
     }
-  };
+  }, [getTimeline, applicationId]);
+
+  useEffect(() => {
+    if (applicationId && isOpen) {
+      loadTimeline();
+    }
+  }, [applicationId, isOpen, loadTimeline]);
 
   if (!isOpen) return null;
 

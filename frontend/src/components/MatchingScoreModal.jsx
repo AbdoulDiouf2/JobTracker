@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Target, CheckCircle, XCircle, Lightbulb, Loader2, RefreshCw,
@@ -93,13 +93,7 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
     keywords: false
   });
 
-  useEffect(() => {
-    if (isOpen && application?.id) {
-      loadExistingScore();
-    }
-  }, [isOpen, application?.id]);
-
-  const loadExistingScore = async () => {
+  const loadExistingScore = useCallback(async () => {
     try {
       const existing = await getMatchingScore(application.id);
       if (existing.has_score) {
@@ -108,7 +102,13 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
     } catch (err) {
       console.error('Erreur chargement score:', err);
     }
-  };
+  }, [getMatchingScore, application?.id]);
+
+  useEffect(() => {
+    if (isOpen && application?.id) {
+      loadExistingScore();
+    }
+  }, [isOpen, application?.id, loadExistingScore]);
 
   const handleCalculate = async () => {
     setCalculating(true);

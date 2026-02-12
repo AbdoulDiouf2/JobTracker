@@ -300,7 +300,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
+          <div className="flex-1 overflow-y-auto flex flex-col gap-8 mt-4 pr-2">
             {/* Status & Actions */}
             <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
               <div>
@@ -426,7 +426,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
             />
 
             {/* Details Grid */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="p-4 bg-slate-900/30 rounded-xl">
                 <p className="text-slate-400 text-sm mb-1">{t.jobType}</p>
                 <p className="text-white font-medium">
@@ -477,9 +477,9 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                   href={app.lien}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-gold hover:text-gold-light flex items-center gap-2 break-all"
+                  className="text-gold hover:text-gold-light flex items-start gap-2 break-all"
                 >
-                  <ExternalLink size={16} />
+                  <ExternalLink size={16} className="mt-1 flex-shrink-0" />
                   {app.lien}
                 </a>
               </div>

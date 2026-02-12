@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,10 +9,10 @@ export const useTracking = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const headers = {
+  const headers = useMemo(() => ({
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
-  };
+  }), [token]);
 
   // Récupérer la timeline d'une candidature
   const getTimeline = useCallback(async (applicationId) => {
@@ -30,7 +30,7 @@ export const useTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // Ajouter un événement à la timeline
   const addTimelineEvent = useCallback(async (applicationId, event) => {
@@ -44,7 +44,7 @@ export const useTracking = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Récupérer les rappels en attente
   const getPendingReminders = useCallback(async () => {
@@ -62,7 +62,7 @@ export const useTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // Marquer un rappel comme envoyé
   const markReminderSent = useCallback(async (applicationId) => {
@@ -76,7 +76,7 @@ export const useTracking = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Générer un email de relance
   const generateFollowupEmail = useCallback(async (applicationId, options = {}) => {
@@ -99,7 +99,7 @@ export const useTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // Calculer le score de matching
   const calculateMatchingScore = useCallback(async (applicationId, cvText = null) => {
@@ -119,7 +119,7 @@ export const useTracking = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // Récupérer le score de matching existant
   const getMatchingScore = useCallback(async (applicationId) => {
@@ -132,7 +132,7 @@ export const useTracking = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   return {
     loading,

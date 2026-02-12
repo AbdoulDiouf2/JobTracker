@@ -211,9 +211,10 @@ export default function ImportExportPage() {
 
   const guide = importType === 'applications' ? COLUMN_GUIDE[language] : INTERVIEW_COLUMN_GUIDE[language];
 
-  // Helper function to map columns to expected format for applications
   const mapRowToApplication = (row) => {
     const mapped = {};
+    const interviews = [];
+
     Object.entries(row).forEach(([key, value]) => {
       const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       // Map known columns
@@ -254,6 +255,55 @@ export default function ImportExportPage() {
         }
       }
     });
+
+    // Extract potential interviews (Entretien 1, Entretien 2, etc.)
+    for (let i = 1; i <= 5; i++) {
+        // Find keys that match "Date Entretien i" pattern loosely
+        const findKey = (pattern) => Object.keys(row).find(k => 
+            k.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(pattern.toLowerCase()) && 
+            k.includes(i.toString())
+        );
+
+        const dateKey = findKey('date entretien') || findKey('date_entretien');
+        
+        if (dateKey && row[dateKey]) {
+            const typeKey = findKey('type entretien') || findKey('type_entretien') || findKey('type');
+            const formatKey = findKey('format entretien') || findKey('format_entretien') || findKey('format');
+            const lieuKey = findKey('lieu/lien') || findKey('lieu entretien') || findKey('lieu');
+            const interviewerKey = findKey('interviewer') || findKey('interviewer');
+            const statusKey = findKey('statut entretien') || findKey('statut');
+            const commentKey = findKey('commentaire entretien') || findKey('commentaire');
+
+            let dateVal = row[dateKey];
+            if (typeof dateVal === 'number') {
+                try {
+                  dateVal = new Date(dateVal).toISOString();
+                } catch (e) { console.error('Date parsing error', e); }
+            }
+
+            let status = 'planned';
+            if (row[statusKey]) {
+                const s = String(row[statusKey]).toLowerCase();
+                if (s.includes('réalisé') || s.includes('realise') || s.includes('completed') || s.includes('✅')) status = 'completed';
+                else if (s.includes('annulé') || s.includes('annule') || s.includes('cancelled') || s.includes('❌')) status = 'cancelled';
+            }
+
+            interviews.push({
+                date_entretien: dateVal,
+                type_entretien: row[typeKey] || 'technical',
+                format_entretien: row[formatKey] || 'video',
+                lieu_lien: row[lieuKey] || '',
+                interviewer: row[interviewerKey] || '',
+                statut: status,
+                commentaire: row[commentKey] || ''
+            });
+        }
+    }
+
+    if (interviews.length > 0) {
+        mapped.interviews = interviews;
+    }
+
     return mapped;
   };
 

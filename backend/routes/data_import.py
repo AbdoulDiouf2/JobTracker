@@ -272,6 +272,40 @@ async def import_data(
             
             await db.applications.insert_one(app_doc)
             imported += 1
+
+            # Handle nested interviews if present
+            if 'interviews' in app_data and isinstance(app_data['interviews'], list):
+                for interview_data in app_data['interviews']:
+                    try:
+                        # Normalize date
+                        int_date_val = interview_data.get('date_entretien')
+                        int_date_str = datetime.now(timezone.utc).isoformat()
+                        
+                        if isinstance(int_date_val, (int, float)):
+                            int_date_str = datetime.fromtimestamp(int_date_val / 1000, tz=timezone.utc).isoformat()
+                        elif int_date_val:
+                            int_date_str = str(int_date_val).replace(' ', 'T')
+                        
+                        # Create interview linked to this application
+                        interview_doc = {
+                            "id": str(uuid.uuid4()),
+                            "user_id": current_user["user_id"],
+                            "candidature_id": app_doc["id"],
+                            "date_entretien": int_date_str,
+                            "type_entretien": interview_data.get('type_entretien', 'technical'),
+                            "format_entretien": interview_data.get('format_entretien', 'video'),
+                            "lieu_lien": interview_data.get('lieu_lien'),
+                            "interviewer": interview_data.get('interviewer'),
+                            "statut": interview_data.get('statut', 'planned'),
+                            "commentaire": interview_data.get('commentaire'),
+                            "created_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        
+                        await db.interviews.insert_one(interview_doc)
+                    except Exception as ie:
+                        print(f"Erreur import entretien: {ie}")
+                        # Don't fail the whole row for a bad interview
             
         except Exception as e:
             errors.append(f"Ligne {idx+1}: {str(e)}")
