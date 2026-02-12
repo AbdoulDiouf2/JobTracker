@@ -14,6 +14,7 @@ import StatisticsPage from "./pages/StatisticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AIAdvisorPage from "./pages/AIAdvisorPage";
 import ImportExportPage from "./pages/ImportExportPage";
+import DocumentsPage from "./pages/DocumentsPage";
 import LegalNoticePage from "./pages/LegalNoticePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
