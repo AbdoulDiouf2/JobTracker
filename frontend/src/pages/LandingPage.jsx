@@ -42,6 +42,7 @@ const Navigation = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { t, language } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -67,7 +68,7 @@ const Navigation = () => {
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-20">
-          <a href="#" data-testid="logo-link" className="flex items-center gap-3">
+          <a href="/" data-testid="logo-link" className="flex items-center gap-3">
             <img 
               src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
               alt="MAADEC Logo" 
@@ -89,20 +90,33 @@ const Navigation = () => {
 
           <div className="hidden md:flex items-center gap-4">
             <LanguageSwitcher />
-            <a
-              href="/login"
-              data-testid="nav-login-button"
-              className="text-slate-400 hover:text-gold font-medium transition-colors duration-200"
-            >
-              {language === 'fr' ? 'Connexion' : 'Login'}
-            </a>
-            <a
-              href="/register"
-              data-testid="nav-cta-button"
-              className="bg-gold text-[#020817] hover:bg-gold-light px-6 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(196,160,82,0.3)] hover:shadow-[0_0_30px_-5px_rgba(196,160,82,0.5)]"
-            >
-              {language === 'fr' ? 'Commencer' : 'Get Started'}
-            </a>
+            {isAuthenticated ? (
+              <a
+                href="/dashboard"
+                data-testid="nav-dashboard-button"
+                className="flex items-center gap-2 bg-gold text-[#020817] hover:bg-gold-light px-6 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(196,160,82,0.3)] hover:shadow-[0_0_30px_-5px_rgba(196,160,82,0.5)]"
+              >
+                <LayoutDashboard size={18} />
+                {language === 'fr' ? 'Tableau de bord' : 'Dashboard'}
+              </a>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  data-testid="nav-login-button"
+                  className="text-slate-400 hover:text-gold font-medium transition-colors duration-200"
+                >
+                  {language === 'fr' ? 'Connexion' : 'Login'}
+                </a>
+                <a
+                  href="/register"
+                  data-testid="nav-cta-button"
+                  className="bg-gold text-[#020817] hover:bg-gold-light px-6 py-2.5 rounded-full font-semibold transition-all duration-300 shadow-[0_0_20px_-5px_rgba(196,160,82,0.3)] hover:shadow-[0_0_30px_-5px_rgba(196,160,82,0.5)]"
+                >
+                  {language === 'fr' ? 'Commencer' : 'Get Started'}
+                </a>
+              </>
+            )}
           </div>
 
           <button
@@ -132,12 +146,30 @@ const Navigation = () => {
             ))}
             <div className="px-4 pt-4 flex flex-col gap-3">
               <LanguageSwitcher />
-              <a
-                href="#contact"
-                className="block w-full text-center bg-gold text-[#020817] py-3 rounded-full font-semibold"
-              >
-                {t('nav.getInTouch')}
-              </a>
+              {isAuthenticated ? (
+                <a
+                  href="/dashboard"
+                  className="flex items-center justify-center gap-2 w-full bg-gold text-[#020817] py-3 rounded-full font-semibold"
+                >
+                  <LayoutDashboard size={18} />
+                  {language === 'fr' ? 'Tableau de bord' : 'Dashboard'}
+                </a>
+              ) : (
+                <>
+                  <a
+                    href="/login"
+                    className="block w-full text-center text-slate-300 py-3 border border-slate-700 rounded-full"
+                  >
+                    {language === 'fr' ? 'Connexion' : 'Login'}
+                  </a>
+                  <a
+                    href="/register"
+                    className="block w-full text-center bg-gold text-[#020817] py-3 rounded-full font-semibold"
+                  >
+                    {language === 'fr' ? 'Commencer' : 'Get Started'}
+                  </a>
+                </>
+              )}
             </div>
           </motion.div>
         )}
