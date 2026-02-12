@@ -232,6 +232,8 @@ class JobApplicationBase(BaseModel):
     # Infos extraites par l'IA
     competences: List[str] = Field(default_factory=list, description="Liste des compétences extraites")
     experience_requise: Optional[str] = Field(None, max_length=100, description="Expérience requise extraite")
+    # CV associé
+    cv_id: Optional[str] = Field(None, description="ID du CV associé à cette candidature")
 
 
 class JobApplicationCreate(JobApplicationBase):
@@ -259,6 +261,7 @@ class JobApplicationUpdate(BaseModel):
     days_before_reminder: Optional[int] = None
     competences: Optional[List[str]] = None
     experience_requise: Optional[str] = None
+    cv_id: Optional[str] = None
 
 
 # ============================================
