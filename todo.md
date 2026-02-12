@@ -56,7 +56,8 @@
 - [x] **Score de matching** : IA analyse le CV vs offre d'emploi et donne un pourcentage de compatibilité
 
 ### 📅 Gestion du Temps
-- [ ] **Intégration calendrier** : Sync avec Google Calendar / Outlook
+- [x] **Intégration Google Calendar** : Backend OAuth 2.0 complet (nécessite credentials)
+- [x] **Section Google Calendar** : UI dans les paramètres avec statut connexion
 - [ ] **Rappels par email/SMS** : 24h et 1h avant l'entretien
 - [ ] **Préparation entretien** : Checklist personnalisée avant chaque entretien
 
