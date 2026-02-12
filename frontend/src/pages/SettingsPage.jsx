@@ -73,6 +73,7 @@ export default function SettingsPage() {
       apiKeys: 'API Keys',
       googleKey: 'Google AI Key (Gemini)',
       openaiKey: 'OpenAI Key',
+      groqKey: 'Groq Key',
       language: 'Language',
       currentLang: 'English',
       save: 'Save',
