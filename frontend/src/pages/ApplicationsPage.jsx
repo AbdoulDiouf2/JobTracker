@@ -8,13 +8,17 @@ import { fr, enUS } from 'date-fns/locale';
 import { 
   Plus, Search, Star, Trash2, Edit2, ExternalLink,
   ChevronLeft, ChevronRight, X, Loader2, MapPin,
-  Calendar, MessageSquare, LayoutGrid, List, Eye, ChevronDown
+  Calendar, MessageSquare, LayoutGrid, List, Eye, ChevronDown,
+  Clock, Mail, Target, Bell, RefreshCw
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
+import { ApplicationTimeline } from '../components/ApplicationTimeline';
+import FollowupEmailModal from '../components/FollowupEmailModal';
+import MatchingScoreModal from '../components/MatchingScoreModal';
 import {
   Dialog,
   DialogContent,
