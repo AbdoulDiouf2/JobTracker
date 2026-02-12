@@ -66,6 +66,12 @@ async def lifespan(app: FastAPI):
     await db.interviews.create_index("user_id")
     await db.interviews.create_index("candidature_id")
     await db.interviews.create_index("id", unique=True)
+    # Documents indexes
+    await db.documents.create_index("user_id")
+    await db.documents.create_index("id", unique=True)
+    await db.documents.create_index([("user_id", 1), ("document_type", 1)])
+    await db.cover_letter_templates.create_index("user_id")
+    await db.application_documents.create_index("application_id")
     
     logger.info(f"Connecté à MongoDB: {settings.DB_NAME}")
     
