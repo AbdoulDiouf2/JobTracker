@@ -19,6 +19,7 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { ApplicationTimeline } from '../components/ApplicationTimeline';
 import FollowupEmailModal from '../components/FollowupEmailModal';
 import MatchingScoreModal from '../components/MatchingScoreModal';
+import CoverLetterGeneratorModal from '../components/CoverLetterGeneratorModal';
 import {
   Dialog,
   DialogContent,
