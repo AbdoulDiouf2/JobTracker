@@ -135,8 +135,19 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - `POST /api/documents/templates` - Créer template LM
 - `GET /api/documents/templates/` - Liste templates
 - `POST /api/documents/templates/{id}/generate` - Générer LM depuis template
+- `POST /api/documents/generate-cover-letter-ai` - Générer LM avec IA
 - `POST /api/documents/link-to-application` - Lier document à candidature
 - `GET /api/documents/application/{id}` - Documents d'une candidature
+
+### Google Calendar
+- `GET /api/calendar/auth/status` - Vérifier statut connexion
+- `GET /api/calendar/auth/login` - Démarrer OAuth flow
+- `GET /api/calendar/callback` - Callback OAuth
+- `POST /api/calendar/disconnect` - Déconnecter Calendar
+- `GET /api/calendar/events` - Liste événements
+- `POST /api/calendar/events` - Créer événement
+- `DELETE /api/calendar/events/{id}` - Supprimer événement
+- `POST /api/calendar/sync-interview/{id}` - Sync entretien vers Calendar
 
 ### Administration
 - `GET /api/admin/dashboard` - Stats globales
