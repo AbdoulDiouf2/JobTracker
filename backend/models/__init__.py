@@ -244,6 +244,13 @@ class JobApplicationUpdate(BaseModel):
     date_reponse: Optional[datetime] = None
     commentaire: Optional[str] = Field(None, max_length=2000)
     is_favorite: Optional[bool] = None
+    # Nouveaux champs
+    description_poste: Optional[str] = Field(None, max_length=5000)
+    contact_email: Optional[str] = Field(None, max_length=200)
+    contact_name: Optional[str] = Field(None, max_length=100)
+    salaire_min: Optional[int] = None
+    salaire_max: Optional[int] = None
+    days_before_reminder: Optional[int] = None
 
 
 class JobApplication(JobApplicationBase):
