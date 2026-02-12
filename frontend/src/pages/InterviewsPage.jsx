@@ -924,6 +924,7 @@ export default function InterviewsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'card' or 'calendar' - calendar by default
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarView, setCalendarView] = useState('month'); // 'day', 'week', 'month', 'year'
   const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
 
   const t = {
