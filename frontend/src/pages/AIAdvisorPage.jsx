@@ -352,6 +352,12 @@ export default function AIAdvisorPage() {
 
         {/* Input */}
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+          {modelUsed && (
+            <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+              <Settings2 size={12} />
+              {t.modelUsed}: <span className="text-gold">{modelUsed}</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button
               variant="outline"
