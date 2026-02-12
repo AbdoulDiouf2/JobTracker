@@ -280,8 +280,9 @@ async def import_data(
                 app_id = app_doc["id"]
                 imported += 1
 
-            # Handle nested interviews if present
-            if 'interviews' in app_data and isinstance(app_data['interviews'], list):
+            # Handle nested interviews if present (even for duplicate applications)
+            if 'interviews' in app_data and isinstance(app_data['interviews'], list) and app_id:
+                interviews_imported = 0
                 for interview_data in app_data['interviews']:
                     try:
                         # Normalize date
@@ -292,6 +293,16 @@ async def import_data(
                             int_date_str = datetime.fromtimestamp(int_date_val / 1000, tz=timezone.utc).isoformat()
                         elif int_date_val:
                             int_date_str = str(int_date_val).replace(' ', 'T')
+                        
+                        # Check if interview already exists (same date + same application)
+                        existing_interview = await db.interviews.find_one({
+                            "user_id": current_user["user_id"],
+                            "candidature_id": app_id,
+                            "date_entretien": {"$regex": f"^{int_date_str[:10]}"}
+                        })
+                        
+                        if existing_interview:
+                            continue  # Skip duplicate interview
                         
                         # Normalize type_entretien to enum values
                         raw_type = str(interview_data.get('type_entretien', 'technical')).lower()
@@ -318,7 +329,7 @@ async def import_data(
                         interview_doc = {
                             "id": str(uuid.uuid4()),
                             "user_id": current_user["user_id"],
-                            "candidature_id": app_doc["id"],
+                            "candidature_id": app_id,
                             "date_entretien": int_date_str,
                             "type_entretien": normalized_type,
                             "format_entretien": normalized_format,
@@ -331,6 +342,7 @@ async def import_data(
                         }
                         
                         await db.interviews.insert_one(interview_doc)
+                        interviews_imported += 1
                     except Exception as ie:
                         print(f"Erreur import entretien: {ie}")
                         # Don't fail the whole row for a bad interview
