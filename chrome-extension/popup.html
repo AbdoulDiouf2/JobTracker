@@ -16,7 +16,7 @@
     <div id="loading" class="hidden">Chargement...</div>
     
     <button type="button" id="extractBtn" class="extract-btn">
-      Extraire avec IA
+      Extraire avec IA ✨
     </button>
     
     <form id="jobForm">
@@ -37,42 +37,45 @@
           <input type="text" id="location" name="location" placeholder="Paris / Remote">
         </div>
         <div class="form-group">
-          <label for="type">Type</label>
+          <label for="experience">Expérience</label>
+          <input type="text" id="experience" name="experience" placeholder="Ex: 2-5 ans">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="type">Contrat</label>
           <select id="type" name="type">
             <option value="cdi">CDI</option>
             <option value="cdd">CDD</option>
             <option value="stage">Stage</option>
             <option value="alternance">Alternance</option>
             <option value="freelance">Freelance</option>
-            <option value="interim">Interim</option>
           </select>
         </div>
-      </div>
-
-      <div class="form-row">
         <div class="form-group">
-          <label for="salaryMin">Salaire min</label>
-          <input type="number" id="salaryMin" name="salaryMin" placeholder="35000">
+          <label for="salaryMin">Salaire Min (€)</label>
+          <input type="number" id="salaryMin" name="salaryMin" placeholder="40000">
         </div>
         <div class="form-group">
-          <label for="salaryMax">Salaire max</label>
-          <input type="number" id="salaryMax" name="salaryMax" placeholder="45000">
+          <label for="salaryMax">Max</label>
+          <input type="number" id="salaryMax" name="salaryMax" placeholder="55000">
         </div>
       </div>
       
       <div class="form-group">
-        <label for="url">URL</label>
+        <label for="url">URL de l'offre</label>
         <input type="text" id="url" name="url" readonly>
       </div>
 
       <div class="form-group">
-        <label for="description">Description</label>
-        <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
+        <label for="competences">Compétences</label>
+        <input type="text" id="competences" name="competences" placeholder="React, Python, SQL...">
       </div>
 
       <div class="form-group">
-        <label for="competences">Competences</label>
-        <input type="text" id="competences" name="competences" placeholder="React, Python...">
+        <label for="description">Description courte</label>
+        <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
       </div>
 
       <button type="submit" id="saveBtn">Ajouter au Tracker</button>
@@ -81,7 +84,7 @@
     <div id="message" class="hidden"></div>
     
     <footer>
-      <a href="#" id="optionsLink">Options</a>
+      <a href="#" id="optionsLink">Configuration</a>
     </footer>
   </div>
   <script src="popup.js"></script>

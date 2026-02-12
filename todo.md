@@ -5,9 +5,14 @@
 
 ## ✅ Complété
 
-### 🛠️ Maintenance & Qualité
-- [x] **Linting Errors** : Corriger les warnings ESLint (useEffect, useCallback dependencies) `src/hooks/useTracking.js`, `ApplicationTimeline.jsx`, `MatchingScoreModal.jsx`.
-- [x] **Import/Export** : Vérifier la prise en compte des entretiens dans l'import (JSON/CSV).
+- [x] **Maintenance & Qualité** :
+  - [x] Linting Errors : Corriger les warnings ESLint dans `src/hooks/useTracking.js`, `ApplicationTimeline.jsx`, `MatchingScoreModal.jsx`.
+  - [x] Import/Export : Vérifier la prise en compte des entretiens dans l'import (JSON/CSV).
+  - [x] **Bug Fix Excel Date** : Correction du bug de date 1970 lors de l'import Excel (ajout support des dates série Excel).
+- [x] **Intégration Extension IA (Full)** :
+  - [x] Stockage complet des données (Compétences, Expérience, Salaires, Description).
+  - [x] Affichage des badges de compétences et détails IA dans le frontend.
+  - [x] Support de modification manuelle de tous les champs IA dans le formulaire.
 
 ### 🔐 Administration Multi-Tenant
 - [x] Créer un modèle `Role` (admin, standard, premium)

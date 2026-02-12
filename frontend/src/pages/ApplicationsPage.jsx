@@ -43,11 +43,16 @@ const applicationSchema = z.object({
   entreprise: z.string().min(1, 'Entreprise requise'),
   poste: z.string().min(1, 'Poste requis'),
   type_poste: z.string(),
-  lieu: z.string().optional(),
-  moyen: z.string().optional(),
+  lieu: z.string().optional().nullable(),
+  moyen: z.string().optional().nullable(),
   date_candidature: z.string(),
-  lien: z.string().url().optional().or(z.literal('')),
-  commentaire: z.string().optional()
+  lien: z.string().url().optional().or(z.literal('')).nullable(),
+  commentaire: z.string().optional().nullable(),
+  salaire_min: z.coerce.number().optional().nullable(),
+  salaire_max: z.coerce.number().optional().nullable(),
+  experience_requise: z.string().optional().nullable(),
+  competences: z.any().optional(), // Can be string or array
+  description_poste: z.string().optional().nullable()
 });
 
 const STATUS_OPTIONS = [
@@ -426,7 +431,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
             />
 
             {/* Details Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="p-4 bg-slate-900/30 rounded-xl">
                 <p className="text-slate-400 text-sm mb-1">{t.jobType}</p>
                 <p className="text-white font-medium">
@@ -436,6 +441,18 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
               <div className="p-4 bg-slate-900/30 rounded-xl">
                 <p className="text-slate-400 text-sm mb-1">{t.location}</p>
                 <p className="text-white font-medium">{app.lieu || '-'}</p>
+              </div>
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">Expérience requise</p>
+                <p className="text-white font-medium">{app.experience_requise || '-'}</p>
+              </div>
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">Salaire brut annuel</p>
+                <p className="text-white font-medium">
+                  {app.salaire_min || app.salaire_max 
+                    ? `${app.salaire_min?.toLocaleString() || '?'} - ${app.salaire_max?.toLocaleString() || '?'} €` 
+                    : '-'}
+                </p>
               </div>
               <div className="p-4 bg-slate-900/30 rounded-xl">
                 <p className="text-slate-400 text-sm mb-1">{t.method}</p>
@@ -451,6 +468,30 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                 <p className="text-slate-500 text-xs mt-1">Il y a {daysSince} jours</p>
               </div>
             </div>
+
+            {/* Competences */}
+            {app.competences && app.competences.length > 0 && (
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-3">Compétences clés</p>
+                <div className="flex flex-wrap gap-2">
+                  {app.competences.map((skill, i) => (
+                    <span key={i} className="px-2 py-1 bg-gold/10 text-gold border border-gold/20 rounded-md text-xs">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Description du poste */}
+            {app.description_poste && (
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-2">Description du poste (IA)</p>
+                <div className="text-slate-300 text-sm leading-relaxed whitespace-pre-wrap">
+                  {app.description_poste}
+                </div>
+              </div>
+            )}
 
             {/* Contact Info */}
             {(app.contact_email || app.contact_name) && (
@@ -541,6 +582,8 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
       Object.entries(editingApp).forEach(([key, value]) => {
         if (key === 'date_candidature' && value) {
           setValue(key, value.split('T')[0]);
+        } else if (key === 'competences' && Array.isArray(value)) {
+          setValue(key, value.join(', '));
         } else if (value !== null && value !== undefined) {
           setValue(key, value);
         }
@@ -560,7 +603,14 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
       lien: data.lien || null,
       lieu: data.lieu || null,
       moyen: data.moyen || null,
-      commentaire: data.commentaire || null
+      commentaire: data.commentaire || null,
+      salaire_min: data.salaire_min ? parseInt(data.salaire_min) : null,
+      salaire_max: data.salaire_max ? parseInt(data.salaire_max) : null,
+      experience_requise: data.experience_requise || null,
+      description_poste: data.description_poste || null,
+      competences: typeof data.competences === 'string' 
+        ? data.competences.split(',').map(s => s.trim()).filter(s => s !== "")
+        : (Array.isArray(data.competences) ? data.competences : [])
     };
     onSubmit(formattedData);
   };
@@ -657,8 +707,57 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
             <label className="block text-sm font-medium text-slate-300 mb-2">{t.comment}</label>
             <textarea
               {...register('commentaire')}
-              rows={3}
+              rows={2}
               placeholder="Notes, contact..."
+              className="w-full px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white resize-none focus:outline-none focus:border-gold"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Salaire Min (€)</label>
+              <Input
+                {...register('salaire_min')}
+                type="number"
+                placeholder="Ex: 40000"
+                className="bg-slate-900/50 border-slate-700 text-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-2">Salaire Max (€)</label>
+              <Input
+                {...register('salaire_max')}
+                type="number"
+                placeholder="Ex: 55000"
+                className="bg-slate-900/50 border-slate-700 text-white"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Expérience requise</label>
+            <Input
+              {...register('experience_requise')}
+              placeholder="Ex: 2-5 ans, Junior..."
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Compétences (séparées par des virgules)</label>
+            <Input
+              {...register('competences')}
+              placeholder="React, Python, SQL..."
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Description du poste (IA)</label>
+            <textarea
+              {...register('description_poste')}
+              rows={4}
+              placeholder="Résumé de l'offre..."
               className="w-full px-3 py-2 bg-slate-900/50 border border-slate-700 rounded-lg text-white resize-none focus:outline-none focus:border-gold"
             />
           </div>

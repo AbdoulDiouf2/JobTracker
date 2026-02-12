@@ -14,11 +14,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const salaryMaxInput = document.getElementById('salaryMax');
   const descriptionInput = document.getElementById('description');
   const competencesInput = document.getElementById('competences');
+  const experienceInput = document.getElementById('experience');
 
   // Get current tab URL
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     const activeTab = tabs[0];
-    urlInput.value = activeTab.url;
+    if (activeTab) urlInput.value = activeTab.url;
   });
 
   // AI Extraction button
@@ -80,8 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (data.lieu) locationInput.value = data.lieu;
       if (data.type_poste) typeSelect.value = data.type_poste;
       if (data.salaire_min) salaryMinInput.value = data.salaire_min;
+      if (data.salary_max) salaryMaxInput.value = data.salary_max; // Handle possible small diff in field names
       if (data.salaire_max) salaryMaxInput.value = data.salaire_max;
       if (data.description_poste) descriptionInput.value = data.description_poste;
+      if (data.experience_requise) experienceInput.value = data.experience_requise;
       if (data.competences && data.competences.length > 0) {
         competencesInput.value = data.competences.join(', ');
       }
@@ -111,6 +114,8 @@ document.addEventListener('DOMContentLoaded', () => {
       salaire_min: salaryMinInput.value ? parseInt(salaryMinInput.value) : null,
       salaire_max: salaryMaxInput.value ? parseInt(salaryMaxInput.value) : null,
       description_poste: descriptionInput.value || null,
+      competences: competencesInput.value ? competencesInput.value.split(',').map(s => s.trim()).filter(s => s !== "") : [],
+      experience_requise: experienceInput.value || null,
       date_candidature: new Date().toISOString(),
       reponse: "pending",
       moyen: detectPlatform(urlInput.value),

@@ -229,9 +229,17 @@ export default function ImportExportPage() {
       } else if (lowerKey === 'moyen' || lowerKey === 'source') {
         mapped.moyen = value;
       } else if (lowerKey.includes('date') && (lowerKey.includes('postule') || lowerKey.includes('candidature'))) {
-        // Handle timestamp or date string
-        if (typeof value === 'number') {
-          mapped.date_candidature = new Date(value).toISOString();
+        // Handle Date object, number (serial), or string
+        if (value instanceof Date) {
+          mapped.date_candidature = value.toISOString();
+        } else if (typeof value === 'number') {
+          // Check if it's an Excel serial date (usually < 100000) or timestamp
+          if (value < 100000) {
+            const date = XLSX.SSF.parse_date_code(value);
+            mapped.date_candidature = new Date(date.y, date.m - 1, date.d, date.H, date.M, date.S).toISOString();
+          } else {
+            mapped.date_candidature = new Date(value).toISOString();
+          }
         } else {
           mapped.date_candidature = value;
         }
@@ -275,9 +283,16 @@ export default function ImportExportPage() {
             const commentKey = findKey('commentaire entretien') || findKey('commentaire');
 
             let dateVal = row[dateKey];
-            if (typeof dateVal === 'number') {
+            if (dateVal instanceof Date) {
+                dateVal = dateVal.toISOString();
+            } else if (typeof dateVal === 'number') {
                 try {
-                  dateVal = new Date(dateVal).toISOString();
+                  if (dateVal < 100000) {
+                    const d = XLSX.SSF.parse_date_code(dateVal);
+                    dateVal = new Date(d.y, d.m - 1, d.d, d.H, d.M, d.S).toISOString();
+                  } else {
+                    dateVal = new Date(dateVal).toISOString();
+                  }
                 } catch (e) { console.error('Date parsing error', e); }
             }
 
@@ -320,7 +335,20 @@ export default function ImportExportPage() {
       } else if (lowerKey === 'candidature_id') {
         mapped.candidature_id = value;
       } else if (lowerKey.includes('date') && lowerKey.includes('entretien')) {
-        mapped.date_entretien = value;
+        if (value instanceof Date) {
+          mapped.date_entretien = value.toISOString();
+        } else if (typeof value === 'number') {
+          try {
+            if (value < 100000) {
+              const d = XLSX.SSF.parse_date_code(value);
+              mapped.date_entretien = new Date(d.y, d.m - 1, d.d, d.H, d.M, d.S).toISOString();
+            } else {
+              mapped.date_entretien = new Date(value).toISOString();
+            }
+          } catch (e) { mapped.date_entretien = value; }
+        } else {
+          mapped.date_entretien = value;
+        }
       } else if (lowerKey === 'type_entretien' || lowerKey === 'type entretien' || lowerKey === 'type') {
         mapped.type_entretien = value;
       } else if (lowerKey === 'format_entretien' || lowerKey === 'format entretien' || lowerKey === 'format') {
@@ -420,14 +448,14 @@ export default function ImportExportPage() {
       } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
         // Parse Excel file
         const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
         
         // Get first sheet
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         
         // Convert to JSON
-        const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '', cellDates: true });
         
         // Map column names
         data = rawData.map(mapRow).filter(filterFn);

@@ -229,6 +229,9 @@ class JobApplicationBase(BaseModel):
     salaire_min: Optional[int] = Field(None, description="Salaire minimum proposé")
     salaire_max: Optional[int] = Field(None, description="Salaire maximum proposé")
     days_before_reminder: Optional[int] = Field(default=7, description="Jours avant rappel de relance")
+    # Infos extraites par l'IA
+    competences: List[str] = Field(default_factory=list, description="Liste des compétences extraites")
+    experience_requise: Optional[str] = Field(None, max_length=100, description="Expérience requise extraite")
 
 
 class JobApplicationCreate(JobApplicationBase):
@@ -254,6 +257,8 @@ class JobApplicationUpdate(BaseModel):
     salaire_min: Optional[int] = None
     salaire_max: Optional[int] = None
     days_before_reminder: Optional[int] = None
+    competences: Optional[List[str]] = None
+    experience_requise: Optional[str] = None
 
 
 # ============================================

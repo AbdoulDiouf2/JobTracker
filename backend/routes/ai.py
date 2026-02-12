@@ -553,11 +553,12 @@ Tu dois retourner un JSON valide avec les champs suivants:
 }
 
 IMPORTANT:
-- Retourne UNIQUEMENT le JSON, sans markdown ni commentaires
+- Retourne UNIQUEMENT le JSON objet (pas de texte avant ou après, pas de markdown ```json)
 - Si une information n'est pas disponible, utilise null
 - Pour type_poste, utilise uniquement: cdi, cdd, stage, alternance, freelance, interim
 - Pour les salaires, convertis en annuel brut si possible
-- confidence_score: 1.0 si toutes les infos clés sont trouvées, moins si incertain"""
+- confidence_score: 1.0 si toutes les infos clés sont trouvées, moins si incertain"
+"""
 
     user_message = f"""URL de l'offre: {request.page_url}
 
@@ -568,6 +569,7 @@ Extrais les informations de cette offre d'emploi."""
 
     try:
         response = await call_ai(api_key, provider, model, system_message, user_message)
+        print(f"DEBUG: Raw AI Response: {response}")
         
         # Parse JSON response
         # Clean response (remove markdown code blocks if present)
@@ -594,7 +596,7 @@ Extrais les informations de cette offre d'emploi."""
             salaire_min=data.get("salaire_min"),
             salaire_max=data.get("salaire_max"),
             description_poste=data.get("description_poste"),
-            competences=data.get("competences", []),
+            competences=data.get("competences") or [],
             experience_requise=data.get("experience_requise"),
             date_publication=data.get("date_publication"),
             contact_email=data.get("contact_email"),
