@@ -738,6 +738,10 @@ export default function ApplicationsPage() {
         </div>
       ) : applications.length > 0 ? (
         <>
+          {/* Total Count */}
+          <div className="mt-4 mb-2 text-sm text-slate-400">
+            {language === 'fr' ? 'Total' : 'Total'}: <span className="text-gold font-medium">{pagination.total || applications.length}</span> {language === 'fr' ? 'candidature(s)' : 'application(s)'}
+          </div>
           {viewMode === 'card' ? (
             /* Card View */
             <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
