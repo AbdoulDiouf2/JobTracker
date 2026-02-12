@@ -46,7 +46,10 @@ export default function AIAdvisorPage() {
         'Comment améliorer mon taux de réponse ?',
         'Aide-moi à préparer un entretien technique',
         'Comment négocier mon salaire ?'
-      ]
+      ],
+      selectModel: 'Sélectionner un modèle',
+      noModels: 'Aucun modèle disponible. Configurez vos clés API dans les paramètres.',
+      modelUsed: 'Modèle utilisé'
     },
     en: {
       title: 'AI Assistant',
@@ -64,7 +67,10 @@ export default function AIAdvisorPage() {
         'How can I improve my response rate?',
         'Help me prepare for a technical interview',
         'How to negotiate my salary?'
-      ]
+      ],
+      selectModel: 'Select a model',
+      noModels: 'No models available. Configure your API keys in settings.',
+      modelUsed: 'Model used'
     }
   }[language];
 
