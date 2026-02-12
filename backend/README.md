@@ -187,6 +187,19 @@ DEBUG=false
 | DELETE | `/{id}` | Supprimer notification |
 | POST | `/generate-reminders` | Générer rappels |
 
+### 🔐 Administration (`/api/admin`) - Accès Admin requis
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| GET | `/dashboard` | Statistiques globales plateforme |
+| GET | `/stats/user-growth` | Données croissance utilisateurs |
+| GET | `/stats/activity` | Activité (candidatures/entretiens) |
+| GET | `/users` | Liste utilisateurs avec pagination |
+| GET | `/users/{id}` | Détails d'un utilisateur |
+| PUT | `/users/{id}` | Modifier rôle/statut utilisateur |
+| DELETE | `/users/{id}` | Désactiver un utilisateur |
+| POST | `/users/{id}/reactivate` | Réactiver un utilisateur |
+| GET | `/export/stats` | Export statistiques admin |
+
 ## 🧪 Tests
 
 ```bash
