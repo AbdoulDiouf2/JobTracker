@@ -253,6 +253,19 @@ class JobApplicationUpdate(BaseModel):
     days_before_reminder: Optional[int] = None
 
 
+# ============================================
+# APPLICATION HISTORY (Timeline)
+# ============================================
+
+class ApplicationHistoryEvent(BaseModel):
+    """Un événement dans l'historique d'une candidature"""
+    event_type: str  # status_change, interview_scheduled, interview_completed, note_added, reminder_sent, followup_sent
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    old_value: Optional[str] = None
+    new_value: Optional[str] = None
+    details: Optional[str] = None
+
+
 class JobApplication(JobApplicationBase):
     model_config = ConfigDict(extra="ignore")
     
@@ -263,6 +276,14 @@ class JobApplication(JobApplicationBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str
+    # Timeline / Historique
+    history: List[ApplicationHistoryEvent] = Field(default_factory=list)
+    # Matching score (calculé par IA)
+    match_score: Optional[int] = Field(None, ge=0, le=100, description="Score de matching CV vs offre")
+    match_details: Optional[dict] = Field(None, description="Détails du matching IA")
+    # Rappels
+    last_reminder_sent: Optional[datetime] = None
+    followup_count: int = 0
 
 
 class JobApplicationResponse(JobApplication):
