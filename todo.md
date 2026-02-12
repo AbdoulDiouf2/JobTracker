@@ -74,10 +74,11 @@
 - [ ] **Conseils personnalisés** : L'IA suggère des améliorations basées sur les stats
 
 ### 📄 Gestion des Documents
-- [ ] **Stockage CV** : Plusieurs versions de CV (par secteur/poste)
-- [ ] **Lettres de motivation** : Templates personnalisables + historique
-- [ ] **Portfolio** : Lien vers projets GitHub, portfolio en ligne
-- [ ] **Suivi des documents envoyés** : Quel CV/LM envoyé à quelle entreprise
+- [x] **Stockage CV** : Plusieurs versions de CV (par secteur/poste)
+- [x] **Lettres de motivation** : Templates personnalisables + génération IA
+- [x] **Portfolio** : Lien vers projets GitHub, portfolio en ligne
+- [x] **Suivi des documents envoyés** : Quel CV/LM envoyé à quelle entreprise
+- [x] **Sélecteur CV dans candidatures** : Dropdown pour associer un CV
 
 ### 🔍 Recherche d'Emploi Intelligente
 - [ ] **Agrégation d'offres** : Import automatique depuis LinkedIn, Indeed, APEC, Welcome to the Jungle
