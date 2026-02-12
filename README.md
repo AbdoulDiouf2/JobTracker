@@ -16,10 +16,18 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 
 ### Gestion des Entretiens
 - ✅ CRUD complet avec liaison aux candidatures
-- ✅ Calendrier interactif mensuel
+- ✅ Calendrier interactif (jour, semaine, mois, année)
 - ✅ Indicateurs d'urgence (24h, 1h)
 - ✅ Types : RH, Technique, Manager, Final
 - ✅ Formats : Téléphone, Visio, Présentiel
+- ✅ Recherche de candidatures avec autocomplétion
+
+### Administration Multi-Tenant
+- ✅ Panel admin sécurisé
+- ✅ Dashboard avec statistiques globales
+- ✅ Gestion des utilisateurs (rôles, activation)
+- ✅ Graphiques de croissance et d'activité
+- ✅ Export des statistiques admin
 
 ### Intelligence Artificielle
 - ✅ **Conseiller Carrière** (Google Gemini) - Analyse et conseils personnalisés
@@ -27,8 +35,9 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 - ✅ **Analyse de CV** - Score, compétences, recommandations, postes suggérés
 
 ### Import/Export
-- ✅ Import JSON et CSV avec prévisualisation
-- ✅ Guide des colonnes attendues
+- ✅ Import JSON, NDJSON, CSV, Excel avec prévisualisation
+- ✅ Import des entretiens avec mapping de colonnes
+- ✅ Détection des doublons
 - ✅ Export Excel, JSON, CSV
 
 ### Notifications
@@ -58,6 +67,7 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 | bcrypt | Hash des mots de passe |
 | emergentintegrations | Intégration LLM |
 | openpyxl | Export Excel |
+| PyPDF2/python-docx | Extraction texte CV |
 
 ### Frontend
 | Technologie | Usage |
@@ -72,6 +82,8 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 | i18next | Internationalisation |
 | Axios | Client HTTP |
 | date-fns | Manipulation des dates |
+| react-markdown | Rendu Markdown chatbot |
+| xlsx | Parsing fichiers Excel |
 
 ---
 
@@ -82,6 +94,7 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 ├── backend/
 │   ├── models/              # Modèles Pydantic
 │   ├── routes/              # Endpoints API
+│   │   ├── admin.py         # Panel administration
 │   │   ├── applications.py  # CRUD candidatures
 │   │   ├── auth.py          # Authentification
 │   │   ├── interviews.py    # CRUD entretiens
@@ -100,8 +113,9 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 │   │   ├── contexts/        # Contextes React
 │   │   ├── hooks/           # Hooks personnalisés
 │   │   ├── i18n/            # Traductions
-│   │   ├── layouts/         # Layouts
+│   │   ├── layouts/         # Layouts (Dashboard, Admin)
 │   │   └── pages/           # Pages
+│   │       └── admin/       # Pages administration
 │   └── package.json
 └── memory/
     └── PRD.md
@@ -119,6 +133,8 @@ Application SaaS complète de suivi de candidatures avec intelligence artificiel
 ### Backend
 ```bash
 cd backend
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
 pip install -r requirements.txt
 cp .env.example .env  # Configurer les variables
 uvicorn server:app --reload --port 8001
@@ -128,6 +144,7 @@ uvicorn server:app --reload --port 8001
 ```bash
 cd frontend
 yarn install
+cp .env.example .env
 yarn start
 ```
 
@@ -199,24 +216,17 @@ REACT_APP_BACKEND_URL=http://localhost:8001
 - `POST /api/ai/chatbot` - Chatbot (GPT-4o)
 
 ### Import/Export
-- `POST /api/import/json` - Import JSON
-- `POST /api/import/csv` - Import CSV
-- `POST /api/import/analyze-cv` - Analyse CV
-- `GET /api/export/json` - Export JSON
-- `GET /api/export/excel` - Export Excel
-- `GET /api/export/csv` - Export CSV
+- `POST /api/import/applications` - Import candidatures
+- `POST /api/import/interviews` - Import entretiens
+- `POST /api/analyze-cv` - Analyse CV
+- `GET /api/export/applications/{format}` - Export candidatures
+- `GET /api/export/interviews/{format}` - Export entretiens
 
-### Notifications
-- `GET /api/notifications` - Liste
-- `GET /api/notifications/settings` - Paramètres
-- `PUT /api/notifications/settings` - Modifier paramètres
-
----
-
-## 🔐 Credentials de Test
-
-- **Email:** demo@jobtracker.com
-- **Password:** Demo123!
+### Administration (🔐 Admin requis)
+- `GET /api/admin/dashboard` - Statistiques globales
+- `GET /api/admin/users` - Liste utilisateurs
+- `PUT /api/admin/users/{id}` - Modifier utilisateur
+- `DELETE /api/admin/users/{id}` - Désactiver utilisateur
 
 ---
 
@@ -229,5 +239,4 @@ MIT © 2025 MAADEC - MAAD Engineering & Consulting
 ## 👨‍💻 Auteur
 
 **MAADEC**  
-Full-Stack & AI Engineering  
-[Logo MAADEC](https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png)
+Full-Stack & AI Engineering
