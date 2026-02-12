@@ -221,7 +221,9 @@ curl -X POST http://localhost:8001/api/auth/login \
   "email": "string",
   "full_name": "string",
   "hashed_password": "string",
+  "role": "admin|standard|premium",
   "is_active": true,
+  "last_login": "datetime",
   "has_google_ai_key": false,
   "has_openai_key": false
 }
