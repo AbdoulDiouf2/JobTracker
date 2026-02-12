@@ -267,17 +267,15 @@ export default function ImportExportPage() {
         mapped.entreprise = value;
       } else if (lowerKey === 'poste' || lowerKey === 'position') {
         mapped.poste = value;
+      } else if (lowerKey === 'candidature_id') {
+        mapped.candidature_id = value;
       } else if (lowerKey.includes('date') && lowerKey.includes('entretien')) {
-        if (typeof value === 'number') {
-          mapped.date_entretien = new Date(value).toISOString();
-        } else {
-          mapped.date_entretien = value;
-        }
-      } else if (lowerKey === 'type_entretien' || lowerKey === 'type entretien' || (lowerKey === 'type' && !mapped.type_entretien)) {
+        mapped.date_entretien = value;
+      } else if (lowerKey === 'type_entretien' || lowerKey === 'type entretien' || lowerKey === 'type') {
         mapped.type_entretien = value;
       } else if (lowerKey === 'format_entretien' || lowerKey === 'format entretien' || lowerKey === 'format') {
         mapped.format_entretien = value;
-      } else if (lowerKey.includes('lieu') || lowerKey.includes('lien') || lowerKey.includes('link')) {
+      } else if (lowerKey === 'lieu_entretien' || lowerKey === 'lieu_lien' || lowerKey.includes('lieu') || lowerKey.includes('lien') || lowerKey.includes('link')) {
         mapped.lieu_lien = value;
       } else if (lowerKey === 'interviewer' || lowerKey === 'recruteur') {
         mapped.interviewer = value;
@@ -285,8 +283,10 @@ export default function ImportExportPage() {
         const valStr = String(value || '').toLowerCase();
         if (valStr.includes('realis') || valStr.includes('complet') || valStr.includes('✅')) {
           mapped.statut = 'completed';
-        } else if (valStr.includes('annul') || valStr.includes('cancel')) {
+        } else if (valStr.includes('annul') || valStr.includes('cancel') || valStr.includes('❌')) {
           mapped.statut = 'cancelled';
+        } else if (valStr.includes('planifi') || valStr.includes('planned') || valStr.includes('📅')) {
+          mapped.statut = 'planned';
         } else {
           mapped.statut = 'planned';
         }
