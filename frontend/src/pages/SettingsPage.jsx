@@ -32,6 +32,13 @@ export default function SettingsPage() {
     browser_notifications: true
   });
 
+  const [calendarStatus, setCalendarStatus] = useState({
+    configured: false,
+    connected: false,
+    email: null
+  });
+  const [calendarLoading, setCalendarLoading] = useState(false);
+
   const t = {
     fr: {
       title: 'Paramètres',
@@ -53,6 +60,13 @@ export default function SettingsPage() {
       reminder24h: 'Rappel 24h avant l\'entretien',
       reminder1h: 'Rappel 1h avant l\'entretien',
       browserNotif: 'Notifications navigateur',
+      calendar: 'Google Calendar',
+      calendarDesc: 'Synchronisez vos entretiens avec Google Calendar',
+      calendarConnected: 'Connecté',
+      calendarDisconnected: 'Non connecté',
+      connectCalendar: 'Connecter Google Calendar',
+      disconnectCalendar: 'Déconnecter',
+      calendarNotConfigured: 'Google Calendar n\'est pas configuré sur ce serveur',
       dangerZone: 'Zone de danger',
       dangerDesc: 'Actions irréversibles sur vos données',
       resetApplications: 'Réinitialiser les candidatures',
@@ -84,6 +98,13 @@ export default function SettingsPage() {
       reminder24h: 'Reminder 24h before interview',
       reminder1h: 'Reminder 1h before interview',
       browserNotif: 'Browser notifications',
+      calendar: 'Google Calendar',
+      calendarDesc: 'Sync your interviews with Google Calendar',
+      calendarConnected: 'Connected',
+      calendarDisconnected: 'Not connected',
+      connectCalendar: 'Connect Google Calendar',
+      disconnectCalendar: 'Disconnect',
+      calendarNotConfigured: 'Google Calendar is not configured on this server',
       dangerZone: 'Danger Zone',
       dangerDesc: 'Irreversible actions on your data',
       resetApplications: 'Reset applications',
