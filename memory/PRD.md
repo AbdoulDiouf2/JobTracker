@@ -6,7 +6,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ## Stack Technique
 - **Backend:** FastAPI, MongoDB, JWT, emergentintegrations
 - **Frontend:** React 19, Tailwind CSS, Shadcn/UI, Recharts
-- **IA:** Google Gemini 2.5 Flash, OpenAI GPT-4o
+- **IA:** Google Gemini (2.0 Flash, 1.5 Pro), OpenAI (GPT-4o, GPT-4o Mini), Groq (Llama 3.3, Mixtral)
 
 ---
 
