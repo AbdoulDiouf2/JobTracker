@@ -179,12 +179,12 @@ export default function CoverLetterGeneratorModal({
               <FileText size={14} className="inline mr-1" />
               {t.selectCV}
             </label>
-            <Select value={selectedCvId} onValueChange={setSelectedCvId}>
+            <Select value={selectedCvId || "none"} onValueChange={(v) => setSelectedCvId(v === "none" ? "" : v)}>
               <SelectTrigger className="bg-slate-800 border-slate-700">
                 <SelectValue placeholder={loadingCvs ? "..." : t.noCV} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700">
-                <SelectItem value="">{t.noCV}</SelectItem>
+                <SelectItem value="none">{t.noCV}</SelectItem>
                 {cvs.map(cv => (
                   <SelectItem key={cv.id} value={cv.id}>
                     {cv.name} {cv.label && `(${cv.label})`} {cv.is_default && '⭐'}
