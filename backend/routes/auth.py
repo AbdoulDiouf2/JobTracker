@@ -53,7 +53,8 @@ async def register(user_data: UserCreate, db = Depends(get_db)):
         created_at=user.created_at,
         is_active=user.is_active,
         has_google_ai_key=False,
-        has_openai_key=False
+        has_openai_key=False,
+        has_groq_key=False
     )
 
 
