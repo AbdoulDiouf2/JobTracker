@@ -4,7 +4,8 @@ import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
-import { User, Key, Globe, Save, Loader2, Bell } from 'lucide-react';
+import { useConfirmDialog } from '../components/ui/confirm-dialog';
+import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar } from 'lucide-react';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -12,7 +13,9 @@ const API_URL = process.env.REACT_APP_BACKEND_URL;
 export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
   const [loading, setLoading] = useState(false);
+  const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
   
   const [formData, setFormData] = useState({
@@ -47,7 +50,17 @@ export default function SettingsPage() {
       emailNotif: 'Notifications par email',
       reminder24h: 'Rappel 24h avant l\'entretien',
       reminder1h: 'Rappel 1h avant l\'entretien',
-      browserNotif: 'Notifications navigateur'
+      browserNotif: 'Notifications navigateur',
+      dangerZone: 'Zone de danger',
+      dangerDesc: 'Actions irréversibles sur vos données',
+      resetApplications: 'Réinitialiser les candidatures',
+      resetApplicationsDesc: 'Supprimer toutes les candidatures et entretiens associés',
+      resetInterviews: 'Réinitialiser les entretiens',
+      resetInterviewsDesc: 'Supprimer uniquement les entretiens',
+      confirmResetApps: 'Êtes-vous sûr de vouloir supprimer TOUTES vos candidatures et entretiens ? Cette action est irréversible !',
+      confirmResetInterviews: 'Êtes-vous sûr de vouloir supprimer TOUS vos entretiens ? Cette action est irréversible !',
+      resetSuccess: 'Données supprimées avec succès',
+      resetting: 'Suppression...'
     },
     en: {
       title: 'Settings',
@@ -67,7 +80,17 @@ export default function SettingsPage() {
       emailNotif: 'Email notifications',
       reminder24h: 'Reminder 24h before interview',
       reminder1h: 'Reminder 1h before interview',
-      browserNotif: 'Browser notifications'
+      browserNotif: 'Browser notifications',
+      dangerZone: 'Danger Zone',
+      dangerDesc: 'Irreversible actions on your data',
+      resetApplications: 'Reset applications',
+      resetApplicationsDesc: 'Delete all applications and associated interviews',
+      resetInterviews: 'Reset interviews',
+      resetInterviewsDesc: 'Delete only interviews',
+      confirmResetApps: 'Are you sure you want to delete ALL your applications and interviews? This action is irreversible!',
+      confirmResetInterviews: 'Are you sure you want to delete ALL your interviews? This action is irreversible!',
+      resetSuccess: 'Data deleted successfully',
+      resetting: 'Deleting...'
     }
   }[language];
 
