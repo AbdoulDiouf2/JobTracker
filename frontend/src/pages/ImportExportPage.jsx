@@ -582,6 +582,29 @@ export default function ImportExportPage() {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
+            {/* Import Type Selector */}
+            <div className="flex items-center gap-4">
+              <span className="text-slate-400 text-sm">{language === 'fr' ? 'Type de données :' : 'Data type:'}</span>
+              <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
+                <button
+                  onClick={() => { setImportType('applications'); setPreviewData(null); setFullData(null); setImportResult(null); }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                    ${importType === 'applications' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <Briefcase size={16} />
+                  {t.importApplications}
+                </button>
+                <button
+                  onClick={() => { setImportType('interviews'); setPreviewData(null); setFullData(null); setImportResult(null); }}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                    ${importType === 'interviews' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <Calendar size={16} />
+                  {t.importInterviews}
+                </button>
+              </div>
+            </div>
+
             {/* Guide Section */}
             <div className="glass-card rounded-xl border border-slate-800 overflow-hidden">
               <button
