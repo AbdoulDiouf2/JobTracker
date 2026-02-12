@@ -101,8 +101,12 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClick={onClose}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
                 ${isActive(item.path) 
-                  ? 'bg-gold/10 text-gold border border-gold/20' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  ? item.isAdmin 
+                    ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    : 'bg-gold/10 text-gold border border-gold/20' 
+                  : item.isAdmin
+                    ? 'text-red-400/70 hover:text-red-400 hover:bg-red-500/10'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                 }`}
             >
               <item.icon size={20} />
