@@ -225,8 +225,14 @@ export default function AIAdvisorPage() {
               ) : (
                 Object.entries(modelsByProvider).map(([provider, models]) => (
                   <div key={provider}>
-                    <DropdownMenuLabel className={`${providerColors[provider]} font-semibold`}>
-                      {providerLabels[provider]}
+                    <DropdownMenuLabel className={`${providerColors[provider]} font-semibold flex items-center justify-between`}>
+                      <span>{providerLabels[provider]}</span>
+                      {models[0]?.key_source === 'platform' && (
+                        <span className="text-xs text-slate-500 font-normal">(plateforme)</span>
+                      )}
+                      {models[0]?.key_source === 'user' && (
+                        <span className="text-xs text-green-500 font-normal">(votre clé)</span>
+                      )}
                     </DropdownMenuLabel>
                     {models.map((model) => (
                       <DropdownMenuItem
