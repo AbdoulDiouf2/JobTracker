@@ -844,6 +844,9 @@ export default function ApplicationsPage() {
         onStatusChange={handleStatusChange}
         t={t}
       />
+
+      {/* Confirm Dialog */}
+      {ConfirmDialog}
     </div>
   );
 }
