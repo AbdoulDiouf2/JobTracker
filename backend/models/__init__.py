@@ -529,6 +529,126 @@ class JobExtractionResponse(BaseModel):
 
 
 # ============================================
+# DOCUMENT MANAGEMENT MODELS
+# ============================================
+
+class DocumentType(str, Enum):
+    CV = "cv"
+    COVER_LETTER = "cover_letter"
+    PORTFOLIO_LINK = "portfolio_link"
+    OTHER = "other"
+
+    @property
+    def label_fr(self) -> str:
+        labels = {
+            "cv": "CV",
+            "cover_letter": "Lettre de motivation",
+            "portfolio_link": "Lien Portfolio",
+            "other": "Autre"
+        }
+        return labels.get(self.value, self.value)
+
+
+class DocumentBase(BaseModel):
+    """Base model for documents"""
+    name: str = Field(..., min_length=1, max_length=200, description="Nom du document")
+    document_type: DocumentType = DocumentType.CV
+    label: Optional[str] = Field(None, max_length=100, description="Étiquette (ex: CV Tech, CV Data)")
+    description: Optional[str] = Field(None, max_length=500, description="Description du document")
+    is_default: bool = Field(default=False, description="Document par défaut pour ce type")
+    # For portfolio links
+    url: Optional[str] = Field(None, max_length=500, description="URL externe (pour portfolio links)")
+
+
+class DocumentCreate(DocumentBase):
+    pass
+
+
+class DocumentUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=200)
+    label: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = Field(None, max_length=500)
+    is_default: Optional[bool] = None
+    url: Optional[str] = Field(None, max_length=500)
+
+
+class Document(DocumentBase):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    # File info (for uploaded files)
+    file_path: Optional[str] = None
+    file_size: Optional[int] = None  # in bytes
+    mime_type: Optional[str] = None
+    original_filename: Optional[str] = None
+    # Metadata
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class DocumentResponse(BaseModel):
+    id: str
+    name: str
+    document_type: DocumentType
+    label: Optional[str] = None
+    description: Optional[str] = None
+    is_default: bool = False
+    url: Optional[str] = None
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    original_filename: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+    # Computed
+    download_url: Optional[str] = None
+
+
+# Cover Letter Template Models
+class CoverLetterTemplateBase(BaseModel):
+    """Template de lettre de motivation"""
+    name: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1, max_length=10000, description="Contenu avec variables: {entreprise}, {poste}, {date}, etc.")
+    is_default: bool = False
+
+
+class CoverLetterTemplateCreate(CoverLetterTemplateBase):
+    pass
+
+
+class CoverLetterTemplate(CoverLetterTemplateBase):
+    model_config = ConfigDict(extra="ignore")
+    
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# Generated Cover Letter (history)
+class GeneratedCoverLetter(BaseModel):
+    """Lettre de motivation générée"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    application_id: Optional[str] = None  # Linked to application if any
+    template_id: Optional[str] = None  # Template used if any
+    entreprise: str
+    poste: str
+    content: str
+    generated_by: str = "manual"  # "manual", "ai", "template"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# Application Document Link (track which docs sent to which company)
+class ApplicationDocumentLink(BaseModel):
+    """Lien entre une candidature et les documents envoyés"""
+    application_id: str
+    document_id: str
+    document_type: DocumentType
+    sent_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+# ============================================
 # AUTH MODELS
 # ============================================
 
