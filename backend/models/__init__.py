@@ -435,3 +435,40 @@ class PaginatedResponse(BaseModel):
     page: int
     per_page: int
     total_pages: int
+
+
+# ============================================
+# ADMIN MODELS
+# ============================================
+
+class AdminDashboardStats(BaseModel):
+    """Statistiques globales pour le panel admin"""
+    total_users: int = 0
+    active_users: int = 0  # Connectés dans les 7 derniers jours
+    new_users_this_week: int = 0
+    new_users_this_month: int = 0
+    total_applications: int = 0
+    total_interviews: int = 0
+    applications_this_week: int = 0
+    interviews_this_week: int = 0
+
+
+class AdminUserUpdate(BaseModel):
+    """Modèle pour la mise à jour admin d'un utilisateur"""
+    role: Optional[UserRole] = None
+    is_active: Optional[bool] = None
+
+
+class UserGrowthDataPoint(BaseModel):
+    """Point de données pour le graphique de croissance"""
+    date: str
+    count: int
+    cumulative: int
+
+
+class ActivityDataPoint(BaseModel):
+    """Point de données pour le graphique d'activité"""
+    date: str
+    applications: int
+    interviews: int
+
