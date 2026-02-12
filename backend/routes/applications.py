@@ -180,6 +180,19 @@ async def get_application(
     application["interviews_count"] = interviews_count
     application["next_interview"] = next_interview["date_entretien"] if next_interview else None
     
+    # Calculer si une relance est recommandée
+    needs_followup = False
+    if application.get("reponse") == "pending":
+        date_candidature = application.get("date_candidature")
+        if date_candidature:
+            if isinstance(date_candidature, str):
+                date_candidature = datetime.fromisoformat(date_candidature.replace("Z", "+00:00"))
+            days_since = (datetime.now(timezone.utc) - date_candidature).days
+            days_before_reminder = application.get("days_before_reminder", 7)
+            needs_followup = days_since >= days_before_reminder
+    
+    application["needs_followup"] = needs_followup
+    
     return application
 
 
