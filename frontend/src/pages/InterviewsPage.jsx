@@ -696,7 +696,7 @@ export default function InterviewsPage() {
   const [viewingInterview, setViewingInterview] = useState(null);
   const [filter, setFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('card'); // 'card' or 'calendar'
+  const [viewMode, setViewMode] = useState('calendar'); // 'card' or 'calendar' - calendar by default
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
 
