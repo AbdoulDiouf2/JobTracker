@@ -703,7 +703,17 @@ export default function InterviewsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm('Supprimer cet entretien ?')) {
+    const confirmed = await showConfirm({
+      title: language === 'fr' ? 'Supprimer l\'entretien' : 'Delete interview',
+      message: language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir supprimer cet entretien ? Cette action est irréversible.'
+        : 'Are you sure you want to delete this interview? This action cannot be undone.',
+      type: 'danger',
+      confirmText: language === 'fr' ? 'Supprimer' : 'Delete',
+      cancelText: language === 'fr' ? 'Annuler' : 'Cancel',
+    });
+    
+    if (confirmed) {
       await deleteInterview(id);
     }
   };
