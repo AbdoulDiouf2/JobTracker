@@ -323,3 +323,25 @@ async def list_favorites(
         app["next_interview"] = None
     
     return favorites
+
+
+@router.delete("/reset/all", status_code=status.HTTP_200_OK)
+async def reset_all_applications(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Supprime TOUTES les candidatures et entretiens de l'utilisateur"""
+    user_id = current_user["user_id"]
+    
+    # Supprimer tous les entretiens
+    interviews_result = await db.interviews.delete_many({"user_id": user_id})
+    
+    # Supprimer toutes les candidatures
+    apps_result = await db.applications.delete_many({"user_id": user_id})
+    
+    return {
+        "success": True,
+        "deleted_applications": apps_result.deleted_count,
+        "deleted_interviews": interviews_result.deleted_count,
+        "message": f"{apps_result.deleted_count} candidature(s) et {interviews_result.deleted_count} entretien(s) supprimé(s)"
+    }
