@@ -18,8 +18,13 @@ import LegalNoticePage from "./pages/LegalNoticePage";
 import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import TermsOfServicePage from "./pages/TermsOfServicePage";
 
+// Admin Pages
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
+import AdminLayout from "./layouts/AdminLayout";
 
 function App() {
   return (
@@ -45,6 +50,12 @@ function App() {
                 <Route path="ai-advisor" element={<AIAdvisorPage />} />
                 <Route path="import-export" element={<ImportExportPage />} />
                 <Route path="settings" element={<SettingsPage />} />
+              </Route>
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="users" element={<AdminUsersPage />} />
               </Route>
             </Routes>
           </BrowserRouter>
