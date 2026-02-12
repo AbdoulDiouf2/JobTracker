@@ -110,6 +110,21 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - `GET /api/ai/chat-history/{session_id}` - Historique de conversation
 - `GET /api/ai/chat-sessions` - Liste des sessions
 
+### Documents
+- `POST /api/documents/upload` - Upload CV/document
+- `POST /api/documents/link` - Ajouter lien portfolio
+- `GET /api/documents/` - Liste des documents
+- `GET /api/documents/cv` - Liste des CV
+- `GET /api/documents/portfolio-links` - Liste des liens portfolio
+- `GET /api/documents/{id}/download` - Télécharger document
+- `PUT /api/documents/{id}` - Modifier document
+- `DELETE /api/documents/{id}` - Supprimer document
+- `POST /api/documents/templates` - Créer template LM
+- `GET /api/documents/templates/` - Liste templates
+- `POST /api/documents/templates/{id}/generate` - Générer LM depuis template
+- `POST /api/documents/link-to-application` - Lier document à candidature
+- `GET /api/documents/application/{id}` - Documents d'une candidature
+
 ### Administration
 - `GET /api/admin/dashboard` - Stats globales
 - `GET /api/admin/users` - Liste utilisateurs
