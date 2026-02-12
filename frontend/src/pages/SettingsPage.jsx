@@ -42,6 +42,7 @@ export default function SettingsPage() {
       apiKeys: 'Clés API',
       googleKey: 'Clé Google AI (Gemini)',
       openaiKey: 'Clé OpenAI',
+      groqKey: 'Clé Groq',
       language: 'Langue',
       currentLang: 'Français',
       save: 'Enregistrer',
