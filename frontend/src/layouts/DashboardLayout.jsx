@@ -48,6 +48,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/dashboard/interviews', icon: Calendar, label: t.interviews },
     { path: '/dashboard/statistics', icon: BarChart3, label: t.statistics },
     { path: '/dashboard/ai-advisor', icon: Sparkles, label: t.aiAdvisor },
+    { path: '/dashboard/documents', icon: FileText, label: t.documents },
     { path: '/dashboard/import-export', icon: FolderSync, label: t.importExport },
     { path: '/dashboard/settings', icon: Settings, label: t.settings },
   ];
