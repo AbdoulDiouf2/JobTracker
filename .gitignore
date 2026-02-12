@@ -28,10 +28,11 @@ next-env.d.ts
 # Production builds
 /build
 dist/
-dist
 
-# Environment files (comprehensive coverage)
-
+# Environment files
+*.env
+*.env.*
+!.env.example
 *token.json*
 *credentials.json*
 
@@ -75,82 +76,13 @@ agenthub/agents/youtube/db
 
 # Build caches
 .cache/
+frontend/node_modules/.cache/
 
 # Mobile development
-android-sdk/ frontend/node_modules/.cache/default-development/2.pack
-frontend/node_modules/.cache/default-development/2.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/0.pack
-frontend/node_modules/.cache/default-development/7.pack
-frontend/node_modules/.cache/default-development/1.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/3.pack
+android-sdk/
+
+# Sensitive documentation (DO NOT COMMIT)
+ADMIN_SETUP.md
+**/ADMIN_SETUP.md
 frontend/node_modules/.cache/default-development/4.pack
-frontend/node_modules/.cache/default-development/5.pack
--e 
-# Environment files
-*.env
-*.env.*
-frontend/node_modules/.cache/default-development/9.pack
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
--e 
-# Environment files
-*.env
-*.env.*
+frontend/node_modules/.cache/default-development/7.pack
