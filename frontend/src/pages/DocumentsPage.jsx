@@ -148,7 +148,7 @@ export default function DocumentsPage() {
   const fetchDocuments = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents`, {
+      const response = await axios.get(`${API_URL}/api/documents/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setDocuments(response.data);
@@ -163,7 +163,7 @@ export default function DocumentsPage() {
   const fetchTemplates = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents/templates`, {
+      const response = await axios.get(`${API_URL}/api/documents/templates/`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setTemplates(response.data);
