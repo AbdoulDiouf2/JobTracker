@@ -311,11 +311,20 @@ async def get_available_models(
     default_model = None
     
     for provider, models in AI_MODELS.items():
-        is_available = bool(user_keys.get(provider)) or env_keys.get(provider, False)
+        has_user_key = bool(user_keys.get(provider))
+        has_env_key = env_keys.get(provider, False)
+        is_available = has_user_key or has_env_key
         
         # Groq requires SDK
         if provider == "groq" and not GROQ_AVAILABLE:
             is_available = False
+        
+        # Determine key source
+        key_source = None
+        if has_user_key:
+            key_source = "user"
+        elif has_env_key:
+            key_source = "platform"
         
         for model in models:
             model_info = {
@@ -323,7 +332,8 @@ async def get_available_models(
                 "model_id": model["model_id"],
                 "display_name": model["display_name"],
                 "description": model["description"],
-                "is_available": is_available
+                "is_available": is_available,
+                "key_source": key_source  # 'user', 'platform', or None
             }
             available_models.append(model_info)
             
