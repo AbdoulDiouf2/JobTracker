@@ -21,7 +21,8 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     google_ai_key: '',
-    openai_key: ''
+    openai_key: '',
+    groq_key: ''
   });
 
   const [notifSettings, setNotifSettings] = useState({
