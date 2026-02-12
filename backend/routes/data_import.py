@@ -29,6 +29,19 @@ except ImportError:
     except ImportError:
         pass
 
+# Import PDF and DOCX extractors
+try:
+    from PyPDF2 import PdfReader
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
+
+try:
+    from docx import Document as DocxDocument
+    DOCX_SUPPORT = True
+except ImportError:
+    DOCX_SUPPORT = False
+
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/import", tags=["Import"])
