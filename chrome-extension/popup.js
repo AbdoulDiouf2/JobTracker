@@ -1,102 +1,179 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('jobForm');
   const messageDiv = document.getElementById('message');
+  const extractBtn = document.getElementById('extractBtn');
+  const loadingDiv = document.getElementById('loading');
   
-  // 1. Au chargement, on demande au content script de scanner la page
+  // Form fields
+  const titleInput = document.getElementById('title');
+  const companyInput = document.getElementById('company');
+  const locationInput = document.getElementById('location');
+  const urlInput = document.getElementById('url');
+  const typeSelect = document.getElementById('type');
+  const salaryMinInput = document.getElementById('salaryMin');
+  const salaryMaxInput = document.getElementById('salaryMax');
+  const descriptionInput = document.getElementById('description');
+  const competencesInput = document.getElementById('competences');
+
+  // Get current tab URL
   chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
     const activeTab = tabs[0];
-    
-    // Injecter script if needed (mais manifest le fait déjà via content_scripts)
-    chrome.tabs.sendMessage(activeTab.id, {action: "scrape"}, (response) => {
-      if (chrome.runtime.lastError) {
-        // Le content script n'est peut-être pas chargé (page non rechargée ou page chrome://)
-        console.warn("Impossible de communiquer avec le content script:", chrome.runtime.lastError);
-        return;
-      }
-
-      if (response) {
-        populateForm(response);
-      }
-    });
+    urlInput.value = activeTab.url;
   });
 
-  // 2. Remplir le formulaire avec les données scrapées
-  function populateForm(data) {
-    if (data.title) document.getElementById('title').value = data.title;
-    if (data.company) document.getElementById('company').value = data.company;
-    if (data.location) document.getElementById('location').value = data.location;
-    if (data.url) document.getElementById('url').value = data.url;
-  }
+  // AI Extraction button
+  extractBtn.addEventListener('click', async () => {
+    loadingDiv.classList.remove('hidden');
+    loadingDiv.textContent = 'Extraction IA en cours...';
+    extractBtn.disabled = true;
 
-  // 3. Soumission du formulaire
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const formData = {
-      title: document.getElementById('title').value,
-      company: document.getElementById('company').value,
-      location: document.getElementById('location').value,
-      jobUrl: document.getElementById('url').value,
-      status: document.getElementById('status').value, // Par défaut 'Applied' (?)
-      dateApplied: new Date().toISOString(),
-      // description: ... (on pourrait l'ajouter hidden)
-    };
+    try {
+      // Get page content from content script
+      const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
+      
+      const pageContent = await chrome.scripting.executeScript({
+        target: {tabId: tab.id},
+        func: () => {
+          // Get main content, avoiding scripts and styles
+          const body = document.body.cloneNode(true);
+          body.querySelectorAll('script, style, noscript, iframe').forEach(el => el.remove());
+          return body.innerText.substring(0, 20000); // Limit content
+        }
+      });
 
-    // Récupérer la config (URL et Token)
-    chrome.storage.sync.get({
-      jt_apiUrl: 'http://localhost:5000',
-      jt_token: ''
-    }, async (items) => {
-      const { jt_apiUrl, jt_token } = items;
+      const content = pageContent[0]?.result || '';
+      
+      // Get config
+      const config = await chrome.storage.sync.get({
+        jt_apiUrl: 'http://localhost:5000',
+        jt_token: ''
+      });
 
-      if (!jt_token) {
+      if (!config.jt_token) {
         showMessage("Erreur: Token non configuré. Allez dans les options.", "error");
         return;
       }
 
-      try {
-        // Construction de l'objet pour l'API backend (JobApplicationCreate)
-        // Note: L'API attend des champs en snake_case (date_candidature, type_poste, etc.)
-        const payload = {
-          poste: formData.title,
-          entreprise: formData.company,
-          lieu: formData.location, // Envoie directement la valeur, même si vide (le backend gère le None)
-          lien: formData.jobUrl, // Correction: url_offre -> lien
-          description: "Importé via Chrome Extension", // On pourrait scraper la description complète
-          date_candidature: formData.dateApplied,
-          reponse: "pending", // Default status
-          type_poste: "cdi", // Valeur par défaut, à améliorer avec un select dans le popup
-          moyen: "linkedin", // Ou détecter via l'URL
-          is_favorite: false
-        };
+      // Call AI extraction endpoint
+      const response = await fetch(`${config.jt_apiUrl}/api/ai/extract-job`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.jt_token}`
+        },
+        body: JSON.stringify({
+          page_content: content,
+          page_url: tab.url
+        })
+      });
 
-        const response = await fetch(`${jt_apiUrl}/api/applications`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jt_token}`
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        
-        const result = await response.json();
-        console.log("Succès:", result);
-        showMessage("Candidature ajoutée avec succès !", "success");
-        
-        setTimeout(() => {
-          window.close();
-        }, 1500);
-
-      } catch (error) {
-        console.error("Erreur:", error);
-        showMessage("Erreur connexion API. Vérifiez l'URL/Token.", "error");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `HTTP ${response.status}`);
       }
-    });
+
+      const data = await response.json();
+      
+      // Populate form with extracted data
+      if (data.poste) titleInput.value = data.poste;
+      if (data.entreprise) companyInput.value = data.entreprise;
+      if (data.lieu) locationInput.value = data.lieu;
+      if (data.type_poste) typeSelect.value = data.type_poste;
+      if (data.salaire_min) salaryMinInput.value = data.salaire_min;
+      if (data.salaire_max) salaryMaxInput.value = data.salaire_max;
+      if (data.description_poste) descriptionInput.value = data.description_poste;
+      if (data.competences && data.competences.length > 0) {
+        competencesInput.value = data.competences.join(', ');
+      }
+
+      const confidence = Math.round(data.confidence_score * 100);
+      showMessage(`Extraction réussie ! (Confiance: ${confidence}%)`, "success");
+
+    } catch (error) {
+      console.error("Extraction error:", error);
+      showMessage(`Erreur: ${error.message}`, "error");
+    } finally {
+      loadingDiv.classList.add('hidden');
+      extractBtn.disabled = false;
+    }
   });
+
+  // Form submission
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const formData = {
+      poste: titleInput.value,
+      entreprise: companyInput.value,
+      lieu: locationInput.value || null,
+      lien: urlInput.value,
+      type_poste: typeSelect.value,
+      salaire_min: salaryMinInput.value ? parseInt(salaryMinInput.value) : null,
+      salaire_max: salaryMaxInput.value ? parseInt(salaryMaxInput.value) : null,
+      description_poste: descriptionInput.value || null,
+      date_candidature: new Date().toISOString(),
+      reponse: "pending",
+      moyen: detectPlatform(urlInput.value),
+      is_favorite: false
+    };
+
+    // Validate required fields
+    if (!formData.entreprise || !formData.poste) {
+      showMessage("Entreprise et Poste sont requis !", "error");
+      return;
+    }
+
+    const config = await chrome.storage.sync.get({
+      jt_apiUrl: 'http://localhost:5000',
+      jt_token: ''
+    });
+
+    if (!config.jt_token) {
+      showMessage("Erreur: Token non configuré. Allez dans les options.", "error");
+      return;
+    }
+
+    try {
+      loadingDiv.classList.remove('hidden');
+      loadingDiv.textContent = 'Enregistrement...';
+
+      const response = await fetch(`${config.jt_apiUrl}/api/applications`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${config.jt_token}`
+        },
+        body: JSON.stringify(formData)
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `HTTP ${response.status}`);
+      }
+      
+      showMessage("Candidature ajoutée avec succès !", "success");
+      
+      setTimeout(() => {
+        window.close();
+      }, 1500);
+
+    } catch (error) {
+      console.error("Save error:", error);
+      showMessage(`Erreur: ${error.message}`, "error");
+    } finally {
+      loadingDiv.classList.add('hidden');
+    }
+  });
+
+  function detectPlatform(url) {
+    const lowerUrl = url.toLowerCase();
+    if (lowerUrl.includes('linkedin')) return 'linkedin';
+    if (lowerUrl.includes('indeed')) return 'indeed';
+    if (lowerUrl.includes('welcometothejungle')) return 'welcome_to_jungle';
+    if (lowerUrl.includes('apec')) return 'apec';
+    if (lowerUrl.includes('pole-emploi') || lowerUrl.includes('francetravail')) return 'pole_emploi';
+    return 'other';
+  }
 
   function showMessage(text, type) {
     messageDiv.textContent = text;
