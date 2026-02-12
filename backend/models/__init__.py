@@ -13,6 +13,21 @@ import uuid
 # ENUMS - Statuts et Types
 # ============================================
 
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    STANDARD = "standard"
+    PREMIUM = "premium"
+
+    @property
+    def label_fr(self) -> str:
+        labels = {
+            "admin": "Administrateur",
+            "standard": "Standard",
+            "premium": "Premium"
+        }
+        return labels.get(self.value, self.value)
+
+
 class ApplicationStatus(str, Enum):
     PENDING = "pending"
     POSITIVE = "positive"
