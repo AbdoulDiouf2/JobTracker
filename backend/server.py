@@ -145,6 +145,7 @@ app.dependency_overrides[import_get_db] = override_get_db
 app.dependency_overrides[notif_get_db] = override_get_db
 app.dependency_overrides[admin_get_db] = override_get_db
 app.dependency_overrides[tracking_get_db] = override_get_db
+app.dependency_overrides[documents_get_db] = override_get_db
 
 # CORS middleware
 app.add_middleware(
