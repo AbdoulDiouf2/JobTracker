@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths } from 'date-fns';
+import { 
+  format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, 
+  addMonths, subMonths, startOfWeek, endOfWeek, addWeeks, subWeeks,
+  addDays, subDays, startOfYear, endOfYear, eachMonthOfInterval, addYears, subYears
+} from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { 
   Plus, Calendar, Clock, MapPin, User, Edit2, Trash2, 
