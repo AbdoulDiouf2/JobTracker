@@ -577,6 +577,17 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
         isOpen={showMatchingModal}
         onClose={() => setShowMatchingModal(false)}
       />
+
+      {/* Cover Letter Generator Modal */}
+      <CoverLetterGeneratorModal
+        open={showCoverLetterModal}
+        onClose={() => setShowCoverLetterModal(false)}
+        entreprise={app.entreprise}
+        poste={app.poste}
+        jobDescription={app.description_poste}
+        applicationId={app.id}
+        language={language}
+      />
     </>
   );
 };
