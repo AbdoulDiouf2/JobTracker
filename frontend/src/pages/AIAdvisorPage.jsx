@@ -174,6 +174,26 @@ export default function AIAdvisorPage() {
       content: activeTab === 'advisor' ? t.welcomeAdvisor : t.welcomeChatbot
     }]);
     setSessionId(null);
+    setModelUsed(null);
+  };
+
+  // Group models by provider
+  const modelsByProvider = availableModels.reduce((acc, model) => {
+    if (!acc[model.provider]) acc[model.provider] = [];
+    acc[model.provider].push(model);
+    return acc;
+  }, {});
+
+  const providerLabels = {
+    openai: 'OpenAI',
+    google: 'Google',
+    groq: 'Groq'
+  };
+
+  const providerColors = {
+    openai: 'text-green-400',
+    google: 'text-blue-400',
+    groq: 'text-orange-400'
   };
 
   return (
