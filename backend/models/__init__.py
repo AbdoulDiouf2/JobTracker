@@ -219,6 +219,13 @@ class JobApplicationBase(BaseModel):
     date_candidature: datetime
     lien: Optional[str] = Field(None, max_length=500)
     commentaire: Optional[str] = Field(None, max_length=2000)
+    # Nouveaux champs pour le matching et le suivi
+    description_poste: Optional[str] = Field(None, max_length=5000, description="Description du poste pour le matching IA")
+    contact_email: Optional[str] = Field(None, max_length=200, description="Email du recruteur pour les relances")
+    contact_name: Optional[str] = Field(None, max_length=100, description="Nom du contact/recruteur")
+    salaire_min: Optional[int] = Field(None, description="Salaire minimum proposé")
+    salaire_max: Optional[int] = Field(None, description="Salaire maximum proposé")
+    days_before_reminder: Optional[int] = Field(default=7, description="Jours avant rappel de relance")
 
 
 class JobApplicationCreate(JobApplicationBase):
