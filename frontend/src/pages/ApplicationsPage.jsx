@@ -766,6 +766,30 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
             />
           </div>
 
+          {/* CV Selector */}
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              <FileText size={14} className="inline mr-1" />
+              CV associé
+            </label>
+            <Select value={selectedCvId} onValueChange={setSelectedCvId}>
+              <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white">
+                <SelectValue placeholder={loadingCvs ? "Chargement..." : "Sélectionner un CV (optionnel)"} />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                <SelectItem value="">Aucun CV</SelectItem>
+                {cvs.map(cv => (
+                  <SelectItem key={cv.id} value={cv.id}>
+                    {cv.name} {cv.label && `(${cv.label})`} {cv.is_default && '⭐'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-slate-500 mt-1">
+              Associez un CV de votre bibliothèque à cette candidature
+            </p>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-slate-300 mb-2">{t.comment}</label>
             <textarea
