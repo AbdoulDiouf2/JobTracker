@@ -80,9 +80,15 @@ async def login(user_data: UserLogin, db = Depends(get_db)):
             detail="Compte désactivé"
         )
     
-    # Créer le token
+    # Mettre à jour la dernière connexion
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    # Créer le token avec le rôle
     access_token = create_access_token(
-        data={"sub": user["id"]},
+        data={"sub": user["id"], "role": user.get("role", "standard")},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
     
