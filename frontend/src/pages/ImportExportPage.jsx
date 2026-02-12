@@ -165,6 +165,52 @@ export default function ImportExportPage() {
 
   const guide = COLUMN_GUIDE[language];
 
+  // Helper function to map columns to expected format
+  const mapRowToApplication = (row) => {
+    const mapped = {};
+    Object.entries(row).forEach(([key, value]) => {
+      const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      // Map known columns
+      if (lowerKey === 'entreprise' || lowerKey === 'company') {
+        mapped.entreprise = value;
+      } else if (lowerKey === 'poste' || lowerKey === 'position' || lowerKey === 'job') {
+        mapped.poste = value;
+      } else if (lowerKey === 'type' || lowerKey === 'type_poste' || lowerKey === 'contrat') {
+        mapped.type_poste = value;
+      } else if (lowerKey === 'lieu' || lowerKey === 'location' || lowerKey === 'ville') {
+        mapped.lieu = value;
+      } else if (lowerKey === 'moyen' || lowerKey === 'source') {
+        mapped.moyen = value;
+      } else if (lowerKey.includes('date') && (lowerKey.includes('postule') || lowerKey.includes('candidature'))) {
+        // Handle timestamp or date string
+        if (typeof value === 'number') {
+          mapped.date_candidature = new Date(value).toISOString();
+        } else {
+          mapped.date_candidature = value;
+        }
+      } else if (lowerKey === 'lien' || lowerKey === 'link' || lowerKey === 'url') {
+        mapped.lien = value;
+      } else if (lowerKey === 'commentaire' || lowerKey === 'comment' || lowerKey === 'notes') {
+        mapped.commentaire = value;
+      } else if (lowerKey === 'reponse' || lowerKey === 'response' || lowerKey === 'status' || lowerKey === 'statut') {
+        // Map response status
+        const valStr = String(value || '').toLowerCase();
+        if (valStr.includes('rejet') || valStr.includes('refus') || valStr.includes('❌')) {
+          mapped.reponse = 'negative';
+        } else if (valStr.includes('accept') || valStr.includes('✅') || valStr.includes('positiv')) {
+          mapped.reponse = 'positive';
+        } else if (valStr.includes('attente') || valStr.includes('pending') || valStr.includes('⏳')) {
+          mapped.reponse = 'pending';
+        } else if (valStr.includes('no_response') || valStr.includes('sans reponse')) {
+          mapped.reponse = 'no_response';
+        } else {
+          mapped.reponse = 'pending';
+        }
+      }
+    });
+    return mapped;
+  };
+
   const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -172,12 +218,14 @@ export default function ImportExportPage() {
     setPreviewFile(file);
     setImportResult(null);
     setPreviewData(null);
+    setFullData(null);
 
     try {
-      const content = await file.text();
       let data = [];
+      const fileName = file.name.toLowerCase();
 
-      if (file.name.endsWith('.json')) {
+      if (fileName.endsWith('.json')) {
+        const content = await file.text();
         // Try standard JSON first
         try {
           const parsed = JSON.parse(content);
@@ -202,56 +250,14 @@ export default function ImportExportPage() {
           }).filter(obj => obj !== null);
         }
         
-        // Map column names to expected format
-        data = data.map(row => {
-          const mapped = {};
-          Object.entries(row).forEach(([key, value]) => {
-            const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            // Map known columns
-            if (lowerKey === 'entreprise' || lowerKey === 'company') {
-              mapped.entreprise = value;
-            } else if (lowerKey === 'poste' || lowerKey === 'position' || lowerKey === 'job') {
-              mapped.poste = value;
-            } else if (lowerKey === 'type' || lowerKey === 'type_poste' || lowerKey === 'contrat') {
-              mapped.type_poste = value;
-            } else if (lowerKey === 'lieu' || lowerKey === 'location' || lowerKey === 'ville') {
-              mapped.lieu = value;
-            } else if (lowerKey === 'moyen' || lowerKey === 'source') {
-              mapped.moyen = value;
-            } else if (lowerKey.includes('date') && (lowerKey.includes('postule') || lowerKey.includes('candidature'))) {
-              // Handle timestamp or date string
-              if (typeof value === 'number') {
-                mapped.date_candidature = new Date(value).toISOString();
-              } else {
-                mapped.date_candidature = value;
-              }
-            } else if (lowerKey === 'lien' || lowerKey === 'link' || lowerKey === 'url') {
-              mapped.lien = value;
-            } else if (lowerKey === 'commentaire' || lowerKey === 'comment' || lowerKey === 'notes') {
-              mapped.commentaire = value;
-            } else if (lowerKey === 'reponse' || lowerKey === 'response' || lowerKey === 'status' || lowerKey === 'statut') {
-              // Map response status
-              const valStr = String(value || '').toLowerCase();
-              if (valStr.includes('rejet') || valStr.includes('refus') || valStr.includes('❌')) {
-                mapped.reponse = 'negative';
-              } else if (valStr.includes('accept') || valStr.includes('✅') || valStr.includes('positiv')) {
-                mapped.reponse = 'positive';
-              } else if (valStr.includes('attente') || valStr.includes('pending') || valStr.includes('⏳')) {
-                mapped.reponse = 'pending';
-              } else if (valStr.includes('no_response') || valStr.includes('sans reponse')) {
-                mapped.reponse = 'no_response';
-              } else {
-                mapped.reponse = 'pending';
-              }
-            }
-          });
-          return mapped;
-        }).filter(obj => obj.entreprise || obj.poste);
+        // Map column names
+        data = data.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
         
-      } else if (file.name.endsWith('.csv')) {
+      } else if (fileName.endsWith('.csv')) {
+        const content = await file.text();
         const lines = content.split('\n').filter(l => l.trim());
         if (lines.length > 0) {
-          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, '').toLowerCase());
+          const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
           data = lines.slice(1).map(line => {
             const values = line.match(/("([^"]*)"|[^,]*)/g) || [];
             const obj = {};
@@ -261,8 +267,25 @@ export default function ImportExportPage() {
               obj[h] = val;
             });
             return obj;
-          }).filter(obj => obj.entreprise || obj.company || obj.poste || obj.position);
+          });
+          // Map column names
+          data = data.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
         }
+        
+      } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+        // Parse Excel file
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        
+        // Get first sheet
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        
+        // Convert to JSON
+        const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+        
+        // Map column names
+        data = rawData.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
       }
 
       console.log('Parsed data:', data);
