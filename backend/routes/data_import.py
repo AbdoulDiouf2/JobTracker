@@ -249,29 +249,36 @@ async def import_data(
                 "poste": {"$regex": f"^{poste}$", "$options": "i"}
             })
             
+            app_id = None
+            is_duplicate = False
+            
             if existing:
+                # Application exists - use its ID for interviews
+                app_id = existing.get("id")
+                is_duplicate = True
                 duplicates += 1
-                continue
-            
-            app_doc = {
-                "id": str(uuid.uuid4()),
-                "user_id": current_user["user_id"],
-                "entreprise": entreprise,
-                "poste": poste,
-                "type_poste": app_data.get('type_poste') or app_data.get('Type') or 'cdi',
-                "lieu": app_data.get('lieu') or app_data.get('Lieu'),
-                "moyen": app_data.get('moyen') or app_data.get('Moyen'),
-                "date_candidature": date_str,
-                "lien": app_data.get('lien') or app_data.get('Lien'),
-                "commentaire": app_data.get('commentaire') or app_data.get('Commentaire'),
-                "reponse": app_data.get('reponse', 'pending'),
-                "is_favorite": False,
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "updated_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-            await db.applications.insert_one(app_doc)
-            imported += 1
+            else:
+                # Create new application
+                app_doc = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": current_user["user_id"],
+                    "entreprise": entreprise,
+                    "poste": poste,
+                    "type_poste": app_data.get('type_poste') or app_data.get('Type') or 'cdi',
+                    "lieu": app_data.get('lieu') or app_data.get('Lieu'),
+                    "moyen": app_data.get('moyen') or app_data.get('Moyen'),
+                    "date_candidature": date_str,
+                    "lien": app_data.get('lien') or app_data.get('Lien'),
+                    "commentaire": app_data.get('commentaire') or app_data.get('Commentaire'),
+                    "reponse": app_data.get('reponse', 'pending'),
+                    "is_favorite": False,
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.applications.insert_one(app_doc)
+                app_id = app_doc["id"]
+                imported += 1
 
             # Handle nested interviews if present
             if 'interviews' in app_data and isinstance(app_data['interviews'], list):
