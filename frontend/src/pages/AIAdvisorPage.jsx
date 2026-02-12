@@ -1,9 +1,17 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Sparkles, MessageSquare, Trash2 } from 'lucide-react';
+import { Send, Bot, User, Loader2, Sparkles, MessageSquare, Trash2, Settings2, ChevronDown } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../components/ui/dropdown-menu';
 import axios from 'axios';
 import Markdown from 'react-markdown';
 
@@ -16,6 +24,9 @@ export default function AIAdvisorPage() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('advisor'); // 'advisor' or 'chatbot'
   const [sessionId, setSessionId] = useState(null);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState(null);
+  const [modelUsed, setModelUsed] = useState(null);
   const messagesEndRef = useRef(null);
 
   const t = {
