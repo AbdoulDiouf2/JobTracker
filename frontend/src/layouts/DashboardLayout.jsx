@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
-  Settings, LogOut, Menu, X, ChevronRight, User, Sparkles, FolderSync
+  Settings, LogOut, Menu, X, ChevronRight, User, Sparkles, FolderSync,
+  ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
@@ -11,7 +12,7 @@ import NotificationBell from '../components/NotificationBell';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const { language } = useLanguage();
 
   const t = {
@@ -23,7 +24,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       aiAdvisor: 'Assistant IA',
       importExport: 'Import/Export',
       settings: 'Paramètres',
-      logout: 'Déconnexion'
+      logout: 'Déconnexion',
+      admin: 'Administration'
     },
     en: {
       dashboard: 'Dashboard',
@@ -33,7 +35,8 @@ const Sidebar = ({ isOpen, onClose }) => {
       aiAdvisor: 'AI Assistant',
       importExport: 'Import/Export',
       settings: 'Settings',
-      logout: 'Logout'
+      logout: 'Logout',
+      admin: 'Administration'
     }
   }[language];
 
@@ -47,8 +50,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     { path: '/dashboard/settings', icon: Settings, label: t.settings },
   ];
 
+  // Add admin link if user is admin
+  if (isAdmin) {
+    navItems.push({ path: '/admin', icon: ShieldCheck, label: t.admin, isAdmin: true });
+  }
+
   const isActive = (path) => {
     if (path === '/dashboard') return location.pathname === '/dashboard';
+    if (path === '/admin') return location.pathname.startsWith('/admin');
     return location.pathname.startsWith(path);
   };
 
