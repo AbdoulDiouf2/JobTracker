@@ -122,8 +122,18 @@ export default function AIAdvisorPage() {
       const token = localStorage.getItem('token');
       const endpoint = activeTab === 'advisor' ? '/api/ai/career-advisor' : '/api/ai/chatbot';
       const payload = activeTab === 'advisor' 
-        ? { question: input, include_applications: true }
-        : { message: input, session_id: sessionId };
+        ? { 
+            question: input, 
+            include_applications: true,
+            model_provider: selectedModel?.provider,
+            model_name: selectedModel?.model_id
+          }
+        : { 
+            message: input, 
+            session_id: sessionId,
+            model_provider: selectedModel?.provider,
+            model_name: selectedModel?.model_id
+          };
 
       const response = await axios.post(`${API_URL}${endpoint}`, payload, {
         headers: { Authorization: `Bearer ${token}` }
@@ -137,6 +147,9 @@ export default function AIAdvisorPage() {
       
       if (response.data.session_id) {
         setSessionId(response.data.session_id);
+      }
+      if (response.data.model_used) {
+        setModelUsed(response.data.model_used);
       }
     } catch (error) {
       console.error('AI Error:', error);
