@@ -286,14 +286,35 @@ async def import_data(
                         elif int_date_val:
                             int_date_str = str(int_date_val).replace(' ', 'T')
                         
+                        # Normalize type_entretien to enum values
+                        raw_type = str(interview_data.get('type_entretien', 'technical')).lower()
+                        type_mapping = {
+                            'rh': 'rh', 'hr': 'rh', 'ressources humaines': 'rh',
+                            'technique': 'technical', 'technical': 'technical', 'tech': 'technical',
+                            'manager': 'manager', 'managerial': 'manager',
+                            'final': 'final', 'finale': 'final',
+                        }
+                        normalized_type = type_mapping.get(raw_type, 'other')
+                        
+                        # Normalize format_entretien to enum values
+                        raw_format = str(interview_data.get('format_entretien', 'video')).lower()
+                        format_mapping = {
+                            'visio': 'video', 'video': 'video', 'visioconference': 'video', 
+                            'visioconférence': 'video', 'teams': 'video', 'zoom': 'video', 'meet': 'video',
+                            'téléphone': 'phone', 'telephone': 'phone', 'phone': 'phone', 'tel': 'phone',
+                            'présentiel': 'in_person', 'presentiel': 'in_person', 'in_person': 'in_person',
+                            'sur site': 'in_person', 'on site': 'in_person', 'onsite': 'in_person',
+                        }
+                        normalized_format = format_mapping.get(raw_format, 'video')
+                        
                         # Create interview linked to this application
                         interview_doc = {
                             "id": str(uuid.uuid4()),
                             "user_id": current_user["user_id"],
                             "candidature_id": app_doc["id"],
                             "date_entretien": int_date_str,
-                            "type_entretien": interview_data.get('type_entretien', 'technical'),
-                            "format_entretien": interview_data.get('format_entretien', 'video'),
+                            "type_entretien": normalized_type,
+                            "format_entretien": normalized_format,
                             "lieu_lien": interview_data.get('lieu_lien'),
                             "interviewer": interview_data.get('interviewer'),
                             "statut": interview_data.get('statut', 'planned'),
