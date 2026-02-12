@@ -41,6 +41,7 @@
 - [x] Responsive liens longs (Teams, Zoom) dans les cartes entretiens
 - [x] Modal détail entretien : espacement entre sections
 - [x] Sidebar fixe avec scroll interne
+- [x] Page Paramètres : layout 2 colonnes (était entassé à gauche)
 
 ## 🔴 Bugs & Corrections UI (P0)
 - [ ] (Aucun bug critique en attente)
