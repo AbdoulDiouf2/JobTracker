@@ -3,36 +3,38 @@
 ## 🎨 Design & Branding
 - [x] Supprimer le badge "Made with Emergent" dans `frontend/public/index.html` (lignes 63-107) pour avoir un look marque blanche.
 
-## 🔴 Bugs & Corrections UI (P0)
-- [ ] Tableau de bord : Ajouter espacement entre les cartes de la section "Candidatures récentes"
-- [ ] Page Entretiens : Responsive des liens longs (Teams, Zoom) - En cours de correction
+## ✅ Complété
 
-## 🔐 Administration Multi-Tenant (P1)
-> Fonctionnalités essentielles pour un SaaS multi-tenant
-
-### Système de Rôles
-- [ ] Créer un modèle `Role` (admin, standard, premium?)
-- [ ] Ajouter le champ `role` au modèle User (défaut: "standard")
-- [ ] Créer un compte admin initial (migration/seed)
-- [ ] Middleware de vérification des permissions admin
-
-### Panel Admin
-- [ ] Dashboard Admin avec statistiques globales :
+### 🔐 Administration Multi-Tenant
+- [x] Créer un modèle `Role` (admin, standard, premium)
+- [x] Ajouter le champ `role` au modèle User (défaut: "standard")
+- [x] Middleware de vérification des permissions admin
+- [x] Dashboard Admin avec statistiques globales :
   - Nombre total d'utilisateurs
   - Nombre de candidatures sur la plateforme
   - Nombre d'entretiens planifiés
   - Utilisateurs actifs (dernière connexion < 7 jours)
   - Graphiques d'évolution (inscriptions, activité)
-- [ ] Gestion des utilisateurs :
+- [x] Gestion des utilisateurs :
   - Liste des utilisateurs avec recherche/filtres
   - Voir le profil détaillé d'un utilisateur
   - Activer/Désactiver un compte
   - Changer le rôle d'un utilisateur
-  - Supprimer un utilisateur (soft delete)
-- [ ] Gestion du contenu :
-  - Modération des données si nécessaire
-  - Export des statistiques globales (CSV/Excel)
-- [ ] Logs d'activité admin (audit trail)
+- [x] Export des statistiques globales (JSON)
+- [x] Script `seed_admin.py` pour initialisation admin local
+
+### 📅 Entretiens
+- [x] Calendrier multi-vues (jour, semaine, mois, année)
+- [x] Autocomplétion recherche candidature dans le formulaire
+
+### 🔧 Corrections UI
+- [x] Espacement cartes dashboard "Candidatures récentes"
+- [x] Responsive liens longs (Teams, Zoom) dans les cartes entretiens
+- [x] Modal détail entretien : espacement entre sections
+- [x] Sidebar fixe avec scroll interne
+
+## 🔴 Bugs & Corrections UI (P0)
+- [ ] (Aucun bug critique en attente)
 
 ## 🎓 Fonctionnalités pour Étudiants (P1)
 > En se mettant à la place d'un étudiant en recherche de stage/alternance/emploi
@@ -45,7 +47,6 @@
 
 ### 📅 Gestion du Temps
 - [ ] **Intégration calendrier** : Sync avec Google Calendar / Outlook
-- [ ] **Vue agenda** : Voir tous les entretiens de la semaine en un coup d'œil
 - [ ] **Rappels par email/SMS** : 24h et 1h avant l'entretien
 - [ ] **Préparation entretien** : Checklist personnalisée avant chaque entretien
 
