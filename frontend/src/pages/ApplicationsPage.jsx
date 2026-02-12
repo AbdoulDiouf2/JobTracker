@@ -9,7 +9,7 @@ import {
   Plus, Search, Star, Trash2, Edit2, ExternalLink,
   ChevronLeft, ChevronRight, X, Loader2, MapPin,
   Calendar, MessageSquare, LayoutGrid, List, Eye, ChevronDown,
-  Clock, Mail, Target, Bell, RefreshCw
+  Clock, Mail, Target, Bell, RefreshCw, FileText, Sparkles, Copy, Check
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
@@ -24,6 +24,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from '../components/ui/dialog';
 import {
   Select,
@@ -38,6 +39,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import axios from 'axios';
 
 const applicationSchema = z.object({
   entreprise: z.string().min(1, 'Entreprise requise'),
