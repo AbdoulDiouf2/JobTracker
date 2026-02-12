@@ -639,7 +639,17 @@ export default function ApplicationsPage() {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm(t.deleteConfirm)) {
+    const confirmed = await showConfirm({
+      title: language === 'fr' ? 'Supprimer la candidature' : 'Delete application',
+      message: language === 'fr' 
+        ? 'Êtes-vous sûr de vouloir supprimer cette candidature ? Cette action est irréversible.'
+        : 'Are you sure you want to delete this application? This action cannot be undone.',
+      type: 'danger',
+      confirmText: language === 'fr' ? 'Supprimer' : 'Delete',
+      cancelText: language === 'fr' ? 'Annuler' : 'Cancel',
+    });
+    
+    if (confirmed) {
       await deleteApplication(id);
     }
   };
