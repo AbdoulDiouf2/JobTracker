@@ -148,7 +148,9 @@ async def update_profile(
         id=user["id"],
         email=user["email"],
         full_name=user["full_name"],
+        role=user.get("role", "standard"),
         created_at=user["created_at"],
+        last_login=user.get("last_login"),
         is_active=user.get("is_active", True),
         has_google_ai_key=bool(user.get("google_ai_key")),
         has_openai_key=bool(user.get("openai_key"))
