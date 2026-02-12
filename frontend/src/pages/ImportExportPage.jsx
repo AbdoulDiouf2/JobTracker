@@ -306,6 +306,11 @@ export default function ImportExportPage() {
     setPreviewData(null);
     setFullData(null);
 
+    const mapRow = importType === 'applications' ? mapRowToApplication : mapRowToInterview;
+    const filterFn = importType === 'applications' 
+      ? (obj) => obj.entreprise || obj.poste
+      : (obj) => obj.entreprise || obj.date_entretien;
+
     try {
       let data = [];
       const fileName = file.name.toLowerCase();
@@ -319,8 +324,12 @@ export default function ImportExportPage() {
             data = parsed;
           } else if (parsed.applications) {
             data = parsed.applications;
+          } else if (parsed.interviews) {
+            data = parsed.interviews;
           } else if (parsed.candidatures) {
             data = parsed.candidatures;
+          } else if (parsed.entretiens) {
+            data = parsed.entretiens;
           } else if (typeof parsed === 'object') {
             data = [parsed];
           }
@@ -337,7 +346,7 @@ export default function ImportExportPage() {
         }
         
         // Map column names
-        data = data.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
+        data = data.map(mapRow).filter(filterFn);
         
       } else if (fileName.endsWith('.csv')) {
         const content = await file.text();
@@ -355,7 +364,7 @@ export default function ImportExportPage() {
             return obj;
           });
           // Map column names
-          data = data.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
+          data = data.map(mapRow).filter(filterFn);
         }
         
       } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
@@ -371,7 +380,7 @@ export default function ImportExportPage() {
         const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
         
         // Map column names
-        data = rawData.map(mapRowToApplication).filter(obj => obj.entreprise || obj.poste);
+        data = rawData.map(mapRow).filter(filterFn);
       }
 
       console.log('Parsed data:', data);
