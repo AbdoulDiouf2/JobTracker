@@ -307,6 +307,23 @@ export default function SettingsPage() {
               className="bg-slate-900/50 border-slate-700 text-white"
             />
           </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              {t.groqKey}
+              {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+            </label>
+            <Input
+              type="password"
+              value={formData.groq_key}
+              onChange={(e) => setFormData(prev => ({ ...prev, groq_key: e.target.value }))}
+              placeholder="gsk_..."
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Obtenez une clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.groq.com</a>
+            </p>
+          </div>
         </div>
       </div>
 
