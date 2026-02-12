@@ -284,3 +284,20 @@ async def delete_interview(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Entretien non trouvé"
         )
+
+
+@router.delete("/reset/all", status_code=status.HTTP_200_OK)
+async def reset_all_interviews(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Supprime TOUS les entretiens de l'utilisateur"""
+    user_id = current_user["user_id"]
+    
+    result = await db.interviews.delete_many({"user_id": user_id})
+    
+    return {
+        "success": True,
+        "deleted_interviews": result.deleted_count,
+        "message": f"{result.deleted_count} entretien(s) supprimé(s)"
+    }
