@@ -872,6 +872,29 @@ Meta,Frontend Developer,cdi,Londres`}
               </div>
             </div>
 
+            {/* Export Type Selector */}
+            <div className="flex items-center gap-4 mb-6">
+              <span className="text-slate-400 text-sm">{language === 'fr' ? 'Type de données :' : 'Data type:'}</span>
+              <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
+                <button
+                  onClick={() => setExportType('applications')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                    ${exportType === 'applications' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <Briefcase size={16} />
+                  {t.exportApplications}
+                </button>
+                <button
+                  onClick={() => setExportType('interviews')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                    ${exportType === 'interviews' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+                >
+                  <Calendar size={16} />
+                  {t.exportInterviews}
+                </button>
+              </div>
+            </div>
+
             <div className="grid md:grid-cols-3 gap-4">
               <button
                 onClick={() => handleExport('json')}
