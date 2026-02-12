@@ -1,0 +1,103 @@
+{
+  "summary": "Frontend testing completed for 3 new features: Google Calendar section in Settings, CV selector in application form, and Cover Letter Generator modal. Found and FIXED a critical bug with SelectItem empty value causing runtime error.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "ApplicationFormModal CV Selector",
+        "issue": "SelectItem with empty string value caused runtime error: 'A <Select.Item /> must have a value prop that is not an empty string'",
+        "selector": "SelectItem value=\"\"",
+        "priority": "CRITICAL",
+        "status": "FIXED"
+      },
+      {
+        "component": "CoverLetterGeneratorModal CV Selector",
+        "issue": "Same SelectItem empty value issue",
+        "selector": "SelectItem value=\"\"",
+        "priority": "CRITICAL",
+        "status": "FIXED"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "passed_tests": [
+    "Frontend: Login with demo@test.com / demo123 credentials",
+    "Frontend: Settings page loads with Google Calendar section",
+    "Frontend: Google Calendar section shows 'n'est pas configuré' message (expected - credentials not set)",
+    "Frontend: Google Calendar section shows 'Synchronisez vos entretiens avec Google Calendar' description",
+    "Frontend: New application modal opens without errors (after fix)",
+    "Frontend: CV selector field 'CV associé' present in application form",
+    "Frontend: CV selector shows 'Aucun CV' option",
+    "Frontend: CV selector helper text 'Associez un CV de votre bibliothèque à cette candidature' present",
+    "Frontend: Application creation works correctly",
+    "Frontend: Application detail modal shows 'Lettre IA' button",
+    "Frontend: Cover Letter Generator modal opens from application detail",
+    "Frontend: Cover Letter Generator shows 'Générer une Lettre de Motivation' title",
+    "Frontend: Cover Letter Generator shows CV selector and tone selector",
+    "Frontend: Cover Letter Generator shows 'Générer avec l'IA' button",
+    "Frontend: Dashboard shows 'Candidatures récentes' section",
+    "Frontend: Dashboard card spacing with gap-5 (20px) verified",
+    "Frontend: Application deletion works correctly"
+  ],
+  "test_report_links": [
+    "/app/test_reports/iteration_4.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "FIXED: SelectItem components in ApplicationsPage.jsx and CoverLetterGeneratorModal.jsx were using empty string values which is not allowed by Radix UI Select. Changed to use 'none' value with conversion logic.",
+    "Google Calendar OAuth is MOCKED - credentials (GOOGLE_CALENDAR_CLIENT_ID, GOOGLE_CALENDAR_CLIENT_SECRET) are not configured, so the section shows 'not configured' message as expected."
+  ],
+  "updated_files": [
+    "/app/frontend/src/pages/ApplicationsPage.jsx",
+    "/app/frontend/src/components/CoverLetterGeneratorModal.jsx"
+  ],
+  "success_rate": {
+    "backend": "N/A (frontend only testing)",
+    "frontend": "100% (all features working after fix)"
+  },
+  "test_credentials": {
+    "email": "demo@test.com",
+    "password": "demo123"
+  },
+  "seed_data_creation": "TEST_Company application was created and deleted during testing",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 3 new features verified: 1) Google Calendar section in Settings (shows 'not configured' as expected since OAuth credentials not set), 2) CV selector in application form (fixed SelectItem empty value bug), 3) Cover Letter Generator modal accessible from application detail view. Dashboard card spacing with gap-5 verified.",
+  "features_verified": {
+    "google_calendar_settings": {
+      "section_present": true,
+      "calendar_icon": true,
+      "description": "Synchronisez vos entretiens avec Google Calendar",
+      "status": "Shows 'Google Calendar n'est pas configuré sur ce serveur' (expected - MOCKED)",
+      "connect_button": "Not shown when not configured (correct behavior)"
+    },
+    "cv_selector_in_application_form": {
+      "label": "CV associé",
+      "icon": "FileText",
+      "dropdown": "Aucun CV option available",
+      "helper_text": "Associez un CV de votre bibliothèque à cette candidature",
+      "bug_fixed": "Changed SelectItem value from empty string to 'none'"
+    },
+    "cover_letter_generator_modal": {
+      "access": "Via 'Lettre IA' button in application detail modal",
+      "title": "Générer une Lettre de Motivation",
+      "subtitle": "L'IA va créer une lettre personnalisée",
+      "cv_selector": "Sélectionner un CV (optionnel)",
+      "tone_selector": "Ton de la lettre (Professionnel, Enthousiaste, Formel)",
+      "generate_button": "Générer avec l'IA",
+      "bug_fixed": "Changed SelectItem value from empty string to 'none'"
+    },
+    "dashboard_card_spacing": {
+      "section": "Candidatures récentes",
+      "spacing_class": "gap-5 (20px)",
+      "verified": true
+    }
+  },
+  "mocked_apis": {
+    "google_calendar_oauth": "MOCKED - GOOGLE_CALENDAR_CLIENT_ID and GOOGLE_CALENDAR_CLIENT_SECRET not configured"
+  }
+}
