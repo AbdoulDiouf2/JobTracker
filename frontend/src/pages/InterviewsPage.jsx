@@ -1095,16 +1095,23 @@ export default function InterviewsPage() {
         <div className="mt-6">
         <CalendarView
           interviews={interviews}
-          currentMonth={currentMonth}
-          onMonthChange={setCurrentMonth}
+          currentDate={currentMonth}
+          onDateChange={setCurrentMonth}
           onDayClick={handleDayClick}
           onInterviewClick={setViewingInterview}
           language={language}
+          calendarView={calendarView}
+          onCalendarViewChange={setCalendarView}
         />
         </div>
       ) : interviews.length > 0 ? (
         /* Card View */
-        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-2">
+        <>
+          {/* Total Count */}
+          <div className="mt-4 mb-2 text-sm text-slate-400">
+            {language === 'fr' ? 'Total' : 'Total'}: <span className="text-gold font-medium">{interviews.length}</span> {language === 'fr' ? 'entretien(s)' : 'interview(s)'}
+          </div>
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
           <AnimatePresence>
             {interviews.map((interview) => (
               <InterviewCard
