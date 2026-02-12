@@ -118,7 +118,8 @@ async def get_me(
         last_login=user.get("last_login"),
         is_active=user.get("is_active", True),
         has_google_ai_key=bool(user.get("google_ai_key")),
-        has_openai_key=bool(user.get("openai_key"))
+        has_openai_key=bool(user.get("openai_key")),
+        has_groq_key=bool(user.get("groq_key"))
     )
 
 
