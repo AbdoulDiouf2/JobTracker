@@ -419,10 +419,16 @@ export default function ImportExportPage() {
     try {
       const token = localStorage.getItem('token');
       
-      // Send ALL parsed data to backend (not just preview)
-      const response = await axios.post(`${API_URL}/api/import/data`, {
-        applications: fullData
-      }, {
+      // Use different endpoint based on import type
+      const endpoint = importType === 'applications' 
+        ? `${API_URL}/api/import/data`
+        : `${API_URL}/api/import/interviews/data`;
+      
+      const payload = importType === 'applications' 
+        ? { applications: fullData }
+        : { interviews: fullData };
+      
+      const response = await axios.post(endpoint, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
