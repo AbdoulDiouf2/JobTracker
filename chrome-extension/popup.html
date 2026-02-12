@@ -10,46 +10,86 @@
   <div class="container">
     <header>
       <h1>JobTracker</h1>
+      <p class="subtitle">Clipper Extension</p>
     </header>
     
-    <div id="loading" class="hidden">Analyse de la page...</div>
+    <div id="loading" class="hidden">Chargement...</div>
+    
+    <button type="button" id="extractBtn" class="extract-btn">
+      Extraire avec IA
+    </button>
     
     <form id="jobForm">
-      <div class="form-group">
-        <label for="title">Poste</label>
-        <input type="text" id="title" name="title" placeholder="Ex: Developpeur Fullstack">
-      </div>
-      
-      <div class="form-group">
-        <label for="company">Entreprise</label>
-        <input type="text" id="company" name="company" placeholder="Ex: Google">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="company">Entreprise *</label>
+          <input type="text" id="company" name="company" placeholder="Ex: Google" required>
+        </div>
+        <div class="form-group">
+          <label for="title">Poste *</label>
+          <input type="text" id="title" name="title" placeholder="Ex: Dev Fullstack" required>
+        </div>
       </div>
 
-      <div class="form-group">
-        <label for="location">Lieu</label>
-        <input type="text" id="location" name="location" placeholder="Ex: Paris / Remote">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="location">Lieu</label>
+          <input type="text" id="location" name="location" placeholder="Paris / Remote">
+        </div>
+        <div class="form-group">
+          <label for="type">Type</label>
+          <select id="type" name="type">
+            <option value="cdi">CDI</option>
+            <option value="cdd">CDD</option>
+            <option value="stage">Stage</option>
+            <option value="alternance">Alternance</option>
+            <option value="freelance">Freelance</option>
+            <option value="interim">Interim</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="salaryMin">Salaire min</label>
+          <input type="number" id="salaryMin" name="salaryMin" placeholder="35000">
+        </div>
+        <div class="form-group">
+          <label for="salaryMax">Salaire max</label>
+          <input type="number" id="salaryMax" name="salaryMax" placeholder="45000">
+        </div>
       </div>
       
       <div class="form-group">
-        <label for="url">URL de l'offre</label>
+        <label for="url">URL</label>
         <input type="text" id="url" name="url" readonly>
       </div>
 
       <div class="form-group">
-        <label for="status">Statut</label>
-        <select id="status" name="status">
-          <option value="Applied">Postulé</option>
-          <option value="Interviewing">Entretien</option>
-          <option value="Offer">Offre</option>
-          <option value="Rejected">Refusé</option>
-        </select>
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="competences">Competences</label>
+        <input type="text" id="competences" name="competences" placeholder="React, Python...">
       </div>
 
       <button type="submit" id="saveBtn">Ajouter au Tracker</button>
     </form>
     
     <div id="message" class="hidden"></div>
+    
+    <footer>
+      <a href="#" id="optionsLink">Options</a>
+    </footer>
   </div>
   <script src="popup.js"></script>
+  <script>
+    document.getElementById('optionsLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      chrome.runtime.openOptionsPage();
+    });
+  </script>
 </body>
 </html>
