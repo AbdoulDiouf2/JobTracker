@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, Upload, Link as LinkIcon, Trash2, Download, Edit2, 
@@ -143,9 +143,9 @@ export default function DocumentsPage() {
   useEffect(() => {
     fetchDocuments();
     fetchTemplates();
-  }, []);
+  }, [fetchDocuments, fetchTemplates]);
 
-  const fetchDocuments = async () => {
+  const fetchDocuments = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/documents/`, {
@@ -158,9 +158,9 @@ export default function DocumentsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t.error]);
 
-  const fetchTemplates = async () => {
+  const fetchTemplates = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/documents/templates/`, {
@@ -170,7 +170,7 @@ export default function DocumentsPage() {
     } catch (error) {
       console.error('Error fetching templates:', error);
     }
-  };
+  }, []);
 
   const handleUpload = async (formData) => {
     try {

@@ -108,7 +108,7 @@ export default function AIAdvisorPage() {
       content: activeTab === 'advisor' ? t.welcomeAdvisor : t.welcomeChatbot
     }]);
     setSessionId(null);
-  }, [activeTab]);
+  }, [activeTab, t.welcomeAdvisor, t.welcomeChatbot]);
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
