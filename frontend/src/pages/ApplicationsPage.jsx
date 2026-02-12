@@ -271,122 +271,258 @@ const ApplicationTableRow = ({ app, onEdit, onDelete, onToggleFavorite, onStatus
 };
 
 // Application Detail Modal
-const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, t }) => {
+const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, onRefresh, t }) => {
   const { language } = useLanguage();
+  const [showTimeline, setShowTimeline] = useState(false);
+  const [showFollowupModal, setShowFollowupModal] = useState(false);
+  const [showMatchingModal, setShowMatchingModal] = useState(false);
+  
   if (!app) return null;
   
   const statusInfo = STATUS_OPTIONS.find(s => s.value === app.reponse) || STATUS_OPTIONS[0];
   
+  // Calculer les jours depuis la candidature
+  const daysSince = Math.floor((new Date() - new Date(app.date_candidature)) / (1000 * 60 * 60 * 24));
+  
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-heading text-xl flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-navy flex items-center justify-center text-gold font-bold text-lg">
-              {app.entreprise[0]}
-            </div>
-            <div>
-              <span className="text-white">{app.entreprise}</span>
-              <p className="text-gold text-base font-normal">{app.poste}</p>
-            </div>
-          </DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white max-w-2xl max-h-[90vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="font-heading text-xl flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-navy flex items-center justify-center text-gold font-bold text-lg">
+                {app.entreprise[0]}
+              </div>
+              <div>
+                <span className="text-white">{app.entreprise}</span>
+                <p className="text-gold text-base font-normal">{app.poste}</p>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="flex flex-col gap-4 mt-4">
-          {/* Status Section */}
-          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">{t.status}</p>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className={`px-3 py-2 rounded-lg text-sm font-medium ${statusInfo.color} flex items-center gap-2`}>
-                    {statusInfo.label}
-                    <ChevronDown size={14} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="bg-slate-900 border-slate-700">
-                  {STATUS_OPTIONS.map(opt => (
-                    <DropdownMenuItem 
-                      key={opt.value}
-                      onClick={() => onStatusChange(app.id, opt.value)}
-                      className={`${opt.color} cursor-pointer`}
-                    >
-                      {opt.label}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
+          <div className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
+            {/* Status & Actions */}
+            <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
+              <div>
+                <p className="text-slate-400 text-sm mb-1">{t.status}</p>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={`px-3 py-2 rounded-lg text-sm font-medium ${statusInfo.color} flex items-center gap-2`}>
+                      {statusInfo.label}
+                      <ChevronDown size={14} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-slate-900 border-slate-700">
+                    {STATUS_OPTIONS.map(opt => (
+                      <DropdownMenuItem 
+                        key={opt.value}
+                        onClick={() => onStatusChange(app.id, opt.value)}
+                        className={`${opt.color} cursor-pointer`}
+                      >
+                        {opt.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <Button onClick={() => { onClose(); onEdit(app); }} variant="outline" className="border-slate-700">
+                <Edit2 size={16} className="mr-2" />
+                {t.edit}
+              </Button>
             </div>
-            <Button onClick={() => { onClose(); onEdit(app); }} variant="outline" className="border-slate-700">
-              <Edit2 size={16} className="mr-2" />
-              {t.edit}
-            </Button>
-          </div>
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">{t.jobType}</p>
-              <p className="text-white font-medium">
-                {TYPE_OPTIONS.find(t => t.value === app.type_poste)?.label || app.type_poste}
-              </p>
-            </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">{t.location}</p>
-              <p className="text-white font-medium">{app.lieu || '-'}</p>
-            </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">{t.method}</p>
-              <p className="text-white font-medium">
-                {METHOD_OPTIONS.find(m => m.value === app.moyen)?.label || app.moyen || '-'}
-              </p>
-            </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">{t.date}</p>
-              <p className="text-white font-medium">
-                {format(new Date(app.date_candidature), 'dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
-              </p>
-            </div>
-          </div>
+            {/* Followup Alert */}
+            {app.needs_followup && app.reponse === 'pending' && (
+              <div className="p-4 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Bell size={20} className="text-orange-400" />
+                    <div>
+                      <p className="text-orange-400 font-medium">Relance recommandée</p>
+                      <p className="text-orange-400/70 text-sm">
+                        {daysSince} jours sans réponse
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setShowFollowupModal(true)}
+                    size="sm"
+                    className="bg-orange-500 hover:bg-orange-600 text-white"
+                  >
+                    <Mail size={16} className="mr-2" />
+                    Générer relance
+                  </Button>
+                </div>
+              </div>
+            )}
 
-          {/* Link */}
-          {app.lien && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-2">{t.link}</p>
-              <a 
-                href={app.lien}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gold hover:text-gold-light flex items-center gap-2 break-all"
+            {/* Match Score Badge */}
+            {app.match_score !== undefined && app.match_score !== null && (
+              <div className={`p-4 rounded-xl border flex items-center justify-between ${
+                app.match_score >= 80 ? 'bg-green-500/10 border-green-500/30' :
+                app.match_score >= 60 ? 'bg-gold/10 border-gold/30' :
+                app.match_score >= 40 ? 'bg-yellow-500/10 border-yellow-500/30' :
+                'bg-red-500/10 border-red-500/30'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <Target size={20} className={
+                    app.match_score >= 80 ? 'text-green-400' :
+                    app.match_score >= 60 ? 'text-gold' :
+                    app.match_score >= 40 ? 'text-yellow-400' :
+                    'text-red-400'
+                  } />
+                  <div>
+                    <p className="text-white font-medium">Score de matching</p>
+                    <p className="text-slate-400 text-sm">CV vs Offre d'emploi</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`text-3xl font-bold ${
+                    app.match_score >= 80 ? 'text-green-400' :
+                    app.match_score >= 60 ? 'text-gold' :
+                    app.match_score >= 40 ? 'text-yellow-400' :
+                    'text-red-400'
+                  }`}>{app.match_score}%</span>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Actions */}
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowTimeline(!showTimeline)}
+                variant="outline" 
+                className="flex-1 border-slate-700"
+                size="sm"
               >
-                <ExternalLink size={16} />
-                {app.lien}
-              </a>
+                <Clock size={16} className="mr-2" />
+                {showTimeline ? 'Masquer' : 'Voir'} l'historique
+              </Button>
+              <Button 
+                onClick={() => setShowFollowupModal(true)}
+                variant="outline" 
+                className="flex-1 border-slate-700"
+                size="sm"
+              >
+                <Mail size={16} className="mr-2" />
+                Générer relance
+              </Button>
+              <Button 
+                onClick={() => setShowMatchingModal(true)}
+                variant="outline" 
+                className="flex-1 border-slate-700"
+                size="sm"
+              >
+                <Target size={16} className="mr-2" />
+                Score matching
+              </Button>
             </div>
-          )}
 
-          {/* Comment */}
-          {app.commentaire && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
-                <MessageSquare size={14} />
-                {t.comment}
-              </p>
-              <p className="text-white whitespace-pre-wrap">{app.commentaire}</p>
-            </div>
-          )}
+            {/* Timeline */}
+            <ApplicationTimeline 
+              applicationId={app.id} 
+              isOpen={showTimeline}
+              onClose={() => setShowTimeline(false)}
+            />
 
-          {/* Interviews Count */}
-          {app.interviews_count > 0 && (
-            <div className="p-4 bg-gold/10 rounded-xl border border-gold/20">
-              <p className="text-gold font-medium">
-                📅 {app.interviews_count} entretien(s) planifié(s)
-              </p>
+            {/* Details Grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">{t.jobType}</p>
+                <p className="text-white font-medium">
+                  {TYPE_OPTIONS.find(t => t.value === app.type_poste)?.label || app.type_poste}
+                </p>
+              </div>
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">{t.location}</p>
+                <p className="text-white font-medium">{app.lieu || '-'}</p>
+              </div>
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">{t.method}</p>
+                <p className="text-white font-medium">
+                  {METHOD_OPTIONS.find(m => m.value === app.moyen)?.label || app.moyen || '-'}
+                </p>
+              </div>
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-1">{t.date}</p>
+                <p className="text-white font-medium">
+                  {format(new Date(app.date_candidature), 'dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
+                </p>
+                <p className="text-slate-500 text-xs mt-1">Il y a {daysSince} jours</p>
+              </div>
             </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+
+            {/* Contact Info */}
+            {(app.contact_email || app.contact_name) && (
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-2">Contact</p>
+                <div className="flex flex-wrap gap-3">
+                  {app.contact_name && (
+                    <span className="text-white">{app.contact_name}</span>
+                  )}
+                  {app.contact_email && (
+                    <a href={`mailto:${app.contact_email}`} className="text-gold hover:text-gold-light">
+                      {app.contact_email}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Link */}
+            {app.lien && (
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-2">{t.link}</p>
+                <a 
+                  href={app.lien}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-gold hover:text-gold-light flex items-center gap-2 break-all"
+                >
+                  <ExternalLink size={16} />
+                  {app.lien}
+                </a>
+              </div>
+            )}
+
+            {/* Comment */}
+            {app.commentaire && (
+              <div className="p-4 bg-slate-900/30 rounded-xl">
+                <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
+                  <MessageSquare size={14} />
+                  {t.comment}
+                </p>
+                <p className="text-white whitespace-pre-wrap">{app.commentaire}</p>
+              </div>
+            )}
+
+            {/* Interviews Count */}
+            {app.interviews_count > 0 && (
+              <div className="p-4 bg-gold/10 rounded-xl border border-gold/20">
+                <p className="text-gold font-medium">
+                  📅 {app.interviews_count} entretien(s) planifié(s)
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Followup Email Modal */}
+      <FollowupEmailModal
+        application={app}
+        isOpen={showFollowupModal}
+        onClose={() => setShowFollowupModal(false)}
+        onEmailSent={onRefresh}
+      />
+
+      {/* Matching Score Modal */}
+      <MatchingScoreModal
+        application={app}
+        isOpen={showMatchingModal}
+        onClose={() => setShowMatchingModal(false)}
+      />
+    </>
   );
 };
 
