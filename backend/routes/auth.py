@@ -163,6 +163,7 @@ async def update_profile(
 async def update_api_keys(
     google_ai_key: str = None,
     openai_key: str = None,
+    groq_key: str = None,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -172,6 +173,8 @@ async def update_api_keys(
         update_data["google_ai_key"] = google_ai_key if google_ai_key else None
     if openai_key is not None:
         update_data["openai_key"] = openai_key if openai_key else None
+    if groq_key is not None:
+        update_data["groq_key"] = groq_key if groq_key else None
     
     if update_data:
         await db.users.update_one(
