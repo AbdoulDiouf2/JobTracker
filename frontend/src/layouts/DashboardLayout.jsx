@@ -162,11 +162,13 @@ export default function DashboardLayout() {
           >
             <Menu size={24} />
           </button>
-          <img 
-            src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
-            alt="MAADEC" 
-            className="h-12"
-          />
+          <Link to="/" className="hover:opacity-80 transition-opacity">
+            <img 
+              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
+              alt="MAADEC" 
+              className="h-12"
+            />
+          </Link>
           <NotificationBell />
         </header>
 
