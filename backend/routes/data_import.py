@@ -87,6 +87,97 @@ class DataImportRequest(BaseModel):
     applications: List[dict]
 
 
+class InterviewImportRequest(BaseModel):
+    interviews: List[dict]
+
+
+# Import interviews from pre-parsed data
+@router.post("/interviews/data", response_model=ImportResult)
+async def import_interviews_data(
+    request: InterviewImportRequest,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Import interviews from pre-parsed data with duplicate detection"""
+    imported = 0
+    errors = []
+    skipped = 0
+    duplicates = 0
+    
+    for idx, interview_data in enumerate(request.interviews):
+        try:
+            # Get candidature_id from entreprise/poste if provided
+            candidature_id = interview_data.get('candidature_id')
+            entreprise = interview_data.get('entreprise') or interview_data.get('Entreprise')
+            poste = interview_data.get('poste') or interview_data.get('Poste')
+            
+            # Try to find matching application
+            if not candidature_id and entreprise:
+                app = await db.applications.find_one({
+                    "user_id": current_user["user_id"],
+                    "entreprise": {"$regex": f"^{entreprise}$", "$options": "i"}
+                })
+                if app:
+                    candidature_id = app["id"]
+            
+            if not candidature_id:
+                errors.append(f"Ligne {idx+1}: candidature non trouvée pour {entreprise}")
+                skipped += 1
+                continue
+            
+            # Get date
+            date_val = interview_data.get('date_entretien') or interview_data.get('Date Entretien')
+            if isinstance(date_val, (int, float)):
+                date_str = datetime.fromtimestamp(date_val / 1000, tz=timezone.utc).isoformat()
+            elif date_val:
+                date_str = str(date_val)
+            else:
+                date_str = datetime.now(timezone.utc).isoformat()
+            
+            # Check for duplicate (same candidature + date)
+            existing = await db.interviews.find_one({
+                "user_id": current_user["user_id"],
+                "candidature_id": candidature_id,
+                "date_entretien": {"$regex": f"^{date_str[:10]}"}
+            })
+            
+            if existing:
+                duplicates += 1
+                continue
+            
+            interview_doc = {
+                "id": str(uuid.uuid4()),
+                "user_id": current_user["user_id"],
+                "candidature_id": candidature_id,
+                "date_entretien": date_str,
+                "type_entretien": interview_data.get('type_entretien') or interview_data.get('Type') or 'technical',
+                "format_entretien": interview_data.get('format_entretien') or interview_data.get('Format') or 'video',
+                "lieu_lien": interview_data.get('lieu_lien') or interview_data.get('Lieu/Lien') or interview_data.get('Lieu'),
+                "interviewer": interview_data.get('interviewer') or interview_data.get('Recruteur'),
+                "statut": interview_data.get('statut') or interview_data.get('Statut') or 'planned',
+                "commentaire": interview_data.get('commentaire') or interview_data.get('Commentaire'),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.interviews.insert_one(interview_doc)
+            imported += 1
+            
+        except Exception as e:
+            errors.append(f"Ligne {idx+1}: {str(e)}")
+            skipped += 1
+    
+    if duplicates > 0:
+        errors.insert(0, f"{duplicates} entretien(s) déjà existant(s) ignoré(s)")
+    
+    return ImportResult(
+        success=True,
+        imported_count=imported,
+        errors=errors[:10],
+        skipped=skipped + duplicates
+    )
+
+
 # Import from pre-parsed data (from frontend preview)
 @router.post("/data", response_model=ImportResult)
 async def import_data(
