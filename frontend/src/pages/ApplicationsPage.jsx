@@ -772,12 +772,12 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
               <FileText size={14} className="inline mr-1" />
               CV associé
             </label>
-            <Select value={selectedCvId} onValueChange={setSelectedCvId}>
+            <Select value={selectedCvId || "none"} onValueChange={(v) => setSelectedCvId(v === "none" ? "" : v)}>
               <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white">
                 <SelectValue placeholder={loadingCvs ? "Chargement..." : "Sélectionner un CV (optionnel)"} />
               </SelectTrigger>
               <SelectContent className="bg-slate-900 border-slate-700">
-                <SelectItem value="">Aucun CV</SelectItem>
+                <SelectItem value="none">Aucun CV</SelectItem>
                 {cvs.map(cv => (
                   <SelectItem key={cv.id} value={cv.id}>
                     {cv.name} {cv.label && `(${cv.label})`} {cv.is_default && '⭐'}
