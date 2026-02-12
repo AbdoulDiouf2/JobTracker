@@ -528,15 +528,15 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white max-w-2xl">
-        <DialogHeader>
+      <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white max-w-2xl max-h-[85vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="font-heading text-xl">
             <span className="text-white">{interview.entreprise}</span>
             <p className="text-gold text-base font-normal">{interview.poste}</p>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        <div className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
           {/* Status & Actions */}
           <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
             <div>
@@ -570,7 +570,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
           {/* Date & Time */}
           <div className="p-4 bg-gold/10 rounded-xl border border-gold/20">
             <div className="flex items-center gap-3 text-gold">
-              <Calendar size={20} />
+              <Calendar size={20} className="flex-shrink-0" />
               <span className="font-medium text-lg">
                 {format(new Date(interview.date_entretien), "EEEE dd MMMM yyyy 'à' HH:mm", { 
                   locale: language === 'fr' ? fr : enUS 
@@ -589,12 +589,12 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-900/30 rounded-xl">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-1">{t.type}</p>
               <p className="text-white font-medium">{typeInfo?.label || interview.type_entretien}</p>
             </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
+            <div className="p-3 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-1">{t.format}</p>
               <p className="text-white font-medium">{formatInfo?.label || interview.format_entretien}</p>
             </div>
@@ -602,18 +602,18 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
 
           {/* Location */}
           {interview.lieu_entretien && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
+            <div className="p-3 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
                 <MapPin size={14} />
                 {t.location}
               </p>
-              <p className="text-white break-all">{interview.lieu_entretien}</p>
+              <p className="text-white break-all text-sm">{interview.lieu_entretien}</p>
             </div>
           )}
 
           {/* Interviewer */}
           {interview.interviewer && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
+            <div className="p-3 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
                 <User size={14} />
                 {t.interviewer}
@@ -624,9 +624,9 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
 
           {/* Comment */}
           {interview.commentaire && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
+            <div className="p-3 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2">{t.comment}</p>
-              <p className="text-white whitespace-pre-wrap">{interview.commentaire}</p>
+              <p className="text-white whitespace-pre-wrap text-sm leading-relaxed">{interview.commentaire}</p>
             </div>
           )}
         </div>
