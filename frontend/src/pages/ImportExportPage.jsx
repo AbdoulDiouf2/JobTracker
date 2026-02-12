@@ -673,7 +673,7 @@ Meta,Frontend Developer,cdi,Londres`}
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".json,.csv"
+                    accept=".json,.csv,.xlsx,.xls"
                     onChange={handleFileSelect}
                     className="hidden"
                     id="import-file"
@@ -681,7 +681,7 @@ Meta,Frontend Developer,cdi,Londres`}
                   <label htmlFor="import-file" className="cursor-pointer">
                     <FileUp size={48} className="mx-auto text-slate-500 mb-4" />
                     <p className="text-white font-medium mb-2">{t.selectFile}</p>
-                    <p className="text-slate-500 text-sm">{t.supportedFormats}</p>
+                    <p className="text-slate-500 text-sm">JSON, CSV, Excel (.xlsx, .xls)</p>
                   </label>
                 </div>
               )}
