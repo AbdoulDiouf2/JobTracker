@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
   Settings, LogOut, Menu, X, ChevronRight, User, Sparkles, FolderSync,
-  ShieldCheck
+  ShieldCheck, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
