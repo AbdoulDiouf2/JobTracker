@@ -289,11 +289,48 @@ class JobApplication(JobApplicationBase):
 class JobApplicationResponse(JobApplication):
     interviews_count: int = 0
     next_interview: Optional[datetime] = None
+    needs_followup: bool = False  # Indique si une relance est recommandée
 
 
 class BulkUpdateRequest(BaseModel):
     application_ids: List[str]
     reponse: ApplicationStatus
+
+
+# ============================================
+# FOLLOWUP / RELANCE MODELS
+# ============================================
+
+class FollowupEmailRequest(BaseModel):
+    """Demande de génération d'email de relance"""
+    application_id: str
+    tone: str = Field(default="professional", description="Ton de l'email: professional, friendly, formal")
+    language: str = Field(default="fr", description="Langue: fr, en")
+
+
+class FollowupEmailResponse(BaseModel):
+    """Réponse avec l'email de relance généré"""
+    subject: str
+    body: str
+    recipient_email: Optional[str] = None
+    recipient_name: Optional[str] = None
+
+
+class MatchingScoreRequest(BaseModel):
+    """Demande de calcul du score de matching"""
+    application_id: str
+    cv_text: Optional[str] = None  # Si non fourni, utilise le dernier CV analysé
+
+
+class MatchingScoreResponse(BaseModel):
+    """Résultat du score de matching"""
+    score: int = Field(ge=0, le=100)
+    summary: str
+    strengths: List[str] = []
+    gaps: List[str] = []
+    recommendations: List[str] = []
+    keywords_matched: List[str] = []
+    keywords_missing: List[str] = []
 
 
 # ============================================
