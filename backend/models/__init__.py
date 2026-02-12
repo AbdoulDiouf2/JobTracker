@@ -175,6 +175,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     google_ai_key: Optional[str] = None
     openai_key: Optional[str] = None
+    groq_key: Optional[str] = None
 
 
 class User(UserBase):
@@ -188,6 +189,7 @@ class User(UserBase):
     is_active: bool = True
     google_ai_key: Optional[str] = None
     openai_key: Optional[str] = None
+    groq_key: Optional[str] = None
 
 
 class UserResponse(UserBase):
@@ -198,6 +200,7 @@ class UserResponse(UserBase):
     is_active: bool
     has_google_ai_key: bool = False
     has_openai_key: bool = False
+    has_groq_key: bool = False
 
 
 class UserAdminResponse(UserResponse):
