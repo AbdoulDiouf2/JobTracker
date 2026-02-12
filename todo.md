@@ -90,8 +90,17 @@
 
 ## 🧩 Extension Chrome (Automation)
 - [x] **Job Clipper (Basique)** : Détection via sélecteurs CSS (LinkedIn/Indeed).
-- [ ] **Job AI Parser** : Remplacer les sélecteurs CSS par une analyse IA du contenu de la page pour extraire automatiquement toutes les infos (Salaire, Stack technique, Expérience) de manière robuste et universelle.
+- [x] **Job AI Parser** : Extraction IA automatique du contenu de la page (Salaire, Stack, Expérience, Description).
 - [ ] **Auto-Fill** : Remplissage automatique des formulaires de candidature (Lever, Greenhouse) avec les infos du profil stockées dans JobTracker.
+
+## 🤖 Configuration IA Multi-Provider
+- [x] **Support Groq** : Ajout de Groq comme fournisseur d'API (Llama 3.3 70B, Mixtral, Gemma 2)
+- [x] **Sélection de modèle** : Dropdown pour choisir le modèle IA dans le chatbot
+- [x] **Modèles disponibles** :
+  - OpenAI: GPT-4o, GPT-4o Mini, GPT-4 Turbo
+  - Google: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash
+  - Groq: Llama 3.3 70B, Llama 3.1 8B, Mixtral 8x7B, Gemma 2 9B
+- [x] **Endpoint extraction IA** : `/api/ai/extract-job` pour l'extension Chrome
 
 ## 🚀 Déploiement & Production (P2)
 - [ ] Configurer le déploiement Vercel pour `jobtracker.maadec.com` (ajout `vercel.json`, `mangum`, config DNS Hostinger)
