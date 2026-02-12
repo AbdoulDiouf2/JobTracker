@@ -82,6 +82,25 @@ export default function AIAdvisorPage() {
     scrollToBottom();
   }, [messages]);
 
+  // Fetch available models on mount
+  useEffect(() => {
+    const fetchModels = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/ai/available-models`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setAvailableModels(response.data.models || []);
+        if (response.data.default_model) {
+          setSelectedModel(response.data.default_model);
+        }
+      } catch (error) {
+        console.error('Error fetching models:', error);
+      }
+    };
+    fetchModels();
+  }, []);
+
   useEffect(() => {
     // Reset messages when switching tabs
     setMessages([{
