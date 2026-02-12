@@ -211,6 +211,22 @@ async def update_application(
             detail="Aucune donnée à mettre à jour"
         )
     
+    # Préparer l'événement d'historique pour les changements de statut
+    history_event = None
+    if "reponse" in update_data and update_data["reponse"] != existing.get("reponse"):
+        old_status = existing.get("reponse", "pending")
+        new_status = update_data["reponse"]
+        if hasattr(new_status, 'value'):
+            new_status = new_status.value
+        
+        history_event = {
+            "event_type": "status_change",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "old_value": old_status,
+            "new_value": new_status,
+            "details": f"Statut changé de {old_status} à {new_status}"
+        }
+    
     # Convertir les enums et dates
     for key, value in update_data.items():
         if hasattr(value, 'value'):
@@ -220,9 +236,16 @@ async def update_application(
     
     update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
     
+    # Construire la requête de mise à jour
+    update_query = {"$set": update_data}
+    
+    # Ajouter l'événement à l'historique si changement de statut
+    if history_event:
+        update_query["$push"] = {"history": history_event}
+    
     await db.applications.update_one(
         {"id": application_id},
-        {"$set": update_data}
+        update_query
     )
     
     # Récupérer la candidature mise à jour
