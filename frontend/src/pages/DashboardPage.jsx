@@ -76,7 +76,7 @@ const RecentAppCard = ({ app }) => {
   };
 
   return (
-    <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl">
+    <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
       <div className="flex items-center gap-4">
         <div className="w-10 h-10 rounded-lg bg-navy flex items-center justify-center text-gold font-bold">
           {app.entreprise[0]}
