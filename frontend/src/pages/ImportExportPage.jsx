@@ -87,6 +87,8 @@ export default function ImportExportPage() {
   const [analyzing, setAnalyzing] = useState(false);
   const [cvAnalysis, setCvAnalysis] = useState(null);
   const [activeTab, setActiveTab] = useState('import');
+  const [importType, setImportType] = useState('applications'); // 'applications' or 'interviews'
+  const [exportType, setExportType] = useState('applications'); // 'applications' or 'interviews'
   const [showGuide, setShowGuide] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [fullData, setFullData] = useState(null);
@@ -101,17 +103,23 @@ export default function ImportExportPage() {
       importTab: 'Importer',
       exportTab: 'Exporter',
       cvTab: 'Analyse CV',
-      importTitle: 'Importer des candidatures',
-      importDesc: 'Importez vos candidatures depuis un fichier JSON ou CSV',
+      importTitle: 'Importer des données',
+      importDesc: 'Importez vos candidatures ou entretiens depuis un fichier',
+      importApplications: 'Candidatures',
+      importInterviews: 'Entretiens',
       selectFile: 'Sélectionner un fichier',
-      supportedFormats: 'Formats supportés: JSON, CSV',
+      supportedFormats: 'Formats supportés: JSON, CSV, Excel',
       importing: 'Import en cours...',
       importSuccess: 'Import réussi !',
-      imported: 'candidatures importées',
-      skipped: 'ignorées',
+      imported: 'éléments importés',
+      importedApplications: 'candidatures importées',
+      importedInterviews: 'entretiens importés',
+      skipped: 'ignorés',
       errors: 'Erreurs',
       exportTitle: 'Exporter vos données',
-      exportDesc: 'Téléchargez toutes vos candidatures et entretiens',
+      exportDesc: 'Téléchargez vos candidatures ou entretiens',
+      exportApplications: 'Candidatures',
+      exportInterviews: 'Entretiens',
       exportJson: 'Exporter JSON',
       exportExcel: 'Exporter Excel',
       exportCsv: 'Exporter CSV',
