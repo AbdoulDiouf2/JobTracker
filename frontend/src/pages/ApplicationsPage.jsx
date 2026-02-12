@@ -14,6 +14,7 @@ import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import {
   Dialog,
   DialogContent,
