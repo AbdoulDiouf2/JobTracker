@@ -79,14 +79,14 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className={`glass-card rounded-xl p-5 border border-slate-800 border-l-4 ${urgencyColors[interview.urgency] || urgencyColors.normal} hover:border-gold/50 cursor-pointer group`}
+      className={`glass-card rounded-xl p-5 border border-slate-800 border-l-4 ${urgencyColors[interview.urgency] || urgencyColors.normal} hover:border-gold/50 cursor-pointer group overflow-hidden`}
       onClick={() => onViewDetails(interview)}
       data-testid={`interview-card-${interview.id}`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="font-semibold text-white group-hover:text-gold transition-colors">{interview.entreprise}</h3>
-          <p className="text-gold text-sm">{interview.poste}</p>
+      <div className="flex items-start justify-between mb-3 gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-white group-hover:text-gold transition-colors truncate">{interview.entreprise}</h3>
+          <p className="text-gold text-sm truncate">{interview.poste}</p>
         </div>
         {/* Status Dropdown */}
         <DropdownMenu>
