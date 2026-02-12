@@ -672,7 +672,8 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
       description_poste: data.description_poste || null,
       competences: typeof data.competences === 'string' 
         ? data.competences.split(',').map(s => s.trim()).filter(s => s !== "")
-        : (Array.isArray(data.competences) ? data.competences : [])
+        : (Array.isArray(data.competences) ? data.competences : []),
+      cv_id: selectedCvId || null
     };
     onSubmit(formattedData);
   };
