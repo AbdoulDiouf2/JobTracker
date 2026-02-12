@@ -129,6 +129,7 @@ api_router.include_router(import_router)
 api_router.include_router(notifications_router)
 api_router.include_router(admin_router)
 api_router.include_router(tracking_router)
+api_router.include_router(documents_router)
 
 # Include main router
 app.include_router(api_router)
