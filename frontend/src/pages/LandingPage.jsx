@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../i18n';
 import { 
   Briefcase, BarChart3, Brain, Bot, Database, Shield, FileJson, 
@@ -384,6 +385,7 @@ const FeaturesSection = () => {
 // Analytics Section
 const AnalyticsSection = () => {
   const { t } = useLanguage();
+  const [period, setPeriod] = useState('year');
   const kpisT = t('analytics.kpis');
   const chartT = t('analytics.chart');
 
@@ -393,6 +395,23 @@ const AnalyticsSection = () => {
     { label: kpisT.avgResponseTime, value: '4.2j', change: '-1.5j', trend: 'up' },
     { label: kpisT.activeApplications, value: '47', change: '+12', trend: 'up' },
   ];
+
+  const chartData = {
+    '30d': [
+      { name: 'J-30', value: 24 }, { name: 'J-25', value: 28 }, { name: 'J-20', value: 35 }, 
+      { name: 'J-15', value: 30 }, { name: 'J-10', value: 42 }, { name: 'J-5', value: 38 }, { name: 'Ajrd', value: 47 }
+    ],
+    '90d': [
+      { name: 'Sem 1', value: 35 }, { name: 'Sem 3', value: 42 }, { name: 'Sem 5', value: 38 },
+      { name: 'Sem 7', value: 55 }, { name: 'Sem 9', value: 48 }, { name: 'Sem 11', value: 62 }, { name: 'Sem 13', value: 70 }
+    ],
+    'year': [
+      { name: 'Jan', value: 30 }, { name: 'Fév', value: 45 }, { name: 'Mar', value: 38 }, 
+      { name: 'Avr', value: 52 }, { name: 'Mai', value: 48 }, { name: 'Jun', value: 65 }, 
+      { name: 'Jul', value: 58 }, { name: 'Aoû', value: 72 }, { name: 'Sep', value: 68 }, 
+      { name: 'Oct', value: 85 }, { name: 'Nov', value: 78 }, { name: 'Déc', value: 92 }
+    ]
+  };
 
   return (
     <AnimatedSection id="analytics" className="py-24 md:py-32 bg-[#0a0f1a]">
@@ -428,37 +447,57 @@ const AnalyticsSection = () => {
           <div className="glass-card rounded-2xl p-8">
             <div className="flex items-center justify-between mb-6">
               <h3 className="font-heading font-semibold text-white">{chartT.title}</h3>
-              <select className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300">
-                <option>{chartT.last30}</option>
-                <option>{chartT.last90}</option>
-                <option>{chartT.thisYear}</option>
+              <select 
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1.5 text-sm text-slate-300 focus:outline-none focus:border-gold"
+              >
+                <option value="30d">{chartT.last30}</option>
+                <option value="90d">{chartT.last90}</option>
+                <option value="year">{chartT.thisYear}</option>
               </select>
             </div>
 
-            <div className="relative h-64">
-              <div className="absolute left-0 top-0 bottom-8 flex flex-col justify-between text-xs text-slate-500">
-                <span>50</span><span>40</span><span>30</span><span>20</span><span>10</span><span>0</span>
-              </div>
-
-              <div className="ml-8 h-full flex items-end gap-2 pb-8">
-                {[30, 45, 38, 52, 48, 65, 58, 72, 68, 85, 78, 92].map((value, i) => (
-                  <div key={i} className="flex-1 flex flex-col items-center">
-                    <motion.div
-                      initial={{ height: 0 }}
-                      whileInView={{ height: `${(value / 100) * 100}%` }}
-                      transition={{ duration: 0.5, delay: i * 0.05 }}
-                      viewport={{ once: true }}
-                      className={`w-full rounded-t ${i === 11 ? 'bg-gold' : 'bg-navy'}`}
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <div className="ml-8 flex justify-between text-xs text-slate-500 mt-2">
-                {['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'].map(m => (
-                  <span key={m}>{m}</span>
-                ))}
-              </div>
+            <div className="h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart
+                  data={chartData[period]}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#c4a052" stopOpacity={0.8}/>
+                      <stop offset="95%" stopColor="#c4a052" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                  <XAxis 
+                    dataKey="name" 
+                    stroke="#64748b" 
+                    fontSize={12} 
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis 
+                    stroke="#64748b" 
+                    fontSize={12} 
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `${value}`}
+                  />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#fff' }}
+                    itemStyle={{ color: '#c4a052' }}
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="value" 
+                    stroke="#c4a052" 
+                    fillOpacity={1} 
+                    fill="url(#colorValue)" 
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
 
             <div className="flex items-center gap-6 mt-6 pt-6 border-t border-slate-700/50">
@@ -546,7 +585,7 @@ const AISection = () => {
 
             <div className="bg-slate-900/50 rounded-xl p-4 space-y-4 max-h-80 overflow-y-auto">
               {chatbotT.messages.map((msg, i) => (
-                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} mb-4 last:mb-0`}>
                   <div 
                     className={`chat-bubble ${msg.role} max-w-[85%] rounded-2xl p-4 ${
                       msg.role === 'user' 

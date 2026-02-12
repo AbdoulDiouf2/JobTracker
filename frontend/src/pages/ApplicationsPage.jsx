@@ -225,7 +225,7 @@ const ApplicationTableRow = ({ app, onEdit, onDelete, onToggleFavorite, onStatus
           <DropdownMenuTrigger asChild>
             <button className={`px-2 py-1 rounded text-xs font-medium ${statusInfo.color} flex items-center gap-1`}>
               <span className={`w-2 h-2 rounded-full ${statusInfo.dotColor}`}></span>
-              {statusInfo.label.split(' ')[1] || statusInfo.label}
+              {statusInfo.label.split(' ').slice(1).join(' ') || statusInfo.label}
               <ChevronDown size={10} />
             </button>
           </DropdownMenuTrigger>
@@ -288,7 +288,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6 mt-4">
+        <div className="flex flex-col gap-4 mt-4">
           {/* Status Section */}
           <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
             <div>

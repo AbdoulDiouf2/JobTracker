@@ -227,12 +227,12 @@ export default function StatisticsPage() {
         {/* By Method */}
         <div className="glass-card rounded-xl p-6 border border-slate-800">
           <h3 className="font-heading text-lg font-semibold text-white mb-4">{t.byMethod}</h3>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={400}>
             <PieChart>
               <Pie
                 data={by_method}
                 cx="50%"
-                cy="50%"
+                cy="40%"
                 outerRadius={90}
                 dataKey="count"
                 nameKey="label"
@@ -246,7 +246,7 @@ export default function StatisticsPage() {
               />
               <Legend 
                 verticalAlign="bottom" 
-                height={36}
+                wrapperStyle={{ padding: '20px 0' }}
                 formatter={(value) => <span className="text-slate-400 text-sm">{value}</span>}
               />
             </PieChart>

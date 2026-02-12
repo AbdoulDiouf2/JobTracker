@@ -220,7 +220,7 @@ export default function DashboardPage() {
               {t.viewAll} <ArrowRight size={14} className="ml-1" />
             </Link>
           </div>
-          <div className="space-y-5">
+          <div className="flex flex-col gap-4">
             {applications.length > 0 ? (
               applications.slice(0, 5).map((app) => (
                 <RecentAppCard key={app.id} app={app} />

@@ -536,7 +536,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-5 mt-4 pr-2">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 mt-4 pr-2">
           {/* Status & Actions */}
           <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl">
             <div>
