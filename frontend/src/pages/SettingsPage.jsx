@@ -141,7 +141,7 @@ export default function SettingsPage() {
       });
       
       setMessage(t.saved);
-      setFormData(prev => ({ ...prev, google_ai_key: '', openai_key: '' }));
+      setFormData(prev => ({ ...prev, google_ai_key: '', openai_key: '', groq_key: '' }));
     } catch (error) {
       setMessage('Erreur');
     } finally {
