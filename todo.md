@@ -40,10 +40,10 @@
 > En se mettant à la place d'un étudiant en recherche de stage/alternance/emploi
 
 ### 📊 Suivi Avancé des Candidatures
-- [ ] **Timeline visuelle** : Voir l'historique complet d'une candidature (envoyé → réponse → entretien → offre)
-- [ ] **Rappels automatiques** : Notification si pas de réponse après X jours (configurable)
-- [ ] **Relance suggérée** : Bouton "Relancer" avec template d'email pré-rempli
-- [ ] **Score de matching** : IA analyse le CV vs offre d'emploi et donne un pourcentage de compatibilité
+- [x] **Timeline visuelle** : Voir l'historique complet d'une candidature (envoyé → réponse → entretien → offre)
+- [x] **Rappels automatiques** : Notification si pas de réponse après X jours (configurable)
+- [x] **Relance suggérée** : Bouton "Relancer" avec génération d'email IA pré-rempli
+- [x] **Score de matching** : IA analyse le CV vs offre d'emploi et donne un pourcentage de compatibilité
 
 ### 📅 Gestion du Temps
 - [ ] **Intégration calendrier** : Sync avec Google Calendar / Outlook
