@@ -754,3 +754,177 @@ async def unlink_document_from_application(
         )
     
     return {"message": "Lien supprimé"}
+
+
+# ============================================
+# AI COVER LETTER GENERATION
+# ============================================
+
+@router.post("/generate-cover-letter-ai")
+async def generate_cover_letter_with_ai(
+    entreprise: str,
+    poste: str,
+    cv_id: Optional[str] = None,
+    job_description: Optional[str] = None,
+    tone: str = "professional",  # professional, enthusiastic, formal
+    application_id: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Generate a cover letter using AI based on CV and job description"""
+    import os
+    user_id = current_user["user_id"]
+    
+    # Get user info
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "full_name": 1, "email": 1, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
+    
+    # Get CV content if provided
+    cv_content = ""
+    if cv_id:
+        cv_doc = await db.documents.find_one({"id": cv_id, "user_id": user_id})
+        if cv_doc and cv_doc.get("description"):
+            cv_content = cv_doc["description"]
+    
+    # Get user's recent applications for context
+    recent_apps = await db.applications.find(
+        {"user_id": user_id},
+        {"_id": 0, "entreprise": 1, "poste": 1, "type_poste": 1}
+    ).sort("date_candidature", -1).limit(5).to_list(5)
+    
+    # Build prompt
+    tone_instructions = {
+        "professional": "un ton professionnel et confiant",
+        "enthusiastic": "un ton enthousiaste et dynamique", 
+        "formal": "un ton formel et respectueux"
+    }
+    
+    tone_text = tone_instructions.get(tone, tone_instructions["professional"])
+    
+    prompt = f"""Génère une lettre de motivation en français pour le poste suivant:
+
+Entreprise: {entreprise}
+Poste: {poste}
+{f"Description du poste: {job_description}" if job_description else ""}
+
+Informations du candidat:
+- Nom: {user.get('full_name', 'Candidat')}
+- Email: {user.get('email', '')}
+{f"- Résumé CV: {cv_content}" if cv_content else ""}
+
+Contexte: Le candidat a postulé récemment à des postes similaires:
+{chr(10).join([f"- {app['poste']} chez {app['entreprise']}" for app in recent_apps]) if recent_apps else "- Première candidature"}
+
+Instructions:
+1. Utilise {tone_text}
+2. Structure classique: accroche, motivation, compétences, conclusion
+3. Maximum 300 mots
+4. Ne pas inventer de compétences non mentionnées
+5. Personnalise pour l'entreprise {entreprise}
+
+Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
+
+    # Select AI provider
+    api_key = None
+    provider = None
+    
+    # Check user keys first
+    if user.get("openai_key"):
+        api_key = user["openai_key"]
+        provider = "openai"
+    elif user.get("google_ai_key"):
+        api_key = user["google_ai_key"]
+        provider = "google"
+    elif user.get("groq_key"):
+        api_key = user["groq_key"]
+        provider = "groq"
+    
+    # Fallback to env keys
+    if not api_key:
+        api_key = os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+        if api_key:
+            provider = "openai"
+    
+    if not api_key:
+        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        if api_key:
+            provider = "google"
+    
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Aucune clé API configurée. Configurez une clé OpenAI, Google ou Groq dans les paramètres."
+        )
+    
+    # Call AI
+    try:
+        content = ""
+        
+        if provider == "openai":
+            try:
+                from emergentintegrations.llm.chat import LlmChat, UserMessage
+                chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
+                chat = chat.with_model("openai", "gpt-4o-mini")
+                content = await chat.send_message(UserMessage(text=prompt))
+            except ImportError:
+                from openai import OpenAI
+                client = OpenAI(api_key=api_key)
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}]
+                )
+                content = response.choices[0].message.content
+                
+        elif provider == "google":
+            try:
+                from emergentintegrations.llm.chat import LlmChat, UserMessage
+                chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
+                chat = chat.with_model("gemini", "gemini-2.0-flash")
+                content = await chat.send_message(UserMessage(text=prompt))
+            except ImportError:
+                from google import genai
+                client = genai.Client(api_key=api_key)
+                response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+                content = response.text
+                
+        elif provider == "groq":
+            from groq import Groq
+            client = Groq(api_key=api_key)
+            response = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            content = response.choices[0].message.content
+        
+        # Save generated letter
+        letter_id = str(uuid.uuid4())
+        letter = {
+            "id": letter_id,
+            "user_id": user_id,
+            "application_id": application_id,
+            "template_id": None,
+            "entreprise": entreprise,
+            "poste": poste,
+            "content": content,
+            "generated_by": "ai",
+            "tone": tone,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.generated_cover_letters.insert_one(letter)
+        
+        return {
+            "id": letter_id,
+            "content": content,
+            "entreprise": entreprise,
+            "poste": poste,
+            "tone": tone,
+            "generated_by": "ai",
+            "created_at": letter["created_at"]
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur de génération IA: {str(e)}"
+        )
+
