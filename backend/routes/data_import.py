@@ -104,14 +104,33 @@ async def import_interviews_data(
     skipped = 0
     duplicates = 0
     
+    # Build a mapping of old candidature_id to new UUID if needed
+    # This helps when importing from old system with numeric IDs
+    
     for idx, interview_data in enumerate(request.interviews):
         try:
-            # Get candidature_id from entreprise/poste if provided
+            # Get candidature_id - could be UUID or numeric from old system
             candidature_id = interview_data.get('candidature_id')
             entreprise = interview_data.get('entreprise') or interview_data.get('Entreprise')
-            poste = interview_data.get('poste') or interview_data.get('Poste')
             
-            # Try to find matching application
+            # If candidature_id is provided but not a valid UUID, try to find by index/position
+            if candidature_id:
+                # Check if it's a valid UUID format
+                if isinstance(candidature_id, int) or (isinstance(candidature_id, str) and candidature_id.isdigit()):
+                    # It's a numeric ID from old system - try to find corresponding application
+                    # Get all user applications sorted by date
+                    apps = await db.applications.find(
+                        {"user_id": current_user["user_id"]},
+                        {"_id": 0, "id": 1, "entreprise": 1}
+                    ).sort("date_candidature", 1).to_list(1000)
+                    
+                    numeric_id = int(candidature_id)
+                    if 0 < numeric_id <= len(apps):
+                        candidature_id = apps[numeric_id - 1]["id"]
+                    else:
+                        candidature_id = None
+            
+            # If still no candidature_id, try to find by entreprise
             if not candidature_id and entreprise:
                 app = await db.applications.find_one({
                     "user_id": current_user["user_id"],
@@ -121,7 +140,7 @@ async def import_interviews_data(
                     candidature_id = app["id"]
             
             if not candidature_id:
-                errors.append(f"Ligne {idx+1}: candidature non trouvée pour {entreprise}")
+                errors.append(f"Ligne {idx+1}: candidature non trouvée")
                 skipped += 1
                 continue
             
@@ -130,11 +149,14 @@ async def import_interviews_data(
             if isinstance(date_val, (int, float)):
                 date_str = datetime.fromtimestamp(date_val / 1000, tz=timezone.utc).isoformat()
             elif date_val:
-                date_str = str(date_val)
+                # Handle format like "2024-11-29 00:00:00.000000"
+                date_str = str(date_val).replace(' ', 'T')
+                if '.' in date_str and len(date_str.split('.')[-1]) > 6:
+                    date_str = date_str[:26]  # Truncate microseconds
             else:
                 date_str = datetime.now(timezone.utc).isoformat()
             
-            # Check for duplicate (same candidature + date)
+            # Check for duplicate (same candidature + similar date)
             existing = await db.interviews.find_one({
                 "user_id": current_user["user_id"],
                 "candidature_id": candidature_id,
@@ -145,6 +167,16 @@ async def import_interviews_data(
                 duplicates += 1
                 continue
             
+            # Map statut
+            statut_val = interview_data.get('statut') or interview_data.get('Statut') or 'planned'
+            statut_str = str(statut_val).lower()
+            if 'réalisé' in statut_str or 'realise' in statut_str or 'completed' in statut_str or '✅' in statut_val:
+                statut = 'completed'
+            elif 'annulé' in statut_str or 'annule' in statut_str or 'cancelled' in statut_str or '❌' in statut_val:
+                statut = 'cancelled'
+            else:
+                statut = 'planned'
+            
             interview_doc = {
                 "id": str(uuid.uuid4()),
                 "user_id": current_user["user_id"],
@@ -152,9 +184,9 @@ async def import_interviews_data(
                 "date_entretien": date_str,
                 "type_entretien": interview_data.get('type_entretien') or interview_data.get('Type') or 'technical',
                 "format_entretien": interview_data.get('format_entretien') or interview_data.get('Format') or 'video',
-                "lieu_lien": interview_data.get('lieu_lien') or interview_data.get('Lieu/Lien') or interview_data.get('Lieu'),
+                "lieu_lien": interview_data.get('lieu_lien') or interview_data.get('lieu_entretien') or interview_data.get('Lieu/Lien') or interview_data.get('Lieu'),
                 "interviewer": interview_data.get('interviewer') or interview_data.get('Recruteur'),
-                "statut": interview_data.get('statut') or interview_data.get('Statut') or 'planned',
+                "statut": statut,
                 "commentaire": interview_data.get('commentaire') or interview_data.get('Commentaire'),
                 "created_at": datetime.now(timezone.utc).isoformat(),
                 "updated_at": datetime.now(timezone.utc).isoformat()
