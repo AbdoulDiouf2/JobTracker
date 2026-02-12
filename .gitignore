@@ -86,3 +86,8 @@ ADMIN_SETUP.md
 **/ADMIN_SETUP.md
 frontend/node_modules/.cache/default-development/4.pack
 frontend/node_modules/.cache/default-development/7.pack
+-e 
+# Environment files
+*.env
+*.env.*
+frontend/node_modules/.cache/default-development/6.pack
