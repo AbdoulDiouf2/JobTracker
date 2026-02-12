@@ -553,6 +553,7 @@ export default function ApplicationsPage() {
     deleteApplication, toggleFavorite 
   } = useApplications();
   const { language } = useLanguage();
+  const { showConfirm, ConfirmDialog } = useConfirmDialog();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApp, setEditingApp] = useState(null);
