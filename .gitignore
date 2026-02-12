@@ -107,3 +107,7 @@ STRATEGIE_SAAS.md
 backend/ADMIN_SETUP.mdfrontend/node_modules/.cache/default-development/1.pack
 frontend/node_modules/.cache/default-development/1.pack
 frontend/node_modules/.cache/default-development/2.pack
+-e 
+# Environment files
+*.env
+*.env.*
