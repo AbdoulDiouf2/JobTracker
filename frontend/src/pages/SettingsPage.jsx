@@ -298,191 +298,258 @@ export default function SettingsPage() {
               <User size={20} className="text-gold" />
               {t.profile}
             </h2>
-        </h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">{t.fullName}</label>
-            <Input
-              value={formData.full_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-              className="bg-slate-900/50 border-slate-700 text-white"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">{t.email}</label>
-            <Input
-              value={user?.email || ''}
-              disabled
-              className="bg-slate-900/50 border-slate-700 text-slate-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Notifications Section */}
-      <div className="glass-card rounded-xl p-6 border border-slate-800">
-        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Bell size={20} className="text-gold" />
-          {t.notifications}
-        </h2>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-slate-300">{t.reminder24h}</label>
-            <Switch 
-              checked={notifSettings.reminder_24h}
-              onCheckedChange={(checked) => handleNotifChange('reminder_24h', checked)}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <label className="text-slate-300">{t.reminder1h}</label>
-            <Switch 
-              checked={notifSettings.reminder_1h}
-              onCheckedChange={(checked) => handleNotifChange('reminder_1h', checked)}
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <label className="text-slate-300">{t.browserNotif}</label>
-            <Switch 
-              checked={notifSettings.browser_notifications}
-              onCheckedChange={(checked) => handleNotifChange('browser_notifications', checked)}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* API Keys Section */}
-      <div className="glass-card rounded-xl p-6 border border-slate-800">
-        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Key size={20} className="text-gold" />
-          {t.apiKeys}
-        </h2>
-        
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              {t.googleKey}
-              {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
-            </label>
-            <Input
-              type="password"
-              value={formData.google_ai_key}
-              onChange={(e) => setFormData(prev => ({ ...prev, google_ai_key: e.target.value }))}
-              placeholder="AIza..."
-              className="bg-slate-900/50 border-slate-700 text-white"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              {t.openaiKey}
-              {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
-            </label>
-            <Input
-              type="password"
-              value={formData.openai_key}
-              onChange={(e) => setFormData(prev => ({ ...prev, openai_key: e.target.value }))}
-              placeholder="sk-..."
-              className="bg-slate-900/50 border-slate-700 text-white"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              {t.groqKey}
-              {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
-            </label>
-            <Input
-              type="password"
-              value={formData.groq_key}
-              onChange={(e) => setFormData(prev => ({ ...prev, groq_key: e.target.value }))}
-              placeholder="gsk_..."
-              className="bg-slate-900/50 border-slate-700 text-white"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Obtenez une clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.groq.com</a>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Google Calendar Section */}
-      <div className="glass-card rounded-xl p-6 border border-slate-800">
-        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Calendar size={20} className="text-gold" />
-          {t.calendar}
-        </h2>
-        <p className="text-slate-400 text-sm mb-4">{t.calendarDesc}</p>
-        
-        {!calendarStatus.configured ? (
-          <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-            <p className="text-yellow-400 text-sm">{t.calendarNotConfigured}</p>
-          </div>
-        ) : calendarStatus.connected ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                <Calendar size={20} className="text-green-400" />
-              </div>
+            
+            <div className="space-y-4">
               <div>
-                <p className="text-green-400 font-medium">{t.calendarConnected}</p>
-                {calendarStatus.email && (
-                  <p className="text-slate-500 text-sm">{calendarStatus.email}</p>
-                )}
+                <label className="block text-sm font-medium text-slate-300 mb-2">{t.fullName}</label>
+                <Input
+                  value={formData.full_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  className="bg-slate-900/50 border-slate-700 text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">{t.email}</label>
+                <Input
+                  value={user?.email || ''}
+                  disabled
+                  className="bg-slate-900/50 border-slate-700 text-slate-500"
+                />
               </div>
             </div>
-            <Button
-              onClick={handleDisconnectCalendar}
-              disabled={calendarLoading}
-              variant="outline"
-              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-            >
-              {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.disconnectCalendar}
-            </Button>
           </div>
-        ) : (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                <Calendar size={20} className="text-slate-400" />
-              </div>
-              <p className="text-slate-400">{t.calendarDisconnected}</p>
-            </div>
-            <Button
-              onClick={handleConnectCalendar}
-              disabled={calendarLoading}
-              className="bg-gold hover:bg-gold-light text-[#020817]"
-            >
-              {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
-            </Button>
-          </div>
-        )}
-      </div>
 
-      {/* Language Section */}
-      <div className="glass-card rounded-xl p-6 border border-slate-800">
-        <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Globe size={20} className="text-gold" />
-          {t.language}
-        </h2>
-        
-        <div className="flex items-center justify-between">
-          <span className="text-slate-300">{t.currentLang}</span>
-          <Button 
-            onClick={toggleLanguage}
-            variant="outline"
-            className="border-slate-700 text-slate-300"
-          >
-            {t.switchTo}
-          </Button>
+          {/* Notifications Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Bell size={20} className="text-gold" />
+              {t.notifications}
+            </h2>
+            
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.reminder24h}</label>
+                <Switch 
+                  checked={notifSettings.reminder_24h}
+                  onCheckedChange={(checked) => handleNotifChange('reminder_24h', checked)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.reminder1h}</label>
+                <Switch 
+                  checked={notifSettings.reminder_1h}
+                  onCheckedChange={(checked) => handleNotifChange('reminder_1h', checked)}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.browserNotif}</label>
+                <Switch 
+                  checked={notifSettings.browser_notifications}
+                  onCheckedChange={(checked) => handleNotifChange('browser_notifications', checked)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Google Calendar Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Calendar size={20} className="text-gold" />
+              {t.calendar}
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">{t.calendarDesc}</p>
+            
+            {!calendarStatus.configured ? (
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-400 text-sm">{t.calendarNotConfigured}</p>
+              </div>
+            ) : calendarStatus.connected ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                    <Calendar size={20} className="text-green-400" />
+                  </div>
+                  <div>
+                    <p className="text-green-400 font-medium">{t.calendarConnected}</p>
+                    {calendarStatus.email && (
+                      <p className="text-slate-500 text-sm">{calendarStatus.email}</p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  onClick={handleDisconnectCalendar}
+                  disabled={calendarLoading}
+                  variant="outline"
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                >
+                  {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.disconnectCalendar}
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+                    <Calendar size={20} className="text-slate-400" />
+                  </div>
+                  <p className="text-slate-400">{t.calendarDisconnected}</p>
+                </div>
+                <Button
+                  onClick={handleConnectCalendar}
+                  disabled={calendarLoading}
+                  className="bg-gold hover:bg-gold-light text-[#020817]"
+                >
+                  {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Language Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Globe size={20} className="text-gold" />
+              {t.language}
+            </h2>
+            
+            <div className="flex items-center justify-between">
+              <span className="text-slate-300">{t.currentLang}</span>
+              <Button 
+                onClick={toggleLanguage}
+                variant="outline"
+                className="border-slate-700 text-slate-300"
+              >
+                {t.switchTo}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-6">
+          {/* API Keys Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
+              <Key size={20} className="text-gold" />
+              {t.apiKeys}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.googleKey}
+                  {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                </label>
+                <Input
+                  type="password"
+                  value={formData.google_ai_key}
+                  onChange={(e) => setFormData(prev => ({ ...prev, google_ai_key: e.target.value }))}
+                  placeholder="AIza..."
+                  className="bg-slate-900/50 border-slate-700 text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.openaiKey}
+                  {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                </label>
+                <Input
+                  type="password"
+                  value={formData.openai_key}
+                  onChange={(e) => setFormData(prev => ({ ...prev, openai_key: e.target.value }))}
+                  placeholder="sk-..."
+                  className="bg-slate-900/50 border-slate-700 text-white"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.groqKey}
+                  {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                </label>
+                <Input
+                  type="password"
+                  value={formData.groq_key}
+                  onChange={(e) => setFormData(prev => ({ ...prev, groq_key: e.target.value }))}
+                  placeholder="gsk_..."
+                  className="bg-slate-900/50 border-slate-700 text-white"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Obtenez une clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.groq.com</a>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Danger Zone Section */}
+          <div className="glass-card rounded-xl p-6 border border-red-900/50 bg-red-950/10">
+            <h2 className="font-heading text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
+              <AlertTriangle size={20} />
+              {t.dangerZone}
+            </h2>
+            <p className="text-slate-500 text-sm mb-6">{t.dangerDesc}</p>
+            
+            <div className="space-y-4">
+              {/* Reset Interviews */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/50 rounded-lg border border-slate-800">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                    <Calendar size={20} className="text-orange-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{t.resetInterviews}</p>
+                    <p className="text-slate-500 text-sm">{t.resetInterviewsDesc}</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleResetInterviews}
+                  disabled={resetting !== null}
+                  variant="outline"
+                  size="sm"
+                  className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 flex-shrink-0"
+                >
+                  {resetting === 'interviews' ? (
+                    <><Loader2 className="animate-spin mr-2" size={14} />{t.resetting}</>
+                  ) : (
+                    <><Trash2 size={14} className="mr-2" />{t.resetInterviews}</>
+                  )}
+                </Button>
+              </div>
+
+              {/* Reset Applications */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/50 rounded-lg border border-red-900/30">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                    <Briefcase size={20} className="text-red-400" />
+                  </div>
+                  <div>
+                    <p className="text-white font-medium">{t.resetApplications}</p>
+                    <p className="text-slate-500 text-sm">{t.resetApplicationsDesc}</p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleResetApplications}
+                  disabled={resetting !== null}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                >
+                  {resetting === 'applications' ? (
+                    <><Loader2 className="animate-spin mr-2" size={14} />{t.resetting}</>
+                  ) : (
+                    <><Trash2 size={14} className="mr-2" />{t.resetApplications}</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Save Button */}
+      {/* Save Button - Full width at bottom */}
       <div className="flex items-center gap-4">
         <Button 
           onClick={handleSave}
@@ -493,67 +560,6 @@ export default function SettingsPage() {
           {t.save}
         </Button>
         {message && <span className="text-green-400 text-sm">{message}</span>}
-      </div>
-
-      {/* Danger Zone Section */}
-      <div className="glass-card rounded-xl p-6 border border-red-900/50 bg-red-950/10">
-        <h2 className="font-heading text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
-          <AlertTriangle size={20} />
-          {t.dangerZone}
-        </h2>
-        <p className="text-slate-500 text-sm mb-6">{t.dangerDesc}</p>
-        
-        <div className="space-y-4">
-          {/* Reset Interviews */}
-          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-800">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                <Calendar size={20} className="text-orange-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">{t.resetInterviews}</p>
-                <p className="text-slate-500 text-sm">{t.resetInterviewsDesc}</p>
-              </div>
-            </div>
-            <Button
-              onClick={handleResetInterviews}
-              disabled={resetting !== null}
-              variant="outline"
-              className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
-            >
-              {resetting === 'interviews' ? (
-                <><Loader2 className="animate-spin mr-2" size={16} />{t.resetting}</>
-              ) : (
-                <><Trash2 size={16} className="mr-2" />{t.resetInterviews}</>
-              )}
-            </Button>
-          </div>
-
-          {/* Reset Applications */}
-          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-red-900/30">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                <Briefcase size={20} className="text-red-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">{t.resetApplications}</p>
-                <p className="text-slate-500 text-sm">{t.resetApplicationsDesc}</p>
-              </div>
-            </div>
-            <Button
-              onClick={handleResetApplications}
-              disabled={resetting !== null}
-              variant="outline"
-              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
-            >
-              {resetting === 'applications' ? (
-                <><Loader2 className="animate-spin mr-2" size={16} />{t.resetting}</>
-              ) : (
-                <><Trash2 size={16} className="mr-2" />{t.resetApplications}</>
-              )}
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Confirm Dialog */}
