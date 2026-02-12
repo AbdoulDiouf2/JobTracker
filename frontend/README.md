@@ -28,18 +28,24 @@ frontend/src/
 │   │   ├── switch.jsx
 │   │   ├── progress.jsx
 │   │   └── ...
-│   └── NotificationBell.jsx  # Cloche de notifications
+│   ├── NotificationBell.jsx  # Cloche de notifications
+│   └── confirm-dialog.jsx    # Modal de confirmation
 ├── contexts/
-│   └── AuthContext.jsx       # Contexte authentification
+│   └── AuthContext.jsx       # Contexte authentification (+ isAdmin)
 ├── hooks/
 │   ├── useApplications.js    # Hook candidatures
 │   ├── useInterviews.js      # Hook entretiens
-│   └── useStatistics.js      # Hook statistiques
+│   ├── useStatistics.js      # Hook statistiques
+│   └── useAdmin.js           # Hook administration
 ├── i18n/
 │   └── index.js              # Configuration i18next
 ├── layouts/
-│   └── DashboardLayout.jsx   # Layout dashboard (sidebar fixe)
+│   ├── DashboardLayout.jsx   # Layout dashboard (sidebar fixe)
+│   └── AdminLayout.jsx       # Layout administration
 ├── pages/
+│   ├── admin/                # Pages administration
+│   │   ├── AdminDashboardPage.jsx
+│   │   └── AdminUsersPage.jsx
 │   ├── LandingPage.jsx       # Page d'accueil
 │   ├── LoginPage.jsx         # Connexion
 │   ├── RegisterPage.jsx      # Inscription
