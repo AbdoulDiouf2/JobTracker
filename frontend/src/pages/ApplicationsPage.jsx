@@ -396,33 +396,42 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
             )}
 
             {/* Quick Actions */}
-            <div className="flex gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               <Button 
                 onClick={() => setShowTimeline(!showTimeline)}
                 variant="outline" 
-                className="flex-1 border-slate-700"
+                className="border-slate-700"
                 size="sm"
               >
                 <Clock size={16} className="mr-2" />
-                {showTimeline ? 'Masquer' : 'Voir'} l'historique
+                Historique
               </Button>
               <Button 
                 onClick={() => setShowFollowupModal(true)}
                 variant="outline" 
-                className="flex-1 border-slate-700"
+                className="border-slate-700"
                 size="sm"
               >
                 <Mail size={16} className="mr-2" />
-                Générer relance
+                Relance
+              </Button>
+              <Button 
+                onClick={() => setShowCoverLetterModal(true)}
+                variant="outline" 
+                className="border-slate-700"
+                size="sm"
+              >
+                <FileText size={16} className="mr-2" />
+                Lettre IA
               </Button>
               <Button 
                 onClick={() => setShowMatchingModal(true)}
                 variant="outline" 
-                className="flex-1 border-slate-700"
+                className="border-slate-700"
                 size="sm"
               >
                 <Target size={16} className="mr-2" />
-                Score matching
+                Score
               </Button>
             </div>
 
