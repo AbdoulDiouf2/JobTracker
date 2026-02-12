@@ -92,6 +92,14 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - `POST /api/applications/{id}/matching/calculate` - Calculer score matching
 - `GET /api/applications/{id}/matching` - Récupérer score existant
 
+### IA
+- `GET /api/ai/available-models` - Liste des modèles disponibles
+- `POST /api/ai/career-advisor` - Conseiller carrière (avec sélection modèle)
+- `POST /api/ai/chatbot` - Assistant chat (avec sélection modèle)
+- `POST /api/ai/extract-job` - Extraction IA offre d'emploi (Chrome Extension)
+- `GET /api/ai/chat-history/{session_id}` - Historique de conversation
+- `GET /api/ai/chat-sessions` - Liste des sessions
+
 ### Administration
 - `GET /api/admin/dashboard` - Stats globales
 - `GET /api/admin/users` - Liste utilisateurs
