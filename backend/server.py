@@ -20,6 +20,7 @@ from routes import (
 from routes.ai import router as ai_router
 from routes.data_import import router as import_router
 from routes.notifications import router as notifications_router
+from routes.admin import router as admin_router
 from routes.auth import get_db as auth_get_db
 from routes.applications import get_db as app_get_db
 from routes.interviews import get_db as interview_get_db
@@ -28,6 +29,7 @@ from routes.export import get_db as export_get_db
 from routes.ai import get_db as ai_get_db
 from routes.data_import import get_db as import_get_db
 from routes.notifications import get_db as notif_get_db
+from routes.admin import get_db as admin_get_db
 from utils.auth import get_current_user, security
 
 # Configure logging
