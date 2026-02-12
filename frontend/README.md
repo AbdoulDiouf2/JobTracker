@@ -108,11 +108,16 @@ REACT_APP_BACKEND_URL=http://localhost:8001
 - Changement de statut via dropdown
 - Système de favoris
 
+### 🔐 Administration (`/admin`)
+- Dashboard admin avec statistiques globales
+- Gestion des utilisateurs (rôles, activation)
+
 ### 📅 Entretiens (`/dashboard/interviews`)
 - Vue liste avec cards
-- Vue calendrier interactif
+- Vue calendrier interactif (jour, semaine, mois, année)
 - Indicateurs d'urgence (couleurs)
 - Filtres : Tous, Planifiés, Effectués
+- Autocomplétion pour la sélection de candidature
 
 ### 📈 Statistiques (`/dashboard/statistics`)
 - Graphiques Recharts :
