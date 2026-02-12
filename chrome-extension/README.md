@@ -16,7 +16,7 @@ Extension Chrome pour capturer et ajouter des offres d'emploi à JobTracker en u
 
 1. Cliquez droit sur l'icône de l'extension → **Options**
 2. Renseignez :
-   - **URL de l'API** : `https://careerpath-54.preview.emergentagent.com` (ou votre URL de production)
+   - **URL de l'API** : `https://careertrail-7.preview.emergentagent.com` (ou votre URL de production)
    - **Token JWT** : Récupérez-le depuis les DevTools de votre navigateur (voir section ci-dessous)
 3. Cliquez sur **Enregistrer**
 
