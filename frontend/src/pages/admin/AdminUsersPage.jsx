@@ -475,7 +475,7 @@ export default function AdminUsersPage() {
         </div>
       ) : users.length > 0 ? (
         <>
-          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
             <AnimatePresence>
               {users.map((user) => (
                 <UserCard
