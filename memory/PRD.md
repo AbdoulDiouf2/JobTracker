@@ -127,6 +127,19 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ## Backlog Futur
 - [ ] Notifications push (PWA)
 - [ ] Mode offline
-- [ ] Déploiement production
+- [ ] Auto-Fill formulaires candidature (Lever, Greenhouse)
+- [ ] Intégration calendrier (Google Calendar, Outlook)
+- [ ] Déploiement production (Vercel + MongoDB Atlas)
+- [ ] Monétisation (Stripe)
+
+---
+
+## Extension Chrome
+- **Dossier:** `/app/chrome-extension/`
+- **Fonctionnalités:**
+  - Extraction IA automatique des offres d'emploi
+  - Support: LinkedIn, Indeed, APEC, Welcome to the Jungle, France Travail
+  - Extraction: Entreprise, Poste, Lieu, Salaire, Type contrat, Compétences
+- **Configuration:** Options pour URL API et Token JWT
 
 © 2025 MAADEC
