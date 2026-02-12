@@ -986,6 +986,7 @@ export default function ApplicationsPage() {
         onClose={() => setViewingApp(null)}
         onEdit={handleEdit}
         onStatusChange={handleStatusChange}
+        onRefresh={fetchApplications}
         t={t}
       />
 
