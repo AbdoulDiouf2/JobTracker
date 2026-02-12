@@ -463,11 +463,64 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     message: str
     conversation_history: List[ChatMessage] = []
+    model_provider: Optional[str] = None  # 'openai', 'google', 'groq'
+    model_name: Optional[str] = None  # specific model name
 
 
 class ChatResponse(BaseModel):
     message: str
     conversation_history: List[ChatMessage]
+    model_used: Optional[str] = None
+
+
+# ============================================
+# AI MODEL CONFIGURATION
+# ============================================
+
+class AIModelInfo(BaseModel):
+    """Information about an AI model"""
+    provider: str  # 'openai', 'google', 'groq'
+    model_id: str
+    display_name: str
+    description: str
+    is_available: bool = False
+
+
+class AvailableModelsResponse(BaseModel):
+    """Response with available AI models based on user's configured keys"""
+    models: List[AIModelInfo] = []
+    default_model: Optional[str] = None
+
+
+# ============================================
+# JOB EXTRACTION (Chrome Extension)
+# ============================================
+
+class JobExtractionRequest(BaseModel):
+    """Request to extract job info from page content using AI"""
+    page_content: str
+    page_url: str
+    model_provider: Optional[str] = None  # 'openai', 'google', 'groq'
+    model_name: Optional[str] = None
+
+
+class JobExtractionResponse(BaseModel):
+    """Extracted job information"""
+    entreprise: Optional[str] = None
+    poste: Optional[str] = None
+    type_poste: Optional[str] = None  # cdi, cdd, stage, alternance
+    lieu: Optional[str] = None
+    salaire_min: Optional[int] = None
+    salaire_max: Optional[int] = None
+    description_poste: Optional[str] = None
+    competences: List[str] = []
+    experience_requise: Optional[str] = None
+    date_publication: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_name: Optional[str] = None
+    moyen: Optional[str] = None  # linkedin, indeed, etc.
+    lien: Optional[str] = None
+    confidence_score: float = 0.0  # 0-1 confidence in extraction
 
 
 # ============================================
