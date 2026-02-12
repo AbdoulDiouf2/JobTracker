@@ -88,6 +88,11 @@
 - [ ] **Mode hors-ligne** : Consulter ses candidatures sans connexion
 - [ ] **Notifications push** : Alertes en temps réel
 
+## 🧩 Extension Chrome (Automation)
+- [x] **Job Clipper (Basique)** : Détection via sélecteurs CSS (LinkedIn/Indeed).
+- [ ] **Job AI Parser** : Remplacer les sélecteurs CSS par une analyse IA du contenu de la page pour extraire automatiquement toutes les infos (Salaire, Stack technique, Expérience) de manière robuste et universelle.
+- [ ] **Auto-Fill** : Remplissage automatique des formulaires de candidature (Lever, Greenhouse) avec les infos du profil stockées dans JobTracker.
+
 ## 🚀 Déploiement & Production (P2)
 - [ ] Configurer le déploiement Vercel pour `jobtracker.maadec.com` (ajout `vercel.json`, `mangum`, config DNS Hostinger)
 - [ ] Tester l'application complète (Backend + Frontend)
