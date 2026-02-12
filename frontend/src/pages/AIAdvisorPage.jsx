@@ -209,23 +209,68 @@ export default function AIAdvisorPage() {
         </div>
         
         {/* Tab Toggle */}
-        <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('advisor')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
-              ${activeTab === 'advisor' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
-          >
-            <Sparkles size={16} />
-            {t.advisorTab}
-          </button>
-          <button
-            onClick={() => setActiveTab('chatbot')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
-              ${activeTab === 'chatbot' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
-          >
-            <MessageSquare size={16} />
-            {t.chatbotTab}
-          </button>
+        <div className="flex items-center gap-2">
+          {/* Model Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="border-slate-700 text-slate-300 gap-2">
+                <Settings2 size={16} />
+                {selectedModel ? selectedModel.display_name : t.selectModel}
+                <ChevronDown size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="bg-slate-900 border-slate-700 w-64">
+              {Object.keys(modelsByProvider).length === 0 ? (
+                <div className="p-3 text-xs text-slate-500">{t.noModels}</div>
+              ) : (
+                Object.entries(modelsByProvider).map(([provider, models]) => (
+                  <div key={provider}>
+                    <DropdownMenuLabel className={`${providerColors[provider]} font-semibold`}>
+                      {providerLabels[provider]}
+                    </DropdownMenuLabel>
+                    {models.map((model) => (
+                      <DropdownMenuItem
+                        key={model.model_id}
+                        onClick={() => setSelectedModel(model)}
+                        className={`cursor-pointer ${!model.is_available ? 'opacity-50' : ''} ${
+                          selectedModel?.model_id === model.model_id ? 'bg-slate-800' : ''
+                        }`}
+                        disabled={!model.is_available}
+                      >
+                        <div className="flex flex-col">
+                          <span className="text-white">{model.display_name}</span>
+                          <span className="text-xs text-slate-500">{model.description}</span>
+                        </div>
+                        {selectedModel?.model_id === model.model_id && (
+                          <span className="ml-auto text-gold">✓</span>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator className="bg-slate-700" />
+                  </div>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('advisor')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                ${activeTab === 'advisor' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+            >
+              <Sparkles size={16} />
+              {t.advisorTab}
+            </button>
+            <button
+              onClick={() => setActiveTab('chatbot')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+                ${activeTab === 'chatbot' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+            >
+              <MessageSquare size={16} />
+              {t.chatbotTab}
+            </button>
+          </div>
         </div>
       </div>
 
