@@ -1125,6 +1125,7 @@ export default function InterviewsPage() {
             ))}
           </AnimatePresence>
         </div>
+        </>
       ) : (
         <div className="text-center py-12">
           <p className="text-slate-500">{t.noResults}</p>
