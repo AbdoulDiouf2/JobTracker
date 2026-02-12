@@ -127,9 +127,13 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
         </div>
 
         {interview.lieu_entretien && (
-          <div className="flex items-center gap-2 text-slate-400">
-            <MapPin size={14} />
-            {interview.lieu_entretien}
+          <div className="flex items-center gap-2 text-slate-400 overflow-hidden">
+            <MapPin size={14} className="flex-shrink-0" />
+            <span className="truncate" title={interview.lieu_entretien}>
+              {interview.lieu_entretien.length > 50 
+                ? interview.lieu_entretien.substring(0, 50) + '...' 
+                : interview.lieu_entretien}
+            </span>
           </div>
         )}
 
