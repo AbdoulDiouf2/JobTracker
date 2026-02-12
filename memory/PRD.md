@@ -10,7 +10,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 
 ---
 
-## ✅ Toutes les Phases Complétées (11 Février 2025)
+## ✅ Phases Complétées
 
 ### Phase 1-2: Core
 - CRUD Candidatures et Entretiens
@@ -19,7 +19,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - Internationalisation FR/EN
 
 ### Phase 3: Fonctionnalités Avancées
-- Calendrier interactif entretiens
+- Calendrier interactif entretiens (jour, semaine, mois, année)
 - Vue carte/table candidatures
 - Changement de statut via dropdown
 - Vue détaillée (modal)
@@ -31,19 +31,61 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - Interface chat avec suggestions
 
 ### Phase 5: Import/Export & Analyse CV
-- Import JSON/CSV avec prévisualisation
-- Guide des colonnes attendues
+- Import JSON/CSV/Excel/NDJSON avec prévisualisation
+- Import entretiens avec mapping de colonnes
+- Détection des doublons
 - Analyse CV IA (score, compétences, recommandations)
 
-### Phase 6: Notifications (NOUVEAU)
-- 🔔 Cloche de notification dans le header
-- ⚙️ Paramètres de notification dans Settings
-- 📅 Rappels automatiques 24h et 1h avant entretien
-- ✅ Sidebar fixe (ne scroll plus avec la page)
+### Phase 6: Notifications
+- Cloche de notification dans le header
+- Paramètres de notification dans Settings
+- Rappels automatiques 24h et 1h avant entretien
+- Sidebar fixe (ne scroll plus avec la page)
+
+### Phase 7: Administration Multi-Tenant (12 Février 2025)
+- Système de rôles (admin, standard, premium)
+- Dashboard admin avec statistiques globales
+- Gestion des utilisateurs (activation, rôles)
+- Graphiques croissance et activité
+- Export des statistiques admin
+- Script seed_admin.py pour initialisation
+
+### Phase 8: Suivi Avancé des Candidatures (12 Février 2025)
+- **Timeline visuelle** : Historique complet (envoyé → réponse → entretien)
+- **Rappels automatiques** : Alerte si pas de réponse après X jours
+- **Génération relance IA** : Email de relance personnalisé (3 tons)
+- **Score de matching** : Analyse IA CV vs offre d'emploi
+- Nouveaux champs : contact_email, contact_name, description_poste, days_before_reminder
 
 ---
 
 ## APIs Disponibles
+
+### Authentication
+- `POST /api/auth/register` - Inscription
+- `POST /api/auth/login` - Connexion
+- `GET /api/auth/me` - Profil utilisateur
+
+### Applications
+- `GET /api/applications` - Liste paginée
+- `POST /api/applications` - Créer
+- `PUT /api/applications/{id}` - Modifier
+- `DELETE /api/applications/{id}` - Supprimer
+
+### Tracking (NOUVEAU)
+- `GET /api/applications/{id}/timeline` - Historique complet
+- `POST /api/applications/{id}/timeline/event` - Ajouter événement
+- `GET /api/applications/reminders/pending` - Candidatures nécessitant relance
+- `POST /api/applications/{id}/reminder/mark-sent` - Marquer rappel envoyé
+- `POST /api/applications/{id}/followup/generate` - Générer email relance IA
+- `POST /api/applications/{id}/matching/calculate` - Calculer score matching
+- `GET /api/applications/{id}/matching` - Récupérer score existant
+
+### Administration
+- `GET /api/admin/dashboard` - Stats globales
+- `GET /api/admin/users` - Liste utilisateurs
+- `PUT /api/admin/users/{id}` - Modifier utilisateur
+- `DELETE /api/admin/users/{id}` - Désactiver utilisateur
 
 ### Notifications
 - `GET /api/notifications` - Liste des notifications
