@@ -2,13 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../i18n';
+import { useAuth } from '../contexts/AuthContext';
 import { 
   Briefcase, BarChart3, Brain, Bot, Database, Shield, FileJson, 
   Calendar, Search, Star, Filter, Download, Upload, Terminal,
   ChevronDown, Github, Linkedin, Mail, ExternalLink, Play,
   Sparkles, Zap, Lock, Server, Code2, Container, Layers,
   FileSpreadsheet, FileText, ArrowRight, MessageSquare, User,
-  Check, TrendingUp, Target, Clock, Menu, X, Globe
+  Check, TrendingUp, Target, Clock, Menu, X, Globe, LayoutDashboard
 } from 'lucide-react';
 import {
   Accordion,
