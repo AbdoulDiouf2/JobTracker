@@ -9,9 +9,11 @@ from typing import Optional, List
 from datetime import datetime, timezone, timedelta
 import os
 import requests
+from urllib.parse import urlencode
 from pydantic import BaseModel
 
 from utils.auth import get_current_user
+from config import settings
 
 router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
@@ -22,10 +24,10 @@ def get_db():
 
 
 # Configuration
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CALENDAR_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CALENDAR_CLIENT_SECRET")
-REDIRECT_URI = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:8001") + "/api/calendar/callback"
-FRONTEND_URL = os.environ.get("REACT_APP_BACKEND_URL", "http://localhost:3000").replace("/api", "")
+GOOGLE_CLIENT_ID = settings.GOOGLE_CALENDAR_CLIENT_ID
+GOOGLE_CLIENT_SECRET = settings.GOOGLE_CALENDAR_CLIENT_SECRET
+REDIRECT_URI = f"{settings.BACKEND_URL}/api/calendar/callback"
+FRONTEND_URL = settings.FRONTEND_URL
 
 SCOPES = [
     "https://www.googleapis.com/auth/calendar",
@@ -103,10 +105,10 @@ async def start_google_auth(
         "scope": " ".join(SCOPES),
         "access_type": "offline",
         "prompt": "consent",
-        "state": current_user["user_id"]  # Pass user_id in state
+        "state": current_user["user_id"]
     }
     
-    url = auth_url + "?" + "&".join([f"{k}={v}" for k, v in params.items()])
+    url = f"{auth_url}?{urlencode(params)}"
     
     return {"authorization_url": url}
 

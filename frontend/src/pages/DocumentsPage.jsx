@@ -139,12 +139,7 @@ export default function DocumentsPage() {
     }
   }[language];
 
-  // Fetch documents
-  useEffect(() => {
-    fetchDocuments();
-    fetchTemplates();
-  }, [fetchDocuments, fetchTemplates]);
-
+  // Define fetch functions first
   const fetchDocuments = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
@@ -171,6 +166,12 @@ export default function DocumentsPage() {
       console.error('Error fetching templates:', error);
     }
   }, []);
+
+  // Fetch documents on mount
+  useEffect(() => {
+    fetchDocuments();
+    fetchTemplates();
+  }, [fetchDocuments, fetchTemplates]);
 
   const handleUpload = async (formData) => {
     try {

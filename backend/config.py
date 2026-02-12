@@ -29,6 +29,14 @@ class Settings(BaseSettings):
     GOOGLE_AI_API_KEY: Optional[str] = os.environ.get('GOOGLE_AI_API_KEY')
     OPENAI_API_KEY: Optional[str] = os.environ.get('OPENAI_API_KEY')
     
+    # Google Calendar
+    GOOGLE_CALENDAR_CLIENT_ID: Optional[str] = os.environ.get('GOOGLE_CALENDAR_CLIENT_ID')
+    GOOGLE_CALENDAR_CLIENT_SECRET: Optional[str] = os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET')
+    
+    # URLs
+    BACKEND_URL: str = os.environ.get('BACKEND_URL', 'http://localhost:8001')
+    FRONTEND_URL: str = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'
