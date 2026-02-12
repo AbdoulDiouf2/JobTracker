@@ -589,12 +589,12 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="p-3 bg-slate-900/30 rounded-xl">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-1">{t.type}</p>
               <p className="text-white font-medium">{typeInfo?.label || interview.type_entretien}</p>
             </div>
-            <div className="p-3 bg-slate-900/30 rounded-xl">
+            <div className="p-4 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-1">{t.format}</p>
               <p className="text-white font-medium">{formatInfo?.label || interview.format_entretien}</p>
             </div>
@@ -602,7 +602,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
 
           {/* Location */}
           {interview.lieu_entretien && (
-            <div className="p-3 bg-slate-900/30 rounded-xl">
+            <div className="p-4 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
                 <MapPin size={14} />
                 {t.location}
@@ -613,7 +613,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
 
           {/* Interviewer */}
           {interview.interviewer && (
-            <div className="p-3 bg-slate-900/30 rounded-xl">
+            <div className="p-4 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2 flex items-center gap-2">
                 <User size={14} />
                 {t.interviewer}
@@ -624,7 +624,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
 
           {/* Comment */}
           {interview.commentaire && (
-            <div className="p-3 bg-slate-900/30 rounded-xl">
+            <div className="p-4 bg-slate-900/30 rounded-xl">
               <p className="text-slate-400 text-sm mb-2">{t.comment}</p>
               <p className="text-white whitespace-pre-wrap text-sm leading-relaxed">{interview.commentaire}</p>
             </div>
