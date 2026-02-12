@@ -120,6 +120,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     isAuthenticated,
+    isAdmin,
     login,
     register,
     logout,
