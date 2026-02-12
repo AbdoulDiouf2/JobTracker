@@ -337,6 +337,70 @@ export default function SettingsPage() {
         </Button>
         {message && <span className="text-green-400 text-sm">{message}</span>}
       </div>
+
+      {/* Danger Zone Section */}
+      <div className="glass-card rounded-xl p-6 border border-red-900/50 bg-red-950/10">
+        <h2 className="font-heading text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
+          <AlertTriangle size={20} />
+          {t.dangerZone}
+        </h2>
+        <p className="text-slate-500 text-sm mb-6">{t.dangerDesc}</p>
+        
+        <div className="space-y-4">
+          {/* Reset Interviews */}
+          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <Calendar size={20} className="text-orange-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">{t.resetInterviews}</p>
+                <p className="text-slate-500 text-sm">{t.resetInterviewsDesc}</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleResetInterviews}
+              disabled={resetting !== null}
+              variant="outline"
+              className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+            >
+              {resetting === 'interviews' ? (
+                <><Loader2 className="animate-spin mr-2" size={16} />{t.resetting}</>
+              ) : (
+                <><Trash2 size={16} className="mr-2" />{t.resetInterviews}</>
+              )}
+            </Button>
+          </div>
+
+          {/* Reset Applications */}
+          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-red-900/30">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <Briefcase size={20} className="text-red-400" />
+              </div>
+              <div>
+                <p className="text-white font-medium">{t.resetApplications}</p>
+                <p className="text-slate-500 text-sm">{t.resetApplicationsDesc}</p>
+              </div>
+            </div>
+            <Button
+              onClick={handleResetApplications}
+              disabled={resetting !== null}
+              variant="outline"
+              className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+            >
+              {resetting === 'applications' ? (
+                <><Loader2 className="animate-spin mr-2" size={16} />{t.resetting}</>
+              ) : (
+                <><Trash2 size={16} className="mr-2" />{t.resetApplications}</>
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm Dialog */}
+      {ConfirmDialog}
     </div>
   );
 }
