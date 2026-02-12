@@ -149,6 +149,56 @@ export default function SettingsPage() {
     setNotifSettings(prev => ({ ...prev, [key]: value }));
   };
 
+  const handleResetApplications = async () => {
+    const confirmed = await showConfirm({
+      title: t.resetApplications,
+      message: t.confirmResetApps,
+      type: 'danger',
+      confirmText: language === 'fr' ? 'Supprimer tout' : 'Delete all',
+      cancelText: language === 'fr' ? 'Annuler' : 'Cancel',
+    });
+    
+    if (confirmed) {
+      setResetting('applications');
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API_URL}/api/applications/reset/all`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setMessage(t.resetSuccess);
+      } catch (error) {
+        setMessage('Erreur lors de la suppression');
+      } finally {
+        setResetting(null);
+      }
+    }
+  };
+
+  const handleResetInterviews = async () => {
+    const confirmed = await showConfirm({
+      title: t.resetInterviews,
+      message: t.confirmResetInterviews,
+      type: 'danger',
+      confirmText: language === 'fr' ? 'Supprimer' : 'Delete',
+      cancelText: language === 'fr' ? 'Annuler' : 'Cancel',
+    });
+    
+    if (confirmed) {
+      setResetting('interviews');
+      try {
+        const token = localStorage.getItem('token');
+        await axios.delete(`${API_URL}/api/interviews/reset/all`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setMessage(t.resetSuccess);
+      } catch (error) {
+        setMessage('Erreur lors de la suppression');
+      } finally {
+        setResetting(null);
+      }
+    }
+  };
+
   return (
     <div className="max-w-2xl space-y-8" data-testid="settings-page">
       <div>
