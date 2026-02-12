@@ -49,6 +49,7 @@ function App() {
                 <Route path="interviews" element={<InterviewsPage />} />
                 <Route path="statistics" element={<StatisticsPage />} />
                 <Route path="ai-advisor" element={<AIAdvisorPage />} />
+                <Route path="documents" element={<DocumentsPage />} />
                 <Route path="import-export" element={<ImportExportPage />} />
                 <Route path="settings" element={<SettingsPage />} />
               </Route>
