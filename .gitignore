@@ -102,3 +102,6 @@ frontend/node_modules/.cache/default-development/10.pack
 # Environment files
 *.env
 *.env.*
+
+STRATEGIE_SAAS.md
+backend/ADMIN_SETUP.md

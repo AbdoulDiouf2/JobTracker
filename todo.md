@@ -5,6 +5,10 @@
 
 ## ✅ Complété
 
+### 🛠️ Maintenance & Qualité
+- [x] **Linting Errors** : Corriger les warnings ESLint (useEffect, useCallback dependencies) `src/hooks/useTracking.js`, `ApplicationTimeline.jsx`, `MatchingScoreModal.jsx`.
+- [x] **Import/Export** : Vérifier la prise en compte des entretiens dans l'import (JSON/CSV).
+
 ### 🔐 Administration Multi-Tenant
 - [x] Créer un modèle `Role` (admin, standard, premium)
 - [x] Ajouter le champ `role` au modèle User (défaut: "standard")
