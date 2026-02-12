@@ -134,6 +134,63 @@ export default function SettingsPage() {
     fetchNotifSettings();
   }, []);
 
+  // Fetch Google Calendar status
+  useEffect(() => {
+    const fetchCalendarStatus = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/calendar/auth/status`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCalendarStatus(response.data);
+      } catch (error) {
+        console.error('Error fetching calendar status:', error);
+      }
+    };
+    fetchCalendarStatus();
+    
+    // Check URL params for calendar connection result
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('calendar_connected') === 'true') {
+      fetchCalendarStatus();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (urlParams.get('calendar_error')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleConnectCalendar = async () => {
+    setCalendarLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/calendar/auth/login`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      // Redirect to Google OAuth
+      window.location.href = response.data.authorization_url;
+    } catch (error) {
+      console.error('Error connecting calendar:', error);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
+  const handleDisconnectCalendar = async () => {
+    setCalendarLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/calendar/disconnect`, null, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCalendarStatus({ configured: true, connected: false, email: null });
+    } catch (error) {
+      console.error('Error disconnecting calendar:', error);
+    } finally {
+      setCalendarLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setMessage('');
