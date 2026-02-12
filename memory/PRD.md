@@ -57,6 +57,17 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 - **Score de matching** : Analyse IA CV vs offre d'emploi
 - Nouveaux champs : contact_email, contact_name, description_poste, days_before_reminder
 
+### Phase 9: IA Multi-Provider & Extension Chrome (12 Février 2025)
+- **Support Groq** : Ajout de Groq comme 3ème fournisseur d'API
+- **Sélection dynamique de modèle** : Dropdown dans le chatbot pour choisir le modèle
+- **Modèles disponibles** :
+  - OpenAI: GPT-4o, GPT-4o Mini, GPT-4 Turbo
+  - Google: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash
+  - Groq: Llama 3.3 70B, Llama 3.1 8B, Mixtral 8x7B, Gemma 2 9B
+- **Extension Chrome v2** : Extraction IA automatique des offres d'emploi
+- **Endpoint `/api/ai/extract-job`** : Extraction IA depuis contenu de page
+- **Endpoint `/api/ai/available-models`** : Liste des modèles disponibles
+
 ---
 
 ## APIs Disponibles
