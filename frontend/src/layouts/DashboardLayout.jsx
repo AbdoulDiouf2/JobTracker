@@ -73,12 +73,12 @@ const Sidebar = ({ isOpen, onClose }) => {
           transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
       >
         {/* Logo - Fixed at top */}
-        <div className="flex-shrink-0 p-6 border-b border-slate-800">
+        <div className="flex-shrink-0 p-6 border-b border-slate-800 flex justify-center">
           <Link to="/" className="flex items-center gap-3">
             <img 
-              src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
+              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
               alt="MAADEC" 
-              className="h-10"
+              className="h-32"
             />
           </Link>
         </div>
@@ -150,9 +150,9 @@ export default function DashboardLayout() {
             <Menu size={24} />
           </button>
           <img 
-            src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
+            src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
             alt="MAADEC" 
-            className="h-8"
+            className="h-12"
           />
           <NotificationBell />
         </header>

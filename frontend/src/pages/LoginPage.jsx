@@ -68,9 +68,9 @@ export default function LoginPage() {
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-8">
           <img 
-            src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
+            src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
             alt="MAADEC" 
-            className="h-16"
+            className="h-64"
           />
         </Link>
 

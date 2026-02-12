@@ -67,9 +67,9 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-20">
           <a href="#" data-testid="logo-link" className="flex items-center gap-3">
             <img 
-              src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
+              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
               alt="MAADEC Logo" 
-              className="h-12 w-auto"
+              className="h-24 w-auto"
             />
           </a>
 
@@ -963,9 +963,9 @@ const Footer = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-16">
           <div className="lg:col-span-1">
             <img 
-              src="https://customer-assets.emergentagent.com/job_careernav-3/artifacts/2hooa0lk_logo_maadec_copie.png" 
+              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
               alt="MAADEC Logo" 
-              className="h-14 w-auto mb-6"
+              className="h-20 w-auto mb-6"
             />
             <p className="text-slate-400 text-sm leading-relaxed mb-6">
               {footerT.tagline}
