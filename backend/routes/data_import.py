@@ -436,19 +436,47 @@ async def analyze_cv(
     
     try:
         content = await file.read()
+        cv_text = ""
         
-        # For text files, read directly
+        # Extract text based on file type
         if file_ext == '.txt':
             cv_text = content.decode('utf-8')
-        else:
-            # For PDF/DOCX, we'll send the raw content description
-            # In production, you'd use PyPDF2 or python-docx to extract text
-            cv_text = f"[CV uploadé: {file.filename}, taille: {len(content)} bytes]"
-            # Try to decode as text if possible
+            
+        elif file_ext == '.pdf':
+            if not PDF_SUPPORT:
+                raise HTTPException(status_code=500, detail="Support PDF non disponible. Installez PyPDF2.")
             try:
-                cv_text = content.decode('utf-8', errors='ignore')[:5000]
-            except:
-                pass
+                pdf_reader = PdfReader(io.BytesIO(content))
+                text_parts = []
+                for page in pdf_reader.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+                cv_text = "\n".join(text_parts)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Erreur lecture PDF: {str(e)}")
+                
+        elif file_ext in ['.docx', '.doc']:
+            if not DOCX_SUPPORT:
+                raise HTTPException(status_code=500, detail="Support DOCX non disponible. Installez python-docx.")
+            try:
+                doc = DocxDocument(io.BytesIO(content))
+                text_parts = []
+                for para in doc.paragraphs:
+                    if para.text.strip():
+                        text_parts.append(para.text)
+                # Also extract from tables
+                for table in doc.tables:
+                    for row in table.rows:
+                        for cell in row.cells:
+                            if cell.text.strip():
+                                text_parts.append(cell.text)
+                cv_text = "\n".join(text_parts)
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Erreur lecture DOCX: {str(e)}")
+        
+        if not cv_text or len(cv_text.strip()) < 50:
+            raise HTTPException(status_code=400, detail="Impossible d'extraire le texte du CV. Le fichier est peut-être vide ou protégé.")
         
         # Get user's applications for matching
         applications = await db.applications.find(
