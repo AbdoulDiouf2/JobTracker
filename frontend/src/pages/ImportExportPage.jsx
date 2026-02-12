@@ -209,9 +209,9 @@ export default function ImportExportPage() {
     }
   }[language];
 
-  const guide = COLUMN_GUIDE[language];
+  const guide = importType === 'applications' ? COLUMN_GUIDE[language] : INTERVIEW_COLUMN_GUIDE[language];
 
-  // Helper function to map columns to expected format
+  // Helper function to map columns to expected format for applications
   const mapRowToApplication = (row) => {
     const mapped = {};
     Object.entries(row).forEach(([key, value]) => {
@@ -252,6 +252,46 @@ export default function ImportExportPage() {
         } else {
           mapped.reponse = 'pending';
         }
+      }
+    });
+    return mapped;
+  };
+
+  // Helper function to map columns for interviews
+  const mapRowToInterview = (row) => {
+    const mapped = {};
+    Object.entries(row).forEach(([key, value]) => {
+      const lowerKey = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      
+      if (lowerKey === 'entreprise' || lowerKey === 'company') {
+        mapped.entreprise = value;
+      } else if (lowerKey === 'poste' || lowerKey === 'position') {
+        mapped.poste = value;
+      } else if (lowerKey.includes('date') && lowerKey.includes('entretien')) {
+        if (typeof value === 'number') {
+          mapped.date_entretien = new Date(value).toISOString();
+        } else {
+          mapped.date_entretien = value;
+        }
+      } else if (lowerKey === 'type_entretien' || lowerKey === 'type entretien' || (lowerKey === 'type' && !mapped.type_entretien)) {
+        mapped.type_entretien = value;
+      } else if (lowerKey === 'format_entretien' || lowerKey === 'format entretien' || lowerKey === 'format') {
+        mapped.format_entretien = value;
+      } else if (lowerKey.includes('lieu') || lowerKey.includes('lien') || lowerKey.includes('link')) {
+        mapped.lieu_lien = value;
+      } else if (lowerKey === 'interviewer' || lowerKey === 'recruteur') {
+        mapped.interviewer = value;
+      } else if (lowerKey === 'statut' || lowerKey === 'status') {
+        const valStr = String(value || '').toLowerCase();
+        if (valStr.includes('realis') || valStr.includes('complet') || valStr.includes('✅')) {
+          mapped.statut = 'completed';
+        } else if (valStr.includes('annul') || valStr.includes('cancel')) {
+          mapped.statut = 'cancelled';
+        } else {
+          mapped.statut = 'planned';
+        }
+      } else if (lowerKey === 'commentaire' || lowerKey === 'comment' || lowerKey === 'notes') {
+        mapped.commentaire = value;
       }
     });
     return mapped;
