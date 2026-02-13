@@ -10,7 +10,7 @@ import { fr, enUS } from 'date-fns/locale';
 import { 
   Plus, Calendar, Clock, MapPin, User, Edit2, Trash2, 
   Phone, Video, Building, Loader2, AlertCircle, Eye,
-  ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, ChevronDown, X
+  ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, ChevronDown, X, CalendarPlus
 } from 'lucide-react';
 import { useInterviews } from '../hooks/useInterviews';
 import { useApplications } from '../hooks/useApplications';
@@ -18,6 +18,8 @@ import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
+import axios from 'axios';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -59,7 +61,7 @@ const STATUS_OPTIONS = [
 ];
 
 // Interview Card
-const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusChange }) => {
+const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusChange, onSyncCalendar, syncLoading }) => {
   const { language } = useLanguage();
   const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut) || STATUS_OPTIONS[0];
   const typeInfo = TYPE_OPTIONS.find(t => t.value === interview.type_entretien);
@@ -73,6 +75,9 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
     passed: 'border-l-slate-700'
   };
 
+  const isSynced = !!interview.google_calendar_event_id;
+  const isLoading = syncLoading === interview.id;
+
   return (
     <motion.div
       layout
@@ -85,7 +90,14 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
     >
       <div className="flex items-start justify-between mb-3 gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-white group-hover:text-gold transition-colors truncate">{interview.entreprise}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-white group-hover:text-gold transition-colors truncate">{interview.entreprise}</h3>
+            {isSynced && (
+              <div className="flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center" title="Synchronisé avec Google Calendar">
+                <Calendar size={12} className="text-green-400" />
+              </div>
+            )}
+          </div>
           <p className="text-gold text-sm truncate">{interview.poste}</p>
         </div>
         {/* Status Dropdown */}
@@ -168,6 +180,21 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
           data-testid={`edit-interview-btn-${interview.id}`}
         >
           <Edit2 size={16} />
+        </button>
+        <button
+          onClick={() => onSyncCalendar(interview.id)}
+          disabled={isSynced || isLoading}
+          className={`p-2 rounded-lg transition-colors ${
+            isSynced 
+              ? 'text-green-400 cursor-not-allowed opacity-50' 
+              : isLoading
+                ? 'text-gold cursor-wait'
+                : 'text-slate-400 hover:text-gold hover:bg-slate-800'
+          }`}
+          title={isSynced ? 'Déjà synchronisé' : 'Synchroniser avec Google Calendar'}
+          data-testid={`sync-calendar-btn-${interview.id}`}
+        >
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <CalendarPlus size={16} />}
         </button>
         <button
           onClick={() => onDelete(interview.id)}
@@ -519,12 +546,15 @@ const CalendarView = ({ interviews, currentDate, onDateChange, onDayClick, onInt
 };
 
 // Interview Detail Modal
-const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChange, t, language }) => {
+const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChange, onSyncCalendar, syncLoading, t, language }) => {
   if (!interview) return null;
   
   const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut) || STATUS_OPTIONS[0];
   const typeInfo = TYPE_OPTIONS.find(t => t.value === interview.type_entretien);
   const formatInfo = FORMAT_OPTIONS.find(f => f.value === interview.format_entretien);
+  
+  const isSynced = !!interview.google_calendar_event_id;
+  const isLoading = syncLoading === interview.id;
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -561,10 +591,32 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <Button onClick={() => { onClose(); onEdit(interview); }} variant="outline" className="border-slate-700">
-              <Edit2 size={16} className="mr-2" />
-              {t.edit}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => onSyncCalendar(interview.id)}
+                disabled={isSynced || isLoading}
+                variant="outline" 
+                className={`border-slate-700 ${
+                  isSynced 
+                    ? 'text-green-400 cursor-not-allowed' 
+                    : isLoading
+                      ? 'text-gold'
+                      : 'text-slate-300 hover:text-gold'
+                }`}
+              >
+                {isLoading ? (
+                  <><Loader2 size={16} className="mr-2 animate-spin" /> Sync...</>
+                ) : isSynced ? (
+                  <><Calendar size={16} className="mr-2" /> Synchronisé</>
+                ) : (
+                  <><CalendarPlus size={16} className="mr-2" /> Sync Calendar</>
+                )}
+              </Button>
+              <Button onClick={() => { onClose(); onEdit(interview); }} variant="outline" className="border-slate-700">
+                <Edit2 size={16} className="mr-2" />
+                {t.edit}
+              </Button>
+            </div>
           </div>
 
           {/* Date & Time */}
@@ -930,6 +982,7 @@ export default function InterviewsPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarView, setCalendarView] = useState('month'); // 'day', 'week', 'month', 'year'
   const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
+  const [syncCalendarLoading, setSyncCalendarLoading] = useState(null);
 
   const t = {
     fr: {
@@ -1026,10 +1079,37 @@ export default function InterviewsPage() {
   };
 
   const handleDayClick = (date, dayInterviews) => {
-    if (dayInterviews.length === 1) {
-      setViewingInterview(dayInterviews[0]);
-    } else {
-      setDayModalData({ date, interviews: dayInterviews });
+    setDayModalData({ date, interviews: dayInterviews });
+  };
+
+  const handleInterviewClick = (interview) => {
+    setViewingInterview(interview);
+  };
+
+  const handleSyncToCalendar = async (interviewId) => {
+    setSyncCalendarLoading(interviewId);
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      const response = await axios.post(
+        `${API_URL}/api/calendar/sync-interview/${interviewId}`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Update local state with google_calendar_event_id
+      await fetchInterviews(filter !== 'all' ? { status: filter } : {});
+      
+      toast.success(language === 'fr' ? 'Entretien synchronisé avec Google Calendar' : 'Interview synced with Google Calendar');
+    } catch (error) {
+      console.error('Error syncing to calendar:', error);
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error(language === 'fr' ? 'Connectez votre Google Calendar dans les paramètres' : 'Connect your Google Calendar in settings');
+      } else {
+        toast.error(language === 'fr' ? 'Erreur lors de la synchronisation' : 'Error syncing to calendar');
+      }
+    } finally {
+      setSyncCalendarLoading(null);
     }
   };
 
@@ -1125,6 +1205,8 @@ export default function InterviewsPage() {
                 onDelete={handleDelete}
                 onViewDetails={setViewingInterview}
                 onStatusChange={handleStatusChange}
+                onSyncCalendar={handleSyncToCalendar}
+                syncLoading={syncCalendarLoading}
               />
             ))}
           </AnimatePresence>
@@ -1154,6 +1236,8 @@ export default function InterviewsPage() {
         onClose={() => setViewingInterview(null)}
         onEdit={(i) => { setEditingInterview(i); setIsModalOpen(true); }}
         onStatusChange={handleStatusChange}
+        onSyncCalendar={handleSyncToCalendar}
+        syncLoading={syncCalendarLoading}
         t={t}
         language={language}
       />
