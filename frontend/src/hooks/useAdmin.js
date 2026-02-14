@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,10 +9,10 @@ export const useAdmin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const headers = {
+  const headers = useMemo(() => ({
     'Authorization': `Bearer ${token}`,
     'Content-Type': 'application/json'
-  };
+  }), [token]);
 
   // Dashboard Stats
   const [dashboardStats, setDashboardStats] = useState(null);
@@ -28,7 +28,7 @@ export const useAdmin = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // User Growth
   const [userGrowth, setUserGrowth] = useState([]);
@@ -40,7 +40,7 @@ export const useAdmin = () => {
     } catch (err) {
       console.error('Erreur user growth:', err);
     }
-  }, [token]);
+  }, [headers]);
 
   // Activity Stats
   const [activityStats, setActivityStats] = useState([]);
@@ -52,7 +52,7 @@ export const useAdmin = () => {
     } catch (err) {
       console.error('Erreur activity stats:', err);
     }
-  }, [token]);
+  }, [headers]);
 
   // Users List
   const [users, setUsers] = useState([]);
@@ -82,7 +82,7 @@ export const useAdmin = () => {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [headers]);
 
   // User Detail
   const fetchUserDetail = useCallback(async (userId) => {
@@ -92,7 +92,7 @@ export const useAdmin = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Update User
   const updateUser = useCallback(async (userId, data) => {
@@ -102,7 +102,7 @@ export const useAdmin = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Delete User (soft delete)
   const deleteUser = useCallback(async (userId) => {
@@ -112,7 +112,7 @@ export const useAdmin = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Reactivate User
   const reactivateUser = useCallback(async (userId) => {
@@ -122,7 +122,7 @@ export const useAdmin = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   // Export Stats
   const exportStats = useCallback(async () => {
@@ -132,7 +132,7 @@ export const useAdmin = () => {
     } catch (err) {
       throw err;
     }
-  }, [token]);
+  }, [headers]);
 
   return {
     loading,
