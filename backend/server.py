@@ -39,6 +39,7 @@ from routes.calendar import get_db as calendar_get_db
 from routes.reminders import router as reminders_router
 from routes.reminders import get_db as reminders_get_db
 from utils.auth import get_current_user, security
+from utils.scheduler import setup_scheduler, shutdown_scheduler
 
 # Configure logging
 logging.basicConfig(
