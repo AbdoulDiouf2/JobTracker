@@ -92,8 +92,8 @@
 - [ ] **LinkedIn integration** : Voir le profil LinkedIn du recruteur
 
 ### 📱 Mobile & Accessibilité
-- [ ] **PWA** : Application installable sur mobile
-- [ ] **Mode hors-ligne** : Consulter ses candidatures sans connexion
+- [x] **PWA** : Application installable sur mobile (manifest.json, service-worker, icônes)
+- [x] **Mode hors-ligne** : Consulter ses candidatures sans connexion (Service Worker avec cache)
 - [ ] **Notifications push** : Alertes en temps réel
 
 ## 🧩 Extension Chrome (Automation)
