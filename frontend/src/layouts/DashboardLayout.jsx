@@ -148,6 +148,9 @@ const Sidebar = ({ isOpen, onClose }) => {
 export default function DashboardLayout() {
   const { isAuthenticated } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  
+  // Process interview reminders automatically
+  useReminders();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
