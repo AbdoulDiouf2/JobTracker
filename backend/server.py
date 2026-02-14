@@ -83,8 +83,14 @@ async def lifespan(app: FastAPI):
     
     logger.info(f"Connecté à MongoDB: {settings.DB_NAME}")
     
+    # Démarrer le scheduler pour les rappels automatiques
+    setup_scheduler(db)
+    logger.info("✅ Scheduler de rappels automatiques démarré")
+    
     yield
     
+    # Arrêter le scheduler proprement
+    shutdown_scheduler()
     logger.info("Fermeture connexion MongoDB...")
     client.close()
 
