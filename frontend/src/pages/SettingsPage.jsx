@@ -134,7 +134,17 @@ export default function SettingsPage() {
       confirmResetApps: 'Are you sure you want to delete ALL your applications and interviews? This action is irreversible!',
       confirmResetInterviews: 'Are you sure you want to delete ALL your interviews? This action is irreversible!',
       resetSuccess: 'Data deleted successfully',
-      resetting: 'Deleting...'
+      resetting: 'Deleting...',
+      // Push Notifications
+      pushNotifications: 'Push Notifications',
+      pushDesc: 'Receive real-time alerts on your device',
+      pushEnabled: 'Notifications enabled',
+      pushDisabled: 'Notifications disabled',
+      pushEnable: 'Enable',
+      pushDisable: 'Disable',
+      pushTest: 'Test',
+      pushNotSupported: 'Your browser does not support push notifications',
+      pushDenied: 'You have blocked notifications. Enable them in your browser settings.'
     }
   }[language];
 
