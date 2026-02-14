@@ -333,3 +333,53 @@ async def clear_sent_reminders(
     result = await db.sent_reminders.delete_many(query)
     
     return {"deleted": result.deleted_count}
+
+
+@router.get("/scheduler-status")
+async def get_scheduler_status():
+    """
+    Récupère le statut du scheduler de rappels automatiques.
+    Endpoint public pour monitoring.
+    """
+    try:
+        from utils.scheduler import scheduler
+        
+        jobs = []
+        for job in scheduler.get_jobs():
+            jobs.append({
+                "id": job.id,
+                "name": job.name,
+                "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
+                "trigger": str(job.trigger)
+            })
+        
+        return {
+            "scheduler_running": scheduler.running,
+            "jobs": jobs,
+            "message": "Le scheduler traite les rappels toutes les 15 minutes automatiquement"
+        }
+    except Exception as e:
+        return {
+            "scheduler_running": False,
+            "error": str(e)
+        }
+
+
+@router.post("/trigger-now")
+async def trigger_reminders_now(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """
+    Déclenche manuellement le traitement des rappels.
+    Utile pour tester ou forcer un traitement immédiat.
+    """
+    from utils.scheduler import process_interview_reminders
+    
+    stats = await process_interview_reminders(db)
+    
+    return {
+        "triggered": True,
+        "stats": stats
+    }
+
