@@ -36,6 +36,8 @@ from routes.admin import get_db as admin_get_db
 from routes.tracking import get_db as tracking_get_db
 from routes.documents import get_db as documents_get_db
 from routes.calendar import get_db as calendar_get_db
+from routes.reminders import router as reminders_router
+from routes.reminders import get_db as reminders_get_db
 from utils.auth import get_current_user, security
 
 # Configure logging
