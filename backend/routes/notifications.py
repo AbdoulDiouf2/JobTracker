@@ -284,3 +284,197 @@ async def generate_reminders(
                 generated += 1
     
     return {"generated": generated}
+
+
+# ===========================================
+# PUSH NOTIFICATIONS (Web Push API)
+# ===========================================
+
+import json
+
+# VAPID Configuration
+VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
+VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "contact@maadec.com")
+
+
+class PushSubscriptionKeys(BaseModel):
+    p256dh: str
+    auth: str
+
+
+class PushSubscriptionData(BaseModel):
+    endpoint: str
+    keys: PushSubscriptionKeys
+
+
+class SubscribeRequest(BaseModel):
+    subscription: PushSubscriptionData
+    device_name: Optional[str] = None
+
+
+async def send_push_notification(db, subscription_info: dict, payload: dict) -> bool:
+    """Send a push notification to a single subscription"""
+    try:
+        from pywebpush import webpush, WebPushException
+        
+        webpush(
+            subscription_info=subscription_info,
+            data=json.dumps(payload),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims={"sub": f"mailto:{VAPID_CLAIMS_EMAIL}"}
+        )
+        return True
+    except Exception as e:
+        error_str = str(e)
+        print(f"[Push] Erreur: {error_str}")
+        # Si subscription expirée (410 Gone), on la supprime
+        if "410" in error_str or "expired" in error_str.lower():
+            await db.push_subscriptions.delete_one({
+                "subscription.endpoint": subscription_info.get("endpoint")
+            })
+        return False
+
+
+@router.get("/push/vapid-key")
+async def get_vapid_public_key():
+    """Get the VAPID public key for client-side subscription"""
+    if not VAPID_PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+
+@router.post("/push/subscribe")
+async def subscribe_to_push(
+    data: SubscribeRequest,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Subscribe a device to push notifications"""
+    user_id = current_user["user_id"]
+    
+    # Check if subscription already exists
+    existing = await db.push_subscriptions.find_one({
+        "user_id": user_id,
+        "subscription.endpoint": data.subscription.endpoint
+    })
+    
+    if existing:
+        # Update existing subscription
+        await db.push_subscriptions.update_one(
+            {"_id": existing["_id"]},
+            {"$set": {
+                "subscription": data.subscription.model_dump(),
+                "device_name": data.device_name,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        return {"message": "Subscription updated"}
+    
+    # Create new subscription
+    subscription_doc = {
+        "user_id": user_id,
+        "subscription": data.subscription.model_dump(),
+        "device_name": data.device_name,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.push_subscriptions.insert_one(subscription_doc)
+    
+    # Send a welcome notification
+    welcome_payload = {
+        "title": "Notifications activées 🔔",
+        "body": "Vous recevrez des alertes pour vos entretiens et candidatures.",
+        "icon": "/icons/icon-192x192.png",
+        "url": "/dashboard"
+    }
+    
+    await send_push_notification(db, data.subscription.model_dump(), welcome_payload)
+    
+    return {"message": "Subscribed successfully"}
+
+
+@router.delete("/push/unsubscribe")
+async def unsubscribe_from_push(
+    endpoint: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Unsubscribe a device from push notifications"""
+    user_id = current_user["user_id"]
+    
+    result = await db.push_subscriptions.delete_one({
+        "user_id": user_id,
+        "subscription.endpoint": endpoint
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription not found")
+    
+    return {"message": "Unsubscribed successfully"}
+
+
+@router.post("/push/test")
+async def send_test_push(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Send a test push notification to all user's devices"""
+    user_id = current_user["user_id"]
+    
+    subscriptions = await db.push_subscriptions.find(
+        {"user_id": user_id}
+    ).to_list(100)
+    
+    if not subscriptions:
+        raise HTTPException(status_code=404, detail="Aucun appareil enregistré")
+    
+    payload = {
+        "title": "Test de notification 🧪",
+        "body": "Si vous voyez ceci, les notifications push fonctionnent !",
+        "icon": "/icons/icon-192x192.png",
+        "url": "/dashboard"
+    }
+    
+    success_count = 0
+    for sub in subscriptions:
+        if await send_push_notification(db, sub["subscription"], payload):
+            success_count += 1
+    
+    return {
+        "message": f"Envoyé à {success_count}/{len(subscriptions)} appareil(s)",
+        "success_count": success_count,
+        "total": len(subscriptions)
+    }
+
+
+async def notify_user_push(db, user_id: str, title: str, body: str, url: str = "/dashboard", tag: str = None):
+    """
+    Internal function to send push notification to all devices of a user.
+    Can be called from other modules for interview reminders, etc.
+    """
+    subscriptions = await db.push_subscriptions.find(
+        {"user_id": user_id}
+    ).to_list(100)
+    
+    if not subscriptions:
+        return False
+    
+    payload = {
+        "title": title,
+        "body": body,
+        "icon": "/icons/icon-192x192.png",
+        "badge": "/icons/icon-96x96.png",
+        "url": url
+    }
+    if tag:
+        payload["tag"] = tag
+    
+    success = False
+    for sub in subscriptions:
+        if await send_push_notification(db, sub["subscription"], payload):
+            success = True
+    
+    return success
+
