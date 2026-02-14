@@ -384,6 +384,68 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Push Notifications Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
+              <BellRing size={20} className="text-gold" />
+              {t.pushNotifications}
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">{t.pushDesc}</p>
+            
+            {!pushSupported ? (
+              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-400 text-sm">{t.pushNotSupported}</p>
+              </div>
+            ) : pushPermission === 'denied' ? (
+              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                <p className="text-red-400 text-sm">{t.pushDenied}</p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                    pushSubscribed ? 'bg-green-500/20' : 'bg-slate-700'
+                  }`}>
+                    <Smartphone size={20} className={pushSubscribed ? 'text-green-400' : 'text-slate-400'} />
+                  </div>
+                  <p className={pushSubscribed ? 'text-green-400 font-medium' : 'text-slate-400'}>
+                    {pushSubscribed ? t.pushEnabled : t.pushDisabled}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {pushSubscribed && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await sendTestNotification();
+                        } catch (e) {
+                          console.error(e);
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      {t.pushTest}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={pushSubscribed ? unsubscribePush : subscribePush}
+                    disabled={pushLoading}
+                    className={pushSubscribed 
+                      ? 'bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30' 
+                      : 'bg-gold hover:bg-gold-light text-[#020817]'
+                    }
+                  >
+                    {pushLoading ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : pushSubscribed ? t.pushDisable : t.pushEnable}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Google Calendar Section */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
