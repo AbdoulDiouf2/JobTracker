@@ -186,6 +186,9 @@ export default function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+      
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   );
 }
