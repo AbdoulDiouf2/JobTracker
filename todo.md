@@ -58,7 +58,8 @@
 ### 📅 Gestion du Temps
 - [x] **Intégration Google Calendar** : Backend OAuth 2.0 complet (nécessite credentials)
 - [x] **Section Google Calendar** : UI dans les paramètres avec statut connexion
-- [ ] **Rappels par email/SMS** : 24h et 1h avant l'entretien
+- [x] **Rappels automatiques par Push** : 24h et 1h avant l'entretien (notifications push)
+- [ ] **Rappels par email/SMS** : Envoi d'emails/SMS en complément des push
 - [ ] **Préparation entretien** : Checklist personnalisée avant chaque entretien
 
 ### 📝 Préparation & Ressources
