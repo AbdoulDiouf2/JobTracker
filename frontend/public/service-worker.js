@@ -97,6 +97,91 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// ===========================================
+// PUSH NOTIFICATIONS
+// ===========================================
+
+// Réception d'une notification push
+self.addEventListener('push', (event) => {
+  console.log('[SW] Push reçu:', event);
+  
+  let data = {
+    title: 'JobTracker',
+    body: 'Nouvelle notification',
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-96x96.png',
+    url: '/dashboard'
+  };
+  
+  // Parser les données de la notification
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() };
+    } catch (e) {
+      console.error('[SW] Erreur parsing push data:', e);
+    }
+  }
+  
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url,
+      dateOfArrival: Date.now()
+    },
+    actions: [
+      { action: 'open', title: 'Ouvrir' },
+      { action: 'close', title: 'Fermer' }
+    ],
+    tag: data.tag || 'jobtracker-notification',
+    renotify: true,
+    requireInteraction: false
+  };
+  
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Clic sur une notification
+self.addEventListener('notificationclick', (event) => {
+  console.log('[SW] Notification cliquée:', event.notification.tag);
+  
+  event.notification.close();
+  
+  // Action "fermer" - ne rien faire
+  if (event.action === 'close') {
+    return;
+  }
+  
+  // Ouvrir l'URL de la notification
+  const urlToOpen = event.notification.data?.url || '/dashboard';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((windowClients) => {
+        // Chercher une fenêtre déjà ouverte
+        for (const client of windowClients) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(urlToOpen);
+            return client.focus();
+          }
+        }
+        // Sinon, ouvrir une nouvelle fenêtre
+        if (clients.openWindow) {
+          return clients.openWindow(urlToOpen);
+        }
+      })
+  );
+});
+
+// Fermeture d'une notification
+self.addEventListener('notificationclose', (event) => {
+  console.log('[SW] Notification fermée:', event.notification.tag);
+});
+
 // Gestion des messages (pour forcer la mise à jour)
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
