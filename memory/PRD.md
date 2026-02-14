@@ -101,6 +101,12 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
   - Cache dynamique des pages visitées
 - **Icônes PWA** : 8 tailles (72px à 512px) + raccourcis
 - **Raccourcis** : "Nouvelle candidature" et "Mes entretiens"
+- **Notifications Push** : Alertes temps réel via Web Push API
+  - Clés VAPID pour authentification serveur
+  - Service Worker pour réception des push
+  - Section dédiée dans les Paramètres
+  - Boutons Activer/Désactiver/Tester
+  - Notification de bienvenue à l'activation
 
 ---
 
