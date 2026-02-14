@@ -86,7 +86,17 @@ export default function SettingsPage() {
       confirmResetApps: 'Êtes-vous sûr de vouloir supprimer TOUTES vos candidatures et entretiens ? Cette action est irréversible !',
       confirmResetInterviews: 'Êtes-vous sûr de vouloir supprimer TOUS vos entretiens ? Cette action est irréversible !',
       resetSuccess: 'Données supprimées avec succès',
-      resetting: 'Suppression...'
+      resetting: 'Suppression...',
+      // Push Notifications
+      pushNotifications: 'Notifications Push',
+      pushDesc: 'Recevez des alertes en temps réel sur votre appareil',
+      pushEnabled: 'Notifications activées',
+      pushDisabled: 'Notifications désactivées',
+      pushEnable: 'Activer',
+      pushDisable: 'Désactiver',
+      pushTest: 'Tester',
+      pushNotSupported: 'Votre navigateur ne supporte pas les notifications push',
+      pushDenied: 'Vous avez bloqué les notifications. Activez-les dans les paramètres de votre navigateur.'
     },
     en: {
       title: 'Settings',
