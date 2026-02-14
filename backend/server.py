@@ -162,6 +162,7 @@ app.dependency_overrides[admin_get_db] = override_get_db
 app.dependency_overrides[tracking_get_db] = override_get_db
 app.dependency_overrides[documents_get_db] = override_get_db
 app.dependency_overrides[calendar_get_db] = override_get_db
+app.dependency_overrides[reminders_get_db] = override_get_db
 
 # CORS middleware
 app.add_middleware(
