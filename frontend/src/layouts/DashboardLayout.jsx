@@ -128,7 +128,13 @@ const Sidebar = ({ isOpen, onClose }) => {
               <User size={20} className="text-gold" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium truncate">{user?.full_name}</p>
+              <p className="text-white font-medium truncate">
+                {user?.full_name ? (() => {
+                  const parts = user.full_name.trim().split(/\s+/);
+                  if (parts.length <= 2) return user.full_name;
+                  return `${parts[0]} ${parts[parts.length - 1]}`;
+                })() : ''}
+              </p>
               <p className="text-slate-500 text-sm truncate">{user?.email}</p>
             </div>
           </div>

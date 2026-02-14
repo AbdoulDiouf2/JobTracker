@@ -401,7 +401,7 @@ export default function SettingsPage() {
                 <p className="text-red-400 text-sm">{t.pushDenied}</p>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     pushSubscribed ? 'bg-green-500/20' : 'bg-slate-700'
@@ -412,7 +412,7 @@ export default function SettingsPage() {
                     {pushSubscribed ? t.pushEnabled : t.pushDisabled}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
                   {pushSubscribed && (
                     <Button
                       onClick={async () => {
@@ -424,7 +424,7 @@ export default function SettingsPage() {
                       }}
                       variant="outline"
                       size="sm"
-                      className="border-slate-700 text-slate-300"
+                      className="flex-1 sm:flex-none border-slate-700 text-slate-300"
                     >
                       {t.pushTest}
                     </Button>
@@ -432,10 +432,10 @@ export default function SettingsPage() {
                   <Button
                     onClick={pushSubscribed ? unsubscribePush : subscribePush}
                     disabled={pushLoading}
-                    className={pushSubscribed 
+                    className={`flex-1 sm:flex-none ${pushSubscribed 
                       ? 'bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30' 
                       : 'bg-gold hover:bg-gold-light text-[#020817]'
-                    }
+                    }`}
                   >
                     {pushLoading ? (
                       <Loader2 className="animate-spin" size={16} />
@@ -459,7 +459,7 @@ export default function SettingsPage() {
                 <p className="text-yellow-400 text-sm">{t.calendarNotConfigured}</p>
               </div>
             ) : calendarStatus.connected ? (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
                     <Calendar size={20} className="text-green-400" />
@@ -475,13 +475,13 @@ export default function SettingsPage() {
                   onClick={handleDisconnectCalendar}
                   disabled={calendarLoading}
                   variant="outline"
-                  className="border-red-500/50 text-red-400 hover:bg-red-500/10"
+                  className="w-full sm:w-auto border-red-500/50 text-red-400 hover:bg-red-500/10"
                 >
                   {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.disconnectCalendar}
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
                     <Calendar size={20} className="text-slate-400" />
@@ -491,7 +491,7 @@ export default function SettingsPage() {
                 <Button
                   onClick={handleConnectCalendar}
                   disabled={calendarLoading}
-                  className="bg-gold hover:bg-gold-light text-[#020817]"
+                  className="w-full sm:w-auto bg-gold hover:bg-gold-light text-[#020817]"
                 >
                   {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
                 </Button>

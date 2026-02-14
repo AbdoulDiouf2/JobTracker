@@ -199,7 +199,7 @@ export default function AIAdvisorPage() {
   return (
     <div className="h-[calc(100vh-120px)] flex flex-col" data-testid="ai-advisor-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-heading text-3xl font-bold text-white flex items-center gap-2">
             <Sparkles className="text-gold" size={28} />
@@ -208,14 +208,18 @@ export default function AIAdvisorPage() {
           <p className="text-slate-400 mt-1">{t.subtitle}</p>
         </div>
         
-        {/* Tab Toggle */}
-        <div className="flex items-center gap-2">
+        {/* Tab Toggle & Model Selector */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Model Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="border-slate-700 text-slate-300 gap-2">
-                <Settings2 size={16} />
-                {selectedModel ? selectedModel.display_name : t.selectModel}
+              <Button variant="outline" className="border-slate-700 text-slate-300 gap-2 justify-between sm:justify-center">
+                <div className="flex items-center gap-2">
+                  <Settings2 size={16} />
+                  <span className="truncate max-w-[150px] sm:max-w-[200px]">
+                    {selectedModel ? selectedModel.display_name : t.selectModel}
+                  </span>
+                </div>
                 <ChevronDown size={14} />
               </Button>
             </DropdownMenuTrigger>
@@ -262,19 +266,19 @@ export default function AIAdvisorPage() {
           <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
             <button
               onClick={() => setActiveTab('advisor')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'advisor' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
             >
               <Sparkles size={16} />
-              {t.advisorTab}
+              <span className="whitespace-nowrap">{t.advisorTab}</span>
             </button>
             <button
               onClick={() => setActiveTab('chatbot')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2
                 ${activeTab === 'chatbot' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
             >
               <MessageSquare size={16} />
-              {t.chatbotTab}
+              <span className="whitespace-nowrap">{t.chatbotTab}</span>
             </button>
           </div>
         </div>
