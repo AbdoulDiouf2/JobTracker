@@ -108,6 +108,21 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
   - Boutons Activer/Désactiver/Tester
   - Notification de bienvenue à l'activation
 
+### Phase 13: Rappels Automatiques (14 Février 2025)
+- **Système de rappels** : Notifications automatiques avant les entretiens
+  - Rappel 24h avant (entre 23h et 25h)
+  - Rappel 1h avant (entre 45min et 75min)
+- **Backend** :
+  - `/api/reminders/process` - Traitement pour l'utilisateur connecté
+  - `/api/reminders/process-all` - Traitement pour tous (cron job)
+  - `/api/reminders/status` - Statut des rappels
+  - Collection `sent_reminders` pour éviter les doublons
+- **Frontend** :
+  - Hook `useReminders` appelé automatiquement au chargement du dashboard
+  - Traitement périodique toutes les 15 minutes
+- **Respect des préférences** : Utilise les paramètres `reminder_24h` et `reminder_1h`
+- **Double notification** : Push + notification in-app
+
 ---
 
 ## APIs Disponibles
