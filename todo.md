@@ -111,11 +111,14 @@
 - [x] **Endpoint extraction IA** : `/api/ai/extract-job` pour l'extension Chrome
 
 ## 🚀 Déploiement & Production (P2)
-- [ ] Configurer le déploiement Vercel pour `jobtracker.maadec.com` (ajout `vercel.json`, `mangum`, config DNS Hostinger)
-- [ ] Tester l'application complète (Backend + Frontend)
-- [ ] Configurer MongoDB Atlas pour la production
-- [ ] Tester l'analyse de CV avec un vrai fichier
-- [ ] Vérifier les notifications (email et navigateur)
+- [x] Configurer le déploiement Vercel (monorepo, `vercel.json` avec routage SPA et Python backend)
+- [x] Optimisation de la taille du build (suppression pandas, numpy, boto3 pour la limite de 250MB)
+- [x] Configurer MongoDB Atlas pour la production (Cluster Free configuré)
+- [x] Correction des erreurs FS (utilisation de `/tmp/` pour les uploads sur Vercel)
+- [x] Correction des compatibilités (bcrypt 3.2.2 pour passlib)
+- [x] Configurer les credentials Google Cloud (OAuth Client ID) pour l'URL de prod
+- [ ] Tester l'analyse de CV avec un vrai fichier sur la prod
+- [ ] Vérifier les notifications (email et navigateur) en prod
 
 ## 💰 Monétisation Future (P3)
 - [ ] **Plan Gratuit** : Limite de X candidatures/mois
