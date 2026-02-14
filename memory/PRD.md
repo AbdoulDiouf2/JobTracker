@@ -91,6 +91,17 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
   - Sync entretiens vers Google Calendar
   - **Note:** Nécessite GOOGLE_CALENDAR_CLIENT_ID et GOOGLE_CALENDAR_CLIENT_SECRET
 
+### Phase 12: PWA & Mode Hors-ligne (14 Février 2025)
+- **Progressive Web App** : Application installable sur mobile/desktop
+  - manifest.json avec métadonnées et icônes
+  - Service Worker pour cache et offline
+  - Prompt d'installation personnalisé
+- **Mode hors-ligne** : Consultation des données même sans connexion
+  - Stratégie Network First avec fallback cache
+  - Cache dynamique des pages visitées
+- **Icônes PWA** : 8 tailles (72px à 512px) + raccourcis
+- **Raccourcis** : "Nouvelle candidature" et "Mes entretiens"
+
 ---
 
 ## APIs Disponibles
