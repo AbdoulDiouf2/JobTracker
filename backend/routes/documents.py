@@ -28,7 +28,14 @@ def get_db():
 
 
 # Configuration
-UPLOAD_DIR = Path("/app/uploads/documents")
+# Configuration
+# Vercel filesystem is read-only except for /tmp
+import sys
+if os.environ.get("VERCEL") or "vercel" in sys.modules:
+    UPLOAD_DIR = Path("/tmp/uploads/documents")
+else:
+    UPLOAD_DIR = Path("/app/uploads/documents") if os.path.exists("/app") else Path("uploads/documents")
+
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MIME_TYPES = [
