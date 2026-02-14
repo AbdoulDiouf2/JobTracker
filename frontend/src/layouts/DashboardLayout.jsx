@@ -10,6 +10,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import NotificationBell from '../components/NotificationBell';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
+import { useReminders } from '../hooks/useReminders';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
