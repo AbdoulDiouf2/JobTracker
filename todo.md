@@ -94,7 +94,7 @@
 ### 📱 Mobile & Accessibilité
 - [x] **PWA** : Application installable sur mobile (manifest.json, service-worker, icônes)
 - [x] **Mode hors-ligne** : Consulter ses candidatures sans connexion (Service Worker avec cache)
-- [ ] **Notifications push** : Alertes en temps réel
+- [x] **Notifications push** : Alertes en temps réel (Web Push API, VAPID)
 
 ## 🧩 Extension Chrome (Automation)
 - [x] **Job Clipper (Basique)** : Détection via sélecteurs CSS (LinkedIn/Indeed).
