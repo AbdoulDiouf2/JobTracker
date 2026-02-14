@@ -15,6 +15,15 @@ export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
+  const { 
+    isSupported: pushSupported, 
+    isSubscribed: pushSubscribed, 
+    permission: pushPermission,
+    loading: pushLoading, 
+    subscribe: subscribePush, 
+    unsubscribe: unsubscribePush,
+    sendTestNotification 
+  } = usePushNotifications();
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
