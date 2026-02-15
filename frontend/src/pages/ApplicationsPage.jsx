@@ -946,7 +946,7 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     fetchApplications({ search: searchQuery, ...filters });
-  }, [fetchApplications, searchQuery, filters]);
+  }, [fetchApplications, searchQuery, filters, refreshKey]);
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
