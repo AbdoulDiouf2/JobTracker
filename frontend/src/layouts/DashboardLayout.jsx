@@ -9,6 +9,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import NotificationBell from '../components/NotificationBell';
+import RefreshButton from '../components/RefreshButton';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { useReminders } from '../hooks/useReminders';
 
