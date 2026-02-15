@@ -1040,7 +1040,7 @@ export default function InterviewsPage() {
   useEffect(() => {
     fetchInterviews(filter !== 'all' ? { status: filter } : {});
     fetchApplications({ per_page: 100 });
-  }, [fetchInterviews, fetchApplications, filter]);
+  }, [fetchInterviews, fetchApplications, filter, refreshKey]);
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
