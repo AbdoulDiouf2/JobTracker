@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useStatistics } from '../hooks/useStatistics';
 import { useLanguage } from '../i18n';
+import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { api } from '../contexts/AuthContext';
 
