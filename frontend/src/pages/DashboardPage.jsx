@@ -9,6 +9,7 @@ import { useStatistics } from '../hooks/useStatistics';
 import { useInterviews } from '../hooks/useInterviews';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
+import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 
 // Stat Card Component
