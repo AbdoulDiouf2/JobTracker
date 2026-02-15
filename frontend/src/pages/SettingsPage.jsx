@@ -257,8 +257,23 @@ export default function SettingsPage() {
     }
   };
 
-  const handleNotifChange = (key, value) => {
+  const handleNotifChange = async (key, value) => {
+    // Mise à jour locale immédiate pour UX réactive
     setNotifSettings(prev => ({ ...prev, [key]: value }));
+    
+    // Sauvegarder sur le serveur
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_URL}/api/notifications/settings`,
+        { [key]: value },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+      // Rollback en cas d'erreur
+      setNotifSettings(prev => ({ ...prev, [key]: !value }));
+    }
   };
 
   const handleResetApplications = async () => {
