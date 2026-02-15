@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useLanguage } from '../i18n';
+import { useRefresh } from '../contexts/RefreshContext';
 
-export default function RefreshButton({ onRefresh }) {
+export default function RefreshButton() {
   const { language } = useLanguage();
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { triggerRefresh, isRefreshing } = useRefresh();
 
   const t = {
     fr: { tooltip: 'Rafraîchir les données' },
@@ -13,24 +14,7 @@ export default function RefreshButton({ onRefresh }) {
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
-    
-    setIsRefreshing(true);
-    
-    try {
-      // Appeler la fonction de rafraîchissement passée en prop
-      if (onRefresh) {
-        await onRefresh();
-      }
-      
-      // Recharger la page actuelle pour rafraîchir toutes les données
-      window.location.reload();
-    } catch (error) {
-      console.error('Error refreshing:', error);
-    } finally {
-      // Le setIsRefreshing ne sera pas atteint si on recharge la page
-      // mais c'est là au cas où on change l'implémentation
-      setTimeout(() => setIsRefreshing(false), 1000);
-    }
+    await triggerRefresh();
   };
 
   return (
