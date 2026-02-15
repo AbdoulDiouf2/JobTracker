@@ -32,37 +32,39 @@ function App() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <div className="min-h-screen bg-[#020817]">
-          <BrowserRouter>
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/legal" element={<LegalNoticePage />} />
-              <Route path="/privacy" element={<PrivacyPolicyPage />} />
-              <Route path="/terms" element={<TermsOfServicePage />} />
-              
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={<DashboardLayout />}>
-                <Route index element={<DashboardPage />} />
-                <Route path="applications" element={<ApplicationsPage />} />
-                <Route path="interviews" element={<InterviewsPage />} />
-                <Route path="statistics" element={<StatisticsPage />} />
-                <Route path="ai-advisor" element={<AIAdvisorPage />} />
-                <Route path="documents" element={<DocumentsPage />} />
-                <Route path="import-export" element={<ImportExportPage />} />
-                <Route path="settings" element={<SettingsPage />} />
-              </Route>
+        <RefreshProvider>
+          <div className="min-h-screen bg-[#020817]">
+            <BrowserRouter>
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/legal" element={<LegalNoticePage />} />
+                <Route path="/privacy" element={<PrivacyPolicyPage />} />
+                <Route path="/terms" element={<TermsOfServicePage />} />
+                
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={<DashboardLayout />}>
+                  <Route index element={<DashboardPage />} />
+                  <Route path="applications" element={<ApplicationsPage />} />
+                  <Route path="interviews" element={<InterviewsPage />} />
+                  <Route path="statistics" element={<StatisticsPage />} />
+                  <Route path="ai-advisor" element={<AIAdvisorPage />} />
+                  <Route path="documents" element={<DocumentsPage />} />
+                  <Route path="import-export" element={<ImportExportPage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                </Route>
 
-              {/* Admin Routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboardPage />} />
-                <Route path="users" element={<AdminUsersPage />} />
-              </Route>
-            </Routes>
-          </BrowserRouter>
-        </div>
+                {/* Admin Routes */}
+                <Route path="/admin" element={<AdminLayout />}>
+                  <Route index element={<AdminDashboardPage />} />
+                  <Route path="users" element={<AdminUsersPage />} />
+                </Route>
+              </Routes>
+            </BrowserRouter>
+          </div>
+        </RefreshProvider>
       </AuthProvider>
     </LanguageProvider>
   );
