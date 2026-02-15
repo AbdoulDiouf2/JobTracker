@@ -184,12 +184,18 @@ export default function DashboardLayout() {
               className="h-12"
             />
           </Link>
-          <NotificationBell />
+          <div className="flex items-center gap-1">
+            <RefreshButton />
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Desktop header with notification */}
         <header className="hidden lg:flex flex-shrink-0 items-center justify-end p-4 border-b border-slate-800 bg-[#020817]">
-          <NotificationBell />
+          <div className="flex items-center gap-2">
+            <RefreshButton />
+            <NotificationBell />
+          </div>
         </header>
 
         {/* Main content - only this part scrolls */}
