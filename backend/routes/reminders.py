@@ -136,9 +136,27 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
         time_diff = interview_date - now
         hours_remaining = time_diff.total_seconds() / 3600
         
-        # Infos de l'entretien
-        entreprise = interview.get("entreprise", "Entreprise")
-        poste = interview.get("poste", "Poste")
+        # Infos de l'entretien - récupérer depuis la candidature si nécessaire
+        entreprise = interview.get("entreprise")
+        poste = interview.get("poste")
+        
+        # Si pas dans l'entretien, récupérer depuis la candidature
+        if not entreprise or not poste:
+            candidature_id = interview.get("candidature_id") or interview.get("application_id")
+            if candidature_id:
+                try:
+                    from bson import ObjectId
+                    candidature = await db.applications.find_one({"_id": ObjectId(candidature_id)})
+                    if not candidature:
+                        candidature = await db.applications.find_one({"id": candidature_id})
+                    if candidature:
+                        entreprise = entreprise or candidature.get("entreprise", "Entreprise")
+                        poste = poste or candidature.get("poste", "Poste")
+                except Exception as e:
+                    print(f"[Reminders] Erreur récupération candidature: {e}")
+        
+        entreprise = entreprise or "Entreprise"
+        poste = poste or "Poste"
         type_entretien = interview.get("type_entretien", "")
         
         # Vérifier si déjà notifié
