@@ -34,6 +34,7 @@ const StatCard = ({ icon: Icon, label, value, color = "gold" }) => (
 export default function StatisticsPage() {
   const { stats, fetchOverview, loading } = useStatistics();
   const { language } = useLanguage();
+  const { refreshKey } = useRefresh();
 
   const t = {
     fr: {
