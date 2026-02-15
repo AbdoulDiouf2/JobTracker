@@ -101,8 +101,27 @@ async def process_interview_reminders(db):
                 # Calculer le temps restant
                 hours_remaining = (interview_date - now).total_seconds() / 3600
                 
-                entreprise = interview.get("entreprise", "Entreprise")
-                poste = interview.get("poste", "Poste")
+                # Récupérer les infos de l'entretien ou de la candidature associée
+                entreprise = interview.get("entreprise")
+                poste = interview.get("poste")
+                
+                # Si pas dans l'entretien, récupérer depuis la candidature
+                if not entreprise or not poste:
+                    candidature_id = interview.get("candidature_id") or interview.get("application_id")
+                    if candidature_id:
+                        try:
+                            from bson import ObjectId
+                            candidature = await db.applications.find_one({"_id": ObjectId(candidature_id)})
+                            if not candidature:
+                                candidature = await db.applications.find_one({"id": candidature_id})
+                            if candidature:
+                                entreprise = entreprise or candidature.get("entreprise", "Entreprise")
+                                poste = poste or candidature.get("poste", "Poste")
+                        except Exception as e:
+                            logger.warning(f"[Scheduler] Erreur récupération candidature: {e}")
+                
+                entreprise = entreprise or "Entreprise"
+                poste = poste or "Poste"
                 type_entretien = interview.get("type_entretien", "")
                 
                 # Rappel 24h (entre 23h et 25h avant)
