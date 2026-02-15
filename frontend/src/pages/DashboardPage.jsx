@@ -136,11 +136,14 @@ export default function DashboardPage() {
     }
   }[language];
 
+  // Refresh context
+  const { refreshKey } = useRefresh();
+
   useEffect(() => {
     fetchDashboard();
     fetchUpcoming(5);
     fetchApplications({ per_page: 5 });
-  }, [fetchDashboard, fetchUpcoming, fetchApplications]);
+  }, [fetchDashboard, fetchUpcoming, fetchApplications, refreshKey]);
 
   return (
     <div className="space-y-8" data-testid="dashboard-page">
