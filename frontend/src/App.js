@@ -2,6 +2,7 @@ import "@/App.css";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "./i18n";
 import { AuthProvider } from "./contexts/AuthContext";
+import { RefreshProvider } from "./contexts/RefreshContext";
 
 // Pages
 import LandingPage from "./pages/LandingPage";
