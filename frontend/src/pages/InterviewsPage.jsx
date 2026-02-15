@@ -972,6 +972,7 @@ export default function InterviewsPage() {
   const { interviews, loading, fetchInterviews, createInterview, updateInterview, deleteInterview } = useInterviews();
   const { applications, fetchApplications } = useApplications();
   const { language } = useLanguage();
+  const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
