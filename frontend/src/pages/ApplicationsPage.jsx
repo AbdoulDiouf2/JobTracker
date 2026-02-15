@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
+import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
