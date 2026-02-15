@@ -87,7 +87,7 @@ export default function StatisticsPage() {
 
   useEffect(() => {
     fetchOverview();
-  }, [fetchOverview]);
+  }, [fetchOverview, refreshKey]);
 
   const handleExport = async (type) => {
     try {
