@@ -880,6 +880,7 @@ export default function ApplicationsPage() {
     deleteApplication, toggleFavorite 
   } = useApplications();
   const { language } = useLanguage();
+  const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
