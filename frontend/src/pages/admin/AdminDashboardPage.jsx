@@ -249,27 +249,31 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Stats */}
-      <div className="glass-card rounded-xl p-6 border border-slate-800">
-        <h2 className="font-heading text-xl font-semibold text-white mb-6">Résumé</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div className="text-center">
-            <p className="text-4xl font-bold text-gold">{dashboardStats?.total_users || 0}</p>
-            <p className="text-slate-400 text-sm mt-1">Utilisateurs inscrits</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-green-400">{dashboardStats?.active_users || 0}</p>
-            <p className="text-slate-400 text-sm mt-1">Actifs (7 jours)</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-blue-400">{dashboardStats?.total_applications || 0}</p>
-            <p className="text-slate-400 text-sm mt-1">Candidatures créées</p>
-          </div>
-          <div className="text-center">
-            <p className="text-4xl font-bold text-purple-400">{dashboardStats?.total_interviews || 0}</p>
-            <p className="text-slate-400 text-sm mt-1">Entretiens planifiés</p>
+      {loading ? (
+        <SummarySkeleton />
+      ) : (
+        <div className="glass-card rounded-xl p-6 border border-slate-800" data-testid="admin-summary">
+          <h2 className="font-heading text-xl font-semibold text-white mb-6">Résumé</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="text-center">
+              <p className="text-4xl font-bold text-gold">{dashboardStats?.total_users || 0}</p>
+              <p className="text-slate-400 text-sm mt-1">Utilisateurs inscrits</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl font-bold text-green-400">{dashboardStats?.active_users || 0}</p>
+              <p className="text-slate-400 text-sm mt-1">Actifs (7 jours)</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl font-bold text-blue-400">{dashboardStats?.total_applications || 0}</p>
+              <p className="text-slate-400 text-sm mt-1">Candidatures créées</p>
+            </div>
+            <div className="text-center">
+              <p className="text-4xl font-bold text-purple-400">{dashboardStats?.total_interviews || 0}</p>
+              <p className="text-slate-400 text-sm mt-1">Entretiens planifiés</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
