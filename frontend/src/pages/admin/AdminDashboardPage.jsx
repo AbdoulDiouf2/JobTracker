@@ -10,6 +10,61 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Legend 
 } from 'recharts';
 
+// Skeleton Animation Component
+const Skeleton = ({ className = "" }) => (
+  <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />
+);
+
+// Skeleton Stat Card
+const StatCardSkeleton = () => (
+  <div className="glass-card rounded-xl p-6 border border-slate-800">
+    <div className="flex items-start justify-between">
+      <Skeleton className="w-12 h-12 rounded-xl" />
+      <Skeleton className="w-12 h-5" />
+    </div>
+    <Skeleton className="h-9 w-20 mt-4" />
+    <Skeleton className="h-4 w-32 mt-2" />
+    <Skeleton className="h-3 w-24 mt-2" />
+  </div>
+);
+
+// Skeleton Chart
+const ChartSkeleton = () => (
+  <div className="glass-card rounded-xl p-6 border border-slate-800">
+    <div className="flex items-center gap-2 mb-6">
+      <Skeleton className="w-5 h-5 rounded" />
+      <Skeleton className="h-6 w-48" />
+    </div>
+    <div className="h-64 flex flex-col justify-end gap-2">
+      <div className="flex items-end gap-2 h-full">
+        {[40, 65, 45, 80, 55, 70, 90, 60, 75, 50].map((h, i) => (
+          <Skeleton key={i} className="flex-1 rounded-t" style={{ height: `${h}%` }} />
+        ))}
+      </div>
+      <div className="flex justify-between">
+        {[1, 2, 3, 4, 5].map((_, i) => (
+          <Skeleton key={i} className="h-3 w-8" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// Skeleton Summary
+const SummarySkeleton = () => (
+  <div className="glass-card rounded-xl p-6 border border-slate-800">
+    <Skeleton className="h-6 w-32 mb-6" />
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      {[1, 2, 3, 4].map((_, i) => (
+        <div key={i} className="text-center">
+          <Skeleton className="h-10 w-16 mx-auto" />
+          <Skeleton className="h-4 w-24 mx-auto mt-2" />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
 // Stat Card Component
 const StatCard = ({ icon: Icon, label, value, subValue, trend, color = "gold" }) => (
   <motion.div
