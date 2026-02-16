@@ -25,6 +25,43 @@ import {
 } from '../../components/ui/select';
 import { useConfirmDialog } from '../../components/ui/confirm-dialog';
 
+// Skeleton Animation Component
+const Skeleton = ({ className = "" }) => (
+  <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />
+);
+
+// Skeleton User Card
+const UserCardSkeleton = () => (
+  <div className="glass-card rounded-xl p-5 border border-slate-800">
+    <div className="flex items-start justify-between mb-4">
+      <div className="flex items-center gap-3">
+        <Skeleton className="w-12 h-12 rounded-xl" />
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      </div>
+      <Skeleton className="h-6 w-20 rounded" />
+    </div>
+    <div className="grid grid-cols-2 gap-3 mb-4">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-4 w-24" />
+    </div>
+    <div className="flex items-center justify-between mb-4">
+      <Skeleton className="h-3 w-32" />
+      <Skeleton className="h-3 w-36" />
+    </div>
+    <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+      <Skeleton className="h-4 w-16" />
+      <div className="flex gap-1">
+        <Skeleton className="h-8 w-8 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+        <Skeleton className="h-8 w-8 rounded-lg" />
+      </div>
+    </div>
+  </div>
+);
+
 const ROLE_OPTIONS = [
   { value: 'admin', label: 'Administrateur', icon: ShieldCheck, color: 'text-red-400 bg-red-500/20' },
   { value: 'premium', label: 'Premium', icon: Shield, color: 'text-gold bg-gold/20' },
