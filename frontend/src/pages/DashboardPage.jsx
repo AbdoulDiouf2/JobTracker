@@ -12,6 +12,53 @@ import { useLanguage } from '../i18n';
 import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 
+// Skeleton Animation Component
+const Skeleton = ({ className = "" }) => (
+  <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />
+);
+
+// Skeleton Stat Card
+const StatCardSkeleton = () => (
+  <div className="glass-card rounded-xl p-6 border border-slate-800">
+    <div className="flex items-start justify-between">
+      <Skeleton className="w-12 h-12 rounded-xl" />
+    </div>
+    <Skeleton className="h-9 w-20 mt-4" />
+    <Skeleton className="h-4 w-32 mt-2" />
+  </div>
+);
+
+// Skeleton Interview Card
+const InterviewCardSkeleton = () => (
+  <div className="rounded-xl p-4 border border-slate-700 bg-slate-800/50">
+    <div className="flex items-start justify-between">
+      <div className="space-y-2 flex-1">
+        <Skeleton className="h-5 w-32" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <Skeleton className="h-6 w-16 rounded-full" />
+    </div>
+    <div className="flex items-center gap-4 mt-3">
+      <Skeleton className="h-4 w-28" />
+      <Skeleton className="h-4 w-20" />
+    </div>
+  </div>
+);
+
+// Skeleton Application Card
+const ApplicationCardSkeleton = () => (
+  <div className="flex items-center justify-between p-4 rounded-xl border border-slate-800 bg-slate-800/30">
+    <div className="flex items-center gap-4">
+      <Skeleton className="w-10 h-10 rounded-lg" />
+      <div className="space-y-2">
+        <Skeleton className="h-5 w-36" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+    </div>
+    <Skeleton className="h-6 w-20 rounded-full" />
+  </div>
+);
+
 // Stat Card Component
 const StatCard = ({ icon: Icon, label, value, change, color = "gold" }) => (
   <motion.div
