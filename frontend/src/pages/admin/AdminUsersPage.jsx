@@ -507,8 +507,13 @@ export default function AdminUsersPage() {
 
       {/* Users Grid */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-gold" size={32} />
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6" data-testid="users-skeleton-grid">
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
+          <UserCardSkeleton />
         </div>
       ) : users.length > 0 ? (
         <>
