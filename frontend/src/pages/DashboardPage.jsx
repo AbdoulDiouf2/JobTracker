@@ -289,7 +289,15 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="flex flex-col gap-5">
-            {applications.length > 0 ? (
+            {applicationsLoading ? (
+              <>
+                <ApplicationCardSkeleton />
+                <ApplicationCardSkeleton />
+                <ApplicationCardSkeleton />
+                <ApplicationCardSkeleton />
+                <ApplicationCardSkeleton />
+              </>
+            ) : applications.length > 0 ? (
               applications.slice(0, 5).map((app) => (
                 <RecentAppCard key={app.id} app={app} />
               ))
