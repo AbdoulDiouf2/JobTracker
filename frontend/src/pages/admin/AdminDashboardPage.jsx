@@ -160,83 +160,92 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Charts */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* User Growth Chart */}
-        <div className="glass-card rounded-xl p-6 border border-slate-800">
-          <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
-            <TrendingUp size={20} className="text-gold" />
-            Croissance des utilisateurs (30 jours)
-          </h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={userGrowth}>
-                <defs>
-                  <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => value.slice(5)}
-                />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#0f172a', 
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="cumulative" 
-                  stroke="#D4AF37" 
-                  fillOpacity={1} 
-                  fill="url(#colorUsers)" 
-                  name="Total utilisateurs"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+      <div className="grid lg:grid-cols-2 gap-6" data-testid="admin-charts-grid">
+        {loading ? (
+          <>
+            <ChartSkeleton />
+            <ChartSkeleton />
+          </>
+        ) : (
+          <>
+            {/* User Growth Chart */}
+            <div className="glass-card rounded-xl p-6 border border-slate-800">
+              <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                <TrendingUp size={20} className="text-gold" />
+                Croissance des utilisateurs (30 jours)
+              </h2>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={userGrowth}>
+                    <defs>
+                      <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#D4AF37" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#D4AF37" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => value.slice(5)}
+                    />
+                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#0f172a', 
+                        border: '1px solid #334155',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="cumulative" 
+                      stroke="#D4AF37" 
+                      fillOpacity={1} 
+                      fill="url(#colorUsers)" 
+                      name="Total utilisateurs"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
 
-        {/* Activity Chart */}
-        <div className="glass-card rounded-xl p-6 border border-slate-800">
-          <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
-            <Activity size={20} className="text-gold" />
-            Activité (30 jours)
-          </h2>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={activityStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                <XAxis 
-                  dataKey="date" 
-                  stroke="#64748b"
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => value.slice(5)}
-                />
-                <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#0f172a', 
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    color: '#fff'
-                  }}
-                />
-                <Legend />
-                <Bar dataKey="applications" fill="#3b82f6" name="Candidatures" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="interviews" fill="#8b5cf6" name="Entretiens" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
+            {/* Activity Chart */}
+            <div className="glass-card rounded-xl p-6 border border-slate-800">
+              <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
+                <Activity size={20} className="text-gold" />
+                Activité (30 jours)
+              </h2>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={activityStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#64748b"
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickFormatter={(value) => value.slice(5)}
+                    />
+                    <YAxis stroke="#64748b" tick={{ fill: '#64748b', fontSize: 12 }} />
+                    <Tooltip 
+                      contentStyle={{ 
+                        backgroundColor: '#0f172a', 
+                        border: '1px solid #334155',
+                        borderRadius: '8px',
+                        color: '#fff'
+                      }}
+                    />
+                    <Legend />
+                    <Bar dataKey="applications" fill="#3b82f6" name="Candidatures" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="interviews" fill="#8b5cf6" name="Entretiens" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Quick Stats */}
