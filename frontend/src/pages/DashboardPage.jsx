@@ -146,8 +146,8 @@ const RecentAppCard = ({ app }) => {
 
 export default function DashboardPage() {
   const { dashboard, fetchDashboard, loading: statsLoading } = useStatistics();
-  const { upcomingInterviews, fetchUpcoming } = useInterviews();
-  const { applications, fetchApplications } = useApplications();
+  const { upcomingInterviews, fetchUpcoming, loading: interviewsLoading } = useInterviews();
+  const { applications, fetchApplications, loading: applicationsLoading } = useApplications();
   const { language } = useLanguage();
 
   const t = {
