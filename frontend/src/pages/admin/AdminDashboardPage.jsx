@@ -117,35 +117,46 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          icon={Users} 
-          label="Utilisateurs totaux" 
-          value={dashboardStats?.total_users || 0}
-          subValue={`${dashboardStats?.active_users || 0} actifs`}
-          color="gold"
-        />
-        <StatCard 
-          icon={UserPlus} 
-          label="Nouveaux cette semaine" 
-          value={dashboardStats?.new_users_this_week || 0}
-          subValue={`${dashboardStats?.new_users_this_month || 0} ce mois`}
-          color="green-400"
-        />
-        <StatCard 
-          icon={Briefcase} 
-          label="Candidatures totales" 
-          value={dashboardStats?.total_applications || 0}
-          subValue={`+${dashboardStats?.applications_this_week || 0} cette semaine`}
-          color="blue-400"
-        />
-        <StatCard 
-          icon={Calendar} 
-          label="Entretiens totaux" 
-          value={dashboardStats?.total_interviews || 0}
-          subValue={`+${dashboardStats?.interviews_this_week || 0} cette semaine`}
-          color="purple-400"
-        />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="admin-stats-grid">
+        {loading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard 
+              icon={Users} 
+              label="Utilisateurs totaux" 
+              value={dashboardStats?.total_users || 0}
+              subValue={`${dashboardStats?.active_users || 0} actifs`}
+              color="gold"
+            />
+            <StatCard 
+              icon={UserPlus} 
+              label="Nouveaux cette semaine" 
+              value={dashboardStats?.new_users_this_week || 0}
+              subValue={`${dashboardStats?.new_users_this_month || 0} ce mois`}
+              color="green-400"
+            />
+            <StatCard 
+              icon={Briefcase} 
+              label="Candidatures totales" 
+              value={dashboardStats?.total_applications || 0}
+              subValue={`+${dashboardStats?.applications_this_week || 0} cette semaine`}
+              color="blue-400"
+            />
+            <StatCard 
+              icon={Calendar} 
+              label="Entretiens totaux" 
+              value={dashboardStats?.total_interviews || 0}
+              subValue={`+${dashboardStats?.interviews_this_week || 0} cette semaine`}
+              color="purple-400"
+            />
+          </>
+        )}
       </div>
 
       {/* Charts */}
