@@ -214,26 +214,37 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="stats-grid">
-        <StatCard 
-          icon={Briefcase} 
-          label={t.totalApplications} 
-          value={dashboard?.total_applications || 0} 
-        />
-        <StatCard 
-          icon={Clock} 
-          label={t.pending} 
-          value={dashboard?.pending || 0}
-        />
-        <StatCard 
-          icon={Calendar} 
-          label={t.withInterview} 
-          value={dashboard?.with_interview || 0}
-        />
-        <StatCard 
-          icon={TrendingUp} 
-          label={t.responseRate} 
-          value={`${dashboard?.response_rate || 0}%`}
-        />
+        {statsLoading ? (
+          <>
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+            <StatCardSkeleton />
+          </>
+        ) : (
+          <>
+            <StatCard 
+              icon={Briefcase} 
+              label={t.totalApplications} 
+              value={dashboard?.total_applications || 0} 
+            />
+            <StatCard 
+              icon={Clock} 
+              label={t.pending} 
+              value={dashboard?.pending || 0}
+            />
+            <StatCard 
+              icon={Calendar} 
+              label={t.withInterview} 
+              value={dashboard?.with_interview || 0}
+            />
+            <StatCard 
+              icon={TrendingUp} 
+              label={t.responseRate} 
+              value={`${dashboard?.response_rate || 0}%`}
+            />
+          </>
+        )}
       </div>
 
       {/* Two columns */}
@@ -250,7 +261,13 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {upcomingInterviews.length > 0 ? (
+            {interviewsLoading ? (
+              <>
+                <InterviewCardSkeleton />
+                <InterviewCardSkeleton />
+                <InterviewCardSkeleton />
+              </>
+            ) : upcomingInterviews.length > 0 ? (
               upcomingInterviews.map((interview) => (
                 <InterviewCard key={interview.id} interview={interview} />
               ))
