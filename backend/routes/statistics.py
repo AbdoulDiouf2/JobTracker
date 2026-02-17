@@ -669,20 +669,22 @@ async def get_dashboard_v2(
     for i in range(3, -1, -1):  # De la plus ancienne à la plus récente
         week_start = start_of_week - timedelta(weeks=i)
         week_end = week_start + timedelta(weeks=1)
+        week_start_str = week_start.isoformat()
+        week_end_str = week_end.isoformat()
         
         apps_count = await db.applications.count_documents({
             "user_id": user_id,
-            "date_candidature": {"$gte": week_start, "$lt": week_end}
+            "date_candidature": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
         responses_count = await db.applications.count_documents({
             "user_id": user_id,
-            "date_reponse": {"$gte": week_start, "$lt": week_end}
+            "date_reponse": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
         interviews_count = await db.interviews.count_documents({
             "user_id": user_id,
-            "date_entretien": {"$gte": week_start, "$lt": week_end}
+            "date_entretien": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
         week_label = f"Sem {4-i}"
