@@ -549,10 +549,11 @@ async def get_dashboard_v2(
         ))
     
     # Insight sur les candidatures sans réponse
+    old_pending_date = (now - timedelta(days=21)).isoformat()
     old_pending = await db.applications.count_documents({
         "user_id": user_id,
         "reponse": "pending",
-        "date_candidature": {"$lt": now - timedelta(days=21)}
+        "date_candidature": {"$lt": old_pending_date}
     })
     if old_pending > 0:
         insights.append(DashboardInsight(
