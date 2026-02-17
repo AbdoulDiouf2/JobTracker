@@ -16,6 +16,7 @@ export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
+  const { preferences, fetchPreferences, updatePreferences } = useStatistics();
   const { 
     isSupported: pushSupported, 
     isSubscribed: pushSubscribed, 
@@ -28,12 +29,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
+  const [goalsLoading, setGoalsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     google_ai_key: '',
     openai_key: '',
     groq_key: ''
+  });
+
+  const [goalsData, setGoalsData] = useState({
+    monthly_goal: 40,
+    weekly_goal: 10
   });
 
   const [notifSettings, setNotifSettings] = useState({
