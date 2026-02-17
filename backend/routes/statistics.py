@@ -430,7 +430,7 @@ async def get_dashboard_v2(
         week_end = week_start + timedelta(weeks=1)
         week_count = await db.applications.count_documents({
             "user_id": user_id,
-            "date_candidature": {"$gte": week_start, "$lt": week_end}
+            "date_candidature": {"$gte": week_start.isoformat(), "$lt": week_end.isoformat()}
         })
         weeks_data.append(week_count)
     
