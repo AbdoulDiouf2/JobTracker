@@ -13,86 +13,128 @@
       <p class="subtitle">Clipper Extension</p>
     </header>
     
-    <div id="loading" class="hidden">Chargement...</div>
-    
-    <button type="button" id="extractBtn" class="extract-btn">
-      Extraire avec IA ✨
-    </button>
-    
-    <form id="jobForm">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="company">Entreprise *</label>
-          <input type="text" id="company" name="company" placeholder="Ex: Google" required>
-        </div>
-        <div class="form-group">
-          <label for="title">Poste *</label>
-          <input type="text" id="title" name="title" placeholder="Ex: Dev Fullstack" required>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="location">Lieu</label>
-          <input type="text" id="location" name="location" placeholder="Paris / Remote">
-        </div>
-        <div class="form-group">
-          <label for="experience">Expérience</label>
-          <input type="text" id="experience" name="experience" placeholder="Ex: 2-5 ans">
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label for="type">Contrat</label>
-          <select id="type" name="type">
-            <option value="cdi">CDI</option>
-            <option value="cdd">CDD</option>
-            <option value="stage">Stage</option>
-            <option value="alternance">Alternance</option>
-            <option value="freelance">Freelance</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label for="salaryMin">Salaire Min (€)</label>
-          <input type="number" id="salaryMin" name="salaryMin" placeholder="40000">
-        </div>
-        <div class="form-group">
-          <label for="salaryMax">Max</label>
-          <input type="number" id="salaryMax" name="salaryMax" placeholder="55000">
-        </div>
+    <!-- Auth Section (shown when not logged in) -->
+    <div id="authSection" class="auth-section">
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-tab="login">Connexion</button>
+        <button type="button" class="auth-tab" data-tab="code">Code rapide</button>
       </div>
       
-      <div class="form-group">
-        <label for="url">URL de l'offre</label>
-        <input type="text" id="url" name="url" readonly>
-      </div>
-
-      <div class="form-group">
-        <label for="competences">Compétences</label>
-        <input type="text" id="competences" name="competences" placeholder="React, Python, SQL...">
-      </div>
-
-      <div class="form-group">
-        <label for="description">Description courte</label>
-        <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
-      </div>
-
-      <button type="submit" id="saveBtn">Ajouter au Tracker</button>
-    </form>
+      <!-- Login Form -->
+      <form id="loginForm" class="auth-form">
+        <div class="form-group">
+          <label for="loginEmail">Email</label>
+          <input type="email" id="loginEmail" placeholder="votre@email.com" required>
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Mot de passe</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="auth-btn">Se connecter</button>
+      </form>
+      
+      <!-- Code Form -->
+      <form id="codeForm" class="auth-form hidden">
+        <p class="code-info">
+          Obtenez un code depuis votre app JobTracker :<br>
+          <strong>Paramètres → Extension Chrome</strong>
+        </p>
+        <div class="form-group">
+          <label for="authCode">Code à 8 caractères</label>
+          <input type="text" id="authCode" placeholder="ABC12DEF" maxlength="8" style="text-transform: uppercase; letter-spacing: 2px; text-align: center; font-size: 16px;">
+        </div>
+        <button type="submit" class="auth-btn">Valider le code</button>
+      </form>
+      
+      <div id="authMessage" class="hidden"></div>
+    </div>
     
-    <div id="message" class="hidden"></div>
+    <!-- Main Section (shown when logged in) -->
+    <div id="mainSection" class="hidden">
+      <!-- User Info Bar -->
+      <div class="user-bar">
+        <div class="user-info">
+          <span class="user-status">✓</span>
+          <span id="userName">Connecté</span>
+        </div>
+        <button type="button" id="logoutBtn" class="logout-btn">Déconnexion</button>
+      </div>
+      
+      <div id="loading" class="hidden">Chargement...</div>
+      
+      <button type="button" id="extractBtn" class="extract-btn">
+        Extraire avec IA ✨
+      </button>
+      
+      <form id="jobForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="company">Entreprise *</label>
+            <input type="text" id="company" name="company" placeholder="Ex: Google" required>
+          </div>
+          <div class="form-group">
+            <label for="title">Poste *</label>
+            <input type="text" id="title" name="title" placeholder="Ex: Dev Fullstack" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="location">Lieu</label>
+            <input type="text" id="location" name="location" placeholder="Paris / Remote">
+          </div>
+          <div class="form-group">
+            <label for="experience">Expérience</label>
+            <input type="text" id="experience" name="experience" placeholder="Ex: 2-5 ans">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="type">Contrat</label>
+            <select id="type" name="type">
+              <option value="cdi">CDI</option>
+              <option value="cdd">CDD</option>
+              <option value="stage">Stage</option>
+              <option value="alternance">Alternance</option>
+              <option value="freelance">Freelance</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="salaryMin">Salaire Min (€)</label>
+            <input type="number" id="salaryMin" name="salaryMin" placeholder="40000">
+          </div>
+          <div class="form-group">
+            <label for="salaryMax">Max</label>
+            <input type="number" id="salaryMax" name="salaryMax" placeholder="55000">
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="url">URL de l'offre</label>
+          <input type="text" id="url" name="url" readonly>
+        </div>
+
+        <div class="form-group">
+          <label for="competences">Compétences</label>
+          <input type="text" id="competences" name="competences" placeholder="React, Python, SQL...">
+        </div>
+
+        <div class="form-group">
+          <label for="description">Description courte</label>
+          <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
+        </div>
+
+        <button type="submit" id="saveBtn">Ajouter au Tracker</button>
+      </form>
+      
+      <div id="message" class="hidden"></div>
+    </div>
     
     <footer>
-      <a href="#" id="optionsLink">Configuration</a>
+      <a href="#" id="optionsLink">Configuration avancée</a>
     </footer>
   </div>
   <script src="popup.js"></script>
-  <script>
-    document.getElementById('optionsLink').addEventListener('click', (e) => {
-      e.preventDefault();
-      chrome.runtime.openOptionsPage();
-    });
-  </script>
 </body>
 </html>
