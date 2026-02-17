@@ -628,11 +628,12 @@ async def get_dashboard_v2(
         ))
     
     # Favoris inactifs
+    inactive_date = (now - timedelta(days=30)).isoformat()
     inactive_favorites = await db.applications.count_documents({
         "user_id": user_id,
         "is_favorite": True,
         "reponse": "pending",
-        "date_candidature": {"$lt": now - timedelta(days=30)}
+        "date_candidature": {"$lt": inactive_date}
     })
     if inactive_favorites > 0:
         priority_actions.append(PriorityAction(
