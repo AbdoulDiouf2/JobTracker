@@ -362,6 +362,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveGoals = async () => {
+    setGoalsLoading(true);
+    try {
+      await updatePreferences(goalsData);
+      setMessage(t.goalsSaved);
+      setTimeout(() => setMessage(''), 2000);
+    } catch (error) {
+      setMessage('Erreur');
+    } finally {
+      setGoalsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8" data-testid="settings-page">
       <div>
