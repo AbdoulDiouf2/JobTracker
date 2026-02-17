@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
-import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing, Target } from 'lucide-react';
+import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing, Target, Chrome, Copy, Check, RefreshCw } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import axios from 'axios';
 
