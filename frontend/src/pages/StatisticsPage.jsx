@@ -13,6 +13,7 @@ import { useLanguage } from '../i18n';
 import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { api } from '../contexts/AuthContext';
+import { Skeleton } from '../components/ui/skeleton';
 
 const COLORS = ['#c4a052', '#1a365d', '#22c55e', '#ef4444', '#6b7280', '#3b82f6'];
 
@@ -106,8 +107,67 @@ export default function StatisticsPage() {
 
   if (loading || !stats) {
     return (
-      <div className="flex justify-center items-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-gold" />
+      <div className="space-y-8 animate-pulse">
+        {/* Header Skeleton */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+        </div>
+
+        {/* Stats Grid Skeleton */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="glass-card rounded-xl p-5 border border-slate-800 space-y-3">
+              <Skeleton className="w-10 h-10 rounded-lg" />
+              <Skeleton className="h-8 w-16" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          ))}
+        </div>
+
+        {/* Charts Row 1 Skeleton */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-[250px] w-full rounded-lg" />
+          </div>
+          <div className="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+            <Skeleton className="h-6 w-48" />
+            <div className="flex justify-center">
+              <Skeleton className="h-[250px] w-[250px] rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Charts Row 2 Skeleton */}
+        <div className="grid lg:grid-cols-2 gap-6">
+          <div className="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-[250px] w-full rounded-lg" />
+          </div>
+          <div className="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+            <Skeleton className="h-6 w-40" />
+            <div className="flex justify-center">
+              <Skeleton className="h-[250px] w-[250px] rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Interview Stats Skeleton */}
+        <div className="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+          <Skeleton className="h-6 w-48" />
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     );
   }

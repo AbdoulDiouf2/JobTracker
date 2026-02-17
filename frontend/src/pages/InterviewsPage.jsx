@@ -21,6 +21,7 @@ import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -1173,9 +1174,57 @@ export default function InterviewsPage() {
 
       {/* Content */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-gold" size={32} />
-        </div>
+        viewMode === 'calendar' ? (
+          /* Calendar View Skeleton */
+          <div className="mt-6">
+            <div className="glass-card rounded-xl border border-slate-800 p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                </div>
+                <div className="flex bg-slate-800/50 rounded-lg p-1 gap-1">
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 35 }).map((_, i) => (
+                  <Skeleton key={i} className="aspect-square rounded-lg" />
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Card View Skeleton */
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass-card rounded-xl p-5 border border-slate-800 border-l-4 border-l-slate-600 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                  <Skeleton className="h-6 w-20 rounded" />
+                </div>
+                <div className="space-y-3">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       ) : viewMode === 'calendar' ? (
         /* Calendar View */
         <div className="mt-6">
