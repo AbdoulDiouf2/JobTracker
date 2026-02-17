@@ -159,7 +159,14 @@ export default function SettingsPage() {
       pushDisable: 'Disable',
       pushTest: 'Test',
       pushNotSupported: 'Your browser does not support push notifications',
-      pushDenied: 'You have blocked notifications. Enable them in your browser settings.'
+      pushDenied: 'You have blocked notifications. Enable them in your browser settings.',
+      // Goals
+      goals: 'Goals',
+      goalsDesc: 'Set your application goals',
+      monthlyGoal: 'Monthly goal',
+      weeklyGoal: 'Weekly goal',
+      goalsSaved: 'Goals saved!',
+      candidatures: 'applications'
     }
   }[language];
 
