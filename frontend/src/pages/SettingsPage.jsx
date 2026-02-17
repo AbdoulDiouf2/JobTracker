@@ -422,22 +422,36 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8" data-testid="settings-page">
-      <div>
-        <h1 className="font-heading text-3xl font-bold text-white">{t.title}</h1>
-        <p className="text-slate-400 mt-1">{t.subtitle}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="font-heading text-2xl lg:text-3xl font-bold text-white">{t.title}</h1>
+          <p className="text-slate-400 mt-1">{t.subtitle}</p>
+        </div>
+        <div className="flex items-center gap-3">
+          {message && <span className="text-green-400 text-sm">{message}</span>}
+          <Button 
+            onClick={handleSave}
+            disabled={loading}
+            className="bg-gold hover:bg-gold-light text-[#020817]"
+          >
+            {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="mr-2" />}
+            {t.save}
+          </Button>
+        </div>
       </div>
 
-      {/* Main Grid Layout - 2 columns on large screens */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-6">
-          {/* Profile Section */}
+      {/* ============================================
+          SECTION 1: COMPTE & PROFIL
+          ============================================ */}
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <User size={20} className="text-gold" />
+          Compte & Profil
+        </h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Profile */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <User size={20} className="text-gold" />
-              {t.profile}
-            </h2>
-            
+            <h3 className="font-medium text-white mb-4">{t.profile}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">{t.fullName}</label>
@@ -447,7 +461,6 @@ export default function SettingsPage() {
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">{t.email}</label>
                 <Input
@@ -459,265 +472,12 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Notifications Section */}
+          {/* Language */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Bell size={20} className="text-gold" />
-              {t.notifications}
-            </h2>
-            
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <label className="text-slate-300">{t.reminder24h}</label>
-                <Switch 
-                  checked={notifSettings.reminder_24h}
-                  onCheckedChange={(checked) => handleNotifChange('reminder_24h', checked)}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <label className="text-slate-300">{t.reminder1h}</label>
-                <Switch 
-                  checked={notifSettings.reminder_1h}
-                  onCheckedChange={(checked) => handleNotifChange('reminder_1h', checked)}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <label className="text-slate-300">{t.browserNotif}</label>
-                <Switch 
-                  checked={notifSettings.browser_notifications}
-                  onCheckedChange={(checked) => handleNotifChange('browser_notifications', checked)}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Push Notifications Section */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              <BellRing size={20} className="text-gold" />
-              {t.pushNotifications}
-            </h2>
-            <p className="text-slate-400 text-sm mb-4">{t.pushDesc}</p>
-            
-            {!pushSupported ? (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <p className="text-yellow-400 text-sm">{t.pushNotSupported}</p>
-              </div>
-            ) : pushPermission === 'denied' ? (
-              <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
-                <p className="text-red-400 text-sm">{t.pushDenied}</p>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    pushSubscribed ? 'bg-green-500/20' : 'bg-slate-700'
-                  }`}>
-                    <Smartphone size={20} className={pushSubscribed ? 'text-green-400' : 'text-slate-400'} />
-                  </div>
-                  <p className={pushSubscribed ? 'text-green-400 font-medium' : 'text-slate-400'}>
-                    {pushSubscribed ? t.pushEnabled : t.pushDisabled}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {pushSubscribed && (
-                    <Button
-                      onClick={async () => {
-                        try {
-                          await sendTestNotification();
-                        } catch (e) {
-                          console.error(e);
-                        }
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="flex-1 sm:flex-none border-slate-700 text-slate-300"
-                    >
-                      {t.pushTest}
-                    </Button>
-                  )}
-                  <Button
-                    onClick={pushSubscribed ? unsubscribePush : subscribePush}
-                    disabled={pushLoading}
-                    className={`flex-1 sm:flex-none ${pushSubscribed 
-                      ? 'bg-red-500/20 border border-red-500/50 text-red-400 hover:bg-red-500/30' 
-                      : 'bg-gold hover:bg-gold-light text-[#020817]'
-                    }`}
-                  >
-                    {pushLoading ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : pushSubscribed ? t.pushDisable : t.pushEnable}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Goals Section */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800 border-gold/30 bg-gradient-to-br from-slate-900 to-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              <Target size={20} className="text-gold" />
-              {t.goals}
-            </h2>
-            <p className="text-slate-400 text-sm mb-4">{t.goalsDesc}</p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {t.monthlyGoal}
-                </label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="500"
-                    value={goalsData.monthly_goal}
-                    onChange={(e) => setGoalsData(prev => ({ ...prev, monthly_goal: parseInt(e.target.value) || 40 }))}
-                    className="bg-slate-900/50 border-slate-700 text-white w-24"
-                  />
-                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
-                  {t.weeklyGoal}
-                </label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={goalsData.weekly_goal}
-                    onChange={(e) => setGoalsData(prev => ({ ...prev, weekly_goal: parseInt(e.target.value) || 10 }))}
-                    className="bg-slate-900/50 border-slate-700 text-white w-24"
-                  />
-                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
-                </div>
-              </div>
-              
-              <Button
-                onClick={handleSaveGoals}
-                disabled={goalsLoading}
-                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
-              >
-                {goalsLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
-                {t.save}
-              </Button>
-            </div>
-          </div>
-
-          {/* Chrome Extension Section */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
-              <Chrome size={20} className="text-gold" />
-              {t.chromeExtension}
-            </h2>
-            <p className="text-slate-400 text-sm mb-4">{t.chromeExtensionDesc}</p>
-            
-            {!extensionCode ? (
-              <Button
-                onClick={handleGenerateExtensionCode}
-                disabled={extensionLoading}
-                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
-              >
-                {extensionLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Chrome className="mr-2" size={16} />}
-                {t.generateCode}
-              </Button>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-slate-800/50 border border-gold/30 rounded-lg text-center">
-                  <p className="text-xs text-slate-400 mb-2">{t.extensionInstructions}</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-3xl font-mono font-bold text-gold tracking-widest">
-                      {extensionCode}
-                    </span>
-                    <Button
-                      onClick={handleCopyCode}
-                      variant="ghost"
-                      size="sm"
-                      className="text-slate-400 hover:text-gold"
-                    >
-                      {codeCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
-                    </Button>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-2">{t.codeExpires}</p>
-                </div>
-                <Button
-                  onClick={handleGenerateExtensionCode}
-                  disabled={extensionLoading}
-                  variant="outline"
-                  className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
-                >
-                  {extensionLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <RefreshCw className="mr-2" size={16} />}
-                  {t.newCode}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Google Calendar Section */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Calendar size={20} className="text-gold" />
-              {t.calendar}
-            </h2>
-            <p className="text-slate-400 text-sm mb-4">{t.calendarDesc}</p>
-            
-            {!calendarStatus.configured ? (
-              <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                <p className="text-yellow-400 text-sm">{t.calendarNotConfigured}</p>
-              </div>
-            ) : calendarStatus.connected ? (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <Calendar size={20} className="text-green-400" />
-                  </div>
-                  <div>
-                    <p className="text-green-400 font-medium">{t.calendarConnected}</p>
-                    {calendarStatus.email && (
-                      <p className="text-slate-500 text-sm">{calendarStatus.email}</p>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={handleDisconnectCalendar}
-                  disabled={calendarLoading}
-                  variant="outline"
-                  className="w-full sm:w-auto border-red-500/50 text-red-400 hover:bg-red-500/10"
-                >
-                  {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.disconnectCalendar}
-                </Button>
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                    <Calendar size={20} className="text-slate-400" />
-                  </div>
-                  <p className="text-slate-400">{t.calendarDisconnected}</p>
-                </div>
-                <Button
-                  onClick={handleConnectCalendar}
-                  disabled={calendarLoading}
-                  className="w-full sm:w-auto bg-gold hover:bg-gold-light text-[#020817]"
-                >
-                  {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Language Section */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Globe size={20} className="text-gold" />
+            <h3 className="font-medium text-white mb-4 flex items-center gap-2">
+              <Globe size={18} className="text-slate-400" />
               {t.language}
-            </h2>
-            
+            </h3>
             <div className="flex items-center justify-between">
               <span className="text-slate-300">{t.currentLang}</span>
               <Button 
@@ -729,22 +489,252 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Right Column */}
-        <div className="space-y-6">
-          {/* API Keys Section */}
+          {/* Goals */}
+          <div className="glass-card rounded-xl p-6 border border-gold/30 bg-gradient-to-br from-slate-900 to-slate-800">
+            <h3 className="font-medium text-white mb-4 flex items-center gap-2">
+              <Target size={18} className="text-gold" />
+              {t.goals}
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">{t.monthlyGoal}</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={goalsData.monthly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, monthly_goal: parseInt(e.target.value) || 40 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-20 text-center"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-slate-300">{t.weeklyGoal}</label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={goalsData.weekly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, weekly_goal: parseInt(e.target.value) || 10 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-20 text-center"
+                  />
+                </div>
+              </div>
+              <Button
+                onClick={handleSaveGoals}
+                disabled={goalsLoading}
+                size="sm"
+                className="w-full mt-2 bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {goalsLoading ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} className="mr-1" />}
+                {t.save}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 2: NOTIFICATIONS
+          ============================================ */}
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Bell size={20} className="text-gold" />
+          Notifications & Alertes
+        </h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Reminders */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
-            <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Key size={20} className="text-gold" />
-              {t.apiKeys}
-            </h2>
+            <h3 className="font-medium text-white mb-4">{t.notifications}</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.reminder24h}</label>
+                <Switch 
+                  checked={notifSettings.reminder_24h}
+                  onCheckedChange={(checked) => handleNotifChange('reminder_24h', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.reminder1h}</label>
+                <Switch 
+                  checked={notifSettings.reminder_1h}
+                  onCheckedChange={(checked) => handleNotifChange('reminder_1h', checked)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="text-slate-300">{t.browserNotif}</label>
+                <Switch 
+                  checked={notifSettings.browser_notifications}
+                  onCheckedChange={(checked) => handleNotifChange('browser_notifications', checked)}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Push Notifications */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+              <BellRing size={18} className="text-slate-400" />
+              {t.pushNotifications}
+            </h3>
+            <p className="text-slate-500 text-sm mb-4">{t.pushDesc}</p>
             
+            {!pushSupported ? (
+              <p className="text-orange-400 text-sm">{t.pushNotSupported}</p>
+            ) : pushPermission === 'denied' ? (
+              <p className="text-red-400 text-sm">{t.pushDenied}</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {!pushSubscribed ? (
+                  <Button
+                    onClick={subscribePush}
+                    disabled={pushLoading}
+                    size="sm"
+                    className="bg-gold hover:bg-gold-light text-[#020817]"
+                  >
+                    {pushLoading ? <Loader2 className="animate-spin mr-2" size={14} /> : <Bell size={14} className="mr-2" />}
+                    {t.enablePush}
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={unsubscribePush}
+                      disabled={pushLoading}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-700 text-slate-300"
+                    >
+                      {pushLoading ? <Loader2 className="animate-spin mr-2" size={14} /> : null}
+                      {t.disablePush}
+                    </Button>
+                    <Button
+                      onClick={sendTestNotification}
+                      disabled={pushLoading}
+                      variant="outline"
+                      size="sm"
+                      className="border-gold/50 text-gold"
+                    >
+                      {t.testPush}
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 3: INTÉGRATIONS
+          ============================================ */}
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Key size={20} className="text-gold" />
+          Intégrations & API
+        </h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Chrome Extension */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+              <Chrome size={18} className="text-slate-400" />
+              {t.chromeExtension}
+            </h3>
+            <p className="text-slate-500 text-sm mb-4">{t.chromeExtensionDesc}</p>
+            
+            {!extensionCode ? (
+              <Button
+                onClick={handleGenerateExtensionCode}
+                disabled={extensionLoading}
+                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {extensionLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Chrome className="mr-2" size={16} />}
+                {t.generateCode}
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-800/50 border border-gold/30 rounded-lg text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-2xl font-mono font-bold text-gold tracking-widest">
+                      {extensionCode}
+                    </span>
+                    <Button
+                      onClick={handleCopyCode}
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-gold p-1"
+                    >
+                      {codeCopied ? <Check size={16} className="text-green-400" /> : <Copy size={16} />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">{t.codeExpires}</p>
+                </div>
+                <Button
+                  onClick={handleGenerateExtensionCode}
+                  disabled={extensionLoading}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-slate-700 text-slate-300"
+                >
+                  <RefreshCw className="mr-2" size={14} />
+                  {t.newCode}
+                </Button>
+              </div>
+            )}
+          </div>
+
+          {/* Google Calendar */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h3 className="font-medium text-white mb-2 flex items-center gap-2">
+              <Calendar size={18} className="text-slate-400" />
+              {t.calendar}
+            </h3>
+            <p className="text-slate-500 text-sm mb-4">{t.calendarDesc}</p>
+            
+            {!calendarStatus.configured ? (
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                <p className="text-yellow-400 text-xs">{t.calendarNotConfigured}</p>
+              </div>
+            ) : calendarStatus.connected ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-green-400 text-sm">
+                  <Check size={16} />
+                  <span>{t.calendarConnected}</span>
+                </div>
+                {calendarStatus.email && (
+                  <p className="text-slate-500 text-xs">{calendarStatus.email}</p>
+                )}
+                <Button
+                  onClick={handleDisconnectCalendar}
+                  disabled={calendarLoading}
+                  variant="outline"
+                  size="sm"
+                  className="w-full border-slate-700 text-slate-300"
+                >
+                  {t.disconnectCalendar}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={handleConnectCalendar}
+                disabled={calendarLoading}
+                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {calendarLoading ? <Loader2 className="animate-spin" size={16} /> : t.connectCalendar}
+              </Button>
+            )}
+          </div>
+
+          {/* API Keys */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800 lg:row-span-2">
+            <h3 className="font-medium text-white mb-4">{t.apiKeys}</h3>
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   {t.googleKey}
-                  {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                  {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
                 </label>
                 <Input
                   type="password"
@@ -754,11 +744,10 @@ export default function SettingsPage() {
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   {t.openaiKey}
-                  {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                  {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
                 </label>
                 <Input
                   type="password"
@@ -768,11 +757,10 @@ export default function SettingsPage() {
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
               </div>
-              
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
                   {t.groqKey}
-                  {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓ Configurée</span>}
+                  {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
                 </label>
                 <Input
                   type="password"
@@ -782,38 +770,38 @@ export default function SettingsPage() {
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
                 <p className="text-xs text-slate-500 mt-1">
-                  Obtenez une clé gratuite sur <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.groq.com</a>
+                  <a href="https://console.groq.com/keys" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">console.groq.com</a>
                 </p>
               </div>
             </div>
           </div>
+        </div>
+      </section>
 
-          {/* Danger Zone Section */}
-          <div className="glass-card rounded-xl p-6 border border-red-900/50 bg-red-950/10">
-            <h2 className="font-heading text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
-              <AlertTriangle size={20} />
-              {t.dangerZone}
-            </h2>
-            <p className="text-slate-500 text-sm mb-6">{t.dangerDesc}</p>
-            
-            <div className="space-y-4">
-              {/* Reset Interviews */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/50 rounded-lg border border-slate-800">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                    <Calendar size={20} className="text-orange-400" />
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{t.resetInterviews}</p>
-                    <p className="text-slate-500 text-sm">{t.resetInterviewsDesc}</p>
-                  </div>
-                </div>
+      {/* ============================================
+          SECTION 4: ZONE DANGER
+          ============================================ */}
+      <section>
+        <h2 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2 border-b border-red-900/50 pb-2">
+          <AlertTriangle size={20} />
+          {t.dangerZone}
+        </h2>
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Reset Interviews */}
+          <div className="glass-card rounded-xl p-6 border border-orange-900/30 bg-orange-950/10">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                <Calendar size={24} className="text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-medium">{t.resetInterviews}</h3>
+                <p className="text-slate-500 text-sm mt-1">{t.resetInterviewsDesc}</p>
                 <Button
                   onClick={handleResetInterviews}
                   disabled={resetting !== null}
                   variant="outline"
                   size="sm"
-                  className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10 flex-shrink-0"
+                  className="mt-3 border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
                 >
                   {resetting === 'interviews' ? (
                     <><Loader2 className="animate-spin mr-2" size={14} />{t.resetting}</>
@@ -822,24 +810,24 @@ export default function SettingsPage() {
                   )}
                 </Button>
               </div>
+            </div>
+          </div>
 
-              {/* Reset Applications */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-900/50 rounded-lg border border-red-900/30">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
-                    <Briefcase size={20} className="text-red-400" />
-                  </div>
-                  <div>
-                    <p className="text-white font-medium">{t.resetApplications}</p>
-                    <p className="text-slate-500 text-sm">{t.resetApplicationsDesc}</p>
-                  </div>
-                </div>
+          {/* Reset Applications */}
+          <div className="glass-card rounded-xl p-6 border border-red-900/30 bg-red-950/10">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                <Briefcase size={24} className="text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-white font-medium">{t.resetApplications}</h3>
+                <p className="text-slate-500 text-sm mt-1">{t.resetApplicationsDesc}</p>
                 <Button
                   onClick={handleResetApplications}
                   disabled={resetting !== null}
                   variant="outline"
                   size="sm"
-                  className="border-red-500/50 text-red-400 hover:bg-red-500/10 flex-shrink-0"
+                  className="mt-3 border-red-500/50 text-red-400 hover:bg-red-500/10"
                 >
                   {resetting === 'applications' ? (
                     <><Loader2 className="animate-spin mr-2" size={14} />{t.resetting}</>
@@ -851,20 +839,7 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Save Button - Full width at bottom */}
-      <div className="flex items-center gap-4">
-        <Button 
-          onClick={handleSave}
-          disabled={loading}
-          className="bg-gold hover:bg-gold-light text-[#020817]"
-        >
-          {loading ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} className="mr-2" />}
-          {t.save}
-        </Button>
-        {message && <span className="text-green-400 text-sm">{message}</span>}
-      </div>
+      </section>
 
       {/* Confirm Dialog */}
       {ConfirmDialog}
