@@ -115,7 +115,16 @@ export default function SettingsPage() {
       monthlyGoal: 'Objectif mensuel',
       weeklyGoal: 'Objectif hebdomadaire',
       goalsSaved: 'Objectifs enregistrés !',
-      candidatures: 'candidatures'
+      candidatures: 'candidatures',
+      // Chrome Extension
+      chromeExtension: 'Extension Chrome',
+      chromeExtensionDesc: 'Connectez l\'extension pour ajouter des offres en un clic',
+      generateCode: 'Générer un code',
+      codeExpires: 'Expire dans 5 minutes',
+      copyCode: 'Copier',
+      copied: 'Copié !',
+      extensionInstructions: 'Ouvrez l\'extension Chrome et entrez ce code dans l\'onglet "Code rapide"',
+      newCode: 'Nouveau code'
     },
     en: {
       title: 'Settings',
