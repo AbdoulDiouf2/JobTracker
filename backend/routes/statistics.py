@@ -609,11 +609,13 @@ async def get_dashboard_v2(
         ))
     
     # Candidatures à relancer
+    followup_min_date = (now - timedelta(days=45)).isoformat()
+    followup_max_date = (now - timedelta(days=14)).isoformat()
     needs_followup = await db.applications.count_documents({
         "user_id": user_id,
         "reponse": "pending",
         "followup_count": {"$lt": 2},
-        "date_candidature": {"$lt": now - timedelta(days=14), "$gt": now - timedelta(days=45)}
+        "date_candidature": {"$lt": followup_max_date, "$gt": followup_min_date}
     })
     if needs_followup > 0:
         priority_actions.append(PriorityAction(
