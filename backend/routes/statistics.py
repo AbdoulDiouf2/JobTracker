@@ -591,10 +591,12 @@ async def get_dashboard_v2(
     priority_actions = []
     
     # Entretiens dans les 48h
+    now_str = now.isoformat()
+    in_48h_str = (now + timedelta(hours=48)).isoformat()
     upcoming_48h = await db.interviews.count_documents({
         "user_id": user_id,
         "statut": "planned",
-        "date_entretien": {"$gte": now, "$lte": now + timedelta(hours=48)}
+        "date_entretien": {"$gte": now_str, "$lte": in_48h_str}
     })
     if upcoming_48h > 0:
         priority_actions.append(PriorityAction(
