@@ -646,10 +646,11 @@ async def get_dashboard_v2(
         ))
     
     # Entretiens cette semaine
+    week_end_str = (start_of_week + timedelta(weeks=1)).isoformat()
     interviews_this_week = await db.interviews.count_documents({
         "user_id": user_id,
         "statut": "planned",
-        "date_entretien": {"$gte": start_of_week, "$lt": start_of_week + timedelta(weeks=1)}
+        "date_entretien": {"$gte": start_of_week_str, "$lt": week_end_str}
     })
     if interviews_this_week > 0 and upcoming_48h == 0:
         priority_actions.append(PriorityAction(
