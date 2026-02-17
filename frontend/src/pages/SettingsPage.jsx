@@ -30,6 +30,10 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
   const [goalsLoading, setGoalsLoading] = useState(false);
+  const [extensionCode, setExtensionCode] = useState('');
+  const [extensionCodeExpiry, setExtensionCodeExpiry] = useState('');
+  const [extensionLoading, setExtensionLoading] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
