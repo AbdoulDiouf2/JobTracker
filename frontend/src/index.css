@@ -39,6 +39,7 @@
 
 html {
     scroll-behavior: smooth;
+    font-size: 14px; /* Base size reduced from 16px for better default zoom */
 }
 
 body {
