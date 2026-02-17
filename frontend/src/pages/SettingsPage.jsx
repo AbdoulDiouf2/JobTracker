@@ -609,6 +609,55 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          {/* Chrome Extension Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
+              <Chrome size={20} className="text-gold" />
+              {t.chromeExtension}
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">{t.chromeExtensionDesc}</p>
+            
+            {!extensionCode ? (
+              <Button
+                onClick={handleGenerateExtensionCode}
+                disabled={extensionLoading}
+                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {extensionLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Chrome className="mr-2" size={16} />}
+                {t.generateCode}
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-800/50 border border-gold/30 rounded-lg text-center">
+                  <p className="text-xs text-slate-400 mb-2">{t.extensionInstructions}</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="text-3xl font-mono font-bold text-gold tracking-widest">
+                      {extensionCode}
+                    </span>
+                    <Button
+                      onClick={handleCopyCode}
+                      variant="ghost"
+                      size="sm"
+                      className="text-slate-400 hover:text-gold"
+                    >
+                      {codeCopied ? <Check size={18} className="text-green-400" /> : <Copy size={18} />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">{t.codeExpires}</p>
+                </div>
+                <Button
+                  onClick={handleGenerateExtensionCode}
+                  disabled={extensionLoading}
+                  variant="outline"
+                  className="w-full border-slate-700 text-slate-300 hover:bg-slate-800"
+                >
+                  {extensionLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <RefreshCw className="mr-2" size={16} />}
+                  {t.newCode}
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Google Calendar Section */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
