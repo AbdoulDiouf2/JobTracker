@@ -373,28 +373,33 @@ async def get_dashboard_v2(
     monthly_goal = prefs.get("monthly_goal", 40) if prefs else 40
     weekly_goal = prefs.get("weekly_goal", 10) if prefs else 10
     
-    # Dates clés
+    # Dates clés (converties en ISO strings pour MongoDB)
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     start_of_week = now - timedelta(days=now.weekday())
     start_of_week = start_of_week.replace(hour=0, minute=0, second=0, microsecond=0)
     start_of_last_month = (start_of_month - timedelta(days=1)).replace(day=1)
     
+    # ISO string format pour les requêtes (car dates stockées en ISO string)
+    start_of_month_str = start_of_month.isoformat()
+    start_of_week_str = start_of_week.isoformat()
+    start_of_last_month_str = start_of_last_month.isoformat()
+    
     # Candidatures ce mois
     this_month_count = await db.applications.count_documents({
         "user_id": user_id,
-        "date_candidature": {"$gte": start_of_month}
+        "date_candidature": {"$gte": start_of_month_str}
     })
     
     # Candidatures mois dernier
     last_month_count = await db.applications.count_documents({
         "user_id": user_id,
-        "date_candidature": {"$gte": start_of_last_month, "$lt": start_of_month}
+        "date_candidature": {"$gte": start_of_last_month_str, "$lt": start_of_month_str}
     })
     
     # Candidatures cette semaine
     this_week_count = await db.applications.count_documents({
         "user_id": user_id,
-        "date_candidature": {"$gte": start_of_week}
+        "date_candidature": {"$gte": start_of_week_str}
     })
     
     # Goal Progress
