@@ -359,7 +359,8 @@ async def get_dashboard_v2(
 ):
     """Dashboard V2 avec insights intelligents, score et objectifs"""
     user_id = current_user["user_id"]
-    now = datetime.now(timezone.utc)
+    # Utiliser datetime sans timezone pour correspondre au format stocké
+    now = datetime.now()
     
     # ============================================
     # 1. STATS DE BASE
