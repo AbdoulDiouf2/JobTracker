@@ -184,3 +184,121 @@ async def update_api_keys(
         )
     
     return {"message": "Clés API mises à jour"}
+
+
+
+# ============================================
+# CHROME EXTENSION AUTHENTICATION
+# ============================================
+
+import secrets
+from pydantic import BaseModel
+
+class ExtensionAuthCode(BaseModel):
+    """Code d'authentification pour l'extension Chrome"""
+    code: str
+    expires_at: str
+
+
+class ExtensionAuthRequest(BaseModel):
+    """Requête d'authentification via code"""
+    code: str
+
+
+@router.post("/extension/generate-code", response_model=ExtensionAuthCode)
+async def generate_extension_code(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """
+    Génère un code temporaire pour connecter l'extension Chrome.
+    Le code expire après 5 minutes et ne peut être utilisé qu'une fois.
+    """
+    # Générer un code aléatoire de 8 caractères
+    code = secrets.token_urlsafe(6)[:8].upper()
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
+    
+    # Stocker le code en base
+    await db.extension_auth_codes.delete_many({"user_id": current_user["user_id"]})
+    await db.extension_auth_codes.insert_one({
+        "code": code,
+        "user_id": current_user["user_id"],
+        "expires_at": expires_at.isoformat(),
+        "used": False
+    })
+    
+    return ExtensionAuthCode(
+        code=code,
+        expires_at=expires_at.isoformat()
+    )
+
+
+@router.post("/extension/verify-code", response_model=Token)
+async def verify_extension_code(
+    request: ExtensionAuthRequest,
+    db = Depends(get_db)
+):
+    """
+    Vérifie un code d'extension et retourne un token JWT.
+    Utilisé par l'extension pour s'authentifier sans login.
+    """
+    # Chercher le code
+    auth_code = await db.extension_auth_codes.find_one({
+        "code": request.code.upper(),
+        "used": False
+    })
+    
+    if not auth_code:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code invalide ou expiré"
+        )
+    
+    # Vérifier l'expiration
+    expires_at = datetime.fromisoformat(auth_code["expires_at"].replace("Z", "+00:00"))
+    if datetime.now(timezone.utc) > expires_at:
+        await db.extension_auth_codes.delete_one({"_id": auth_code["_id"]})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Code expiré"
+        )
+    
+    # Marquer comme utilisé
+    await db.extension_auth_codes.update_one(
+        {"_id": auth_code["_id"]},
+        {"$set": {"used": True}}
+    )
+    
+    # Récupérer l'utilisateur
+    user = await db.users.find_one({"id": auth_code["user_id"]})
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur non trouvé"
+        )
+    
+    # Créer un token longue durée pour l'extension (30 jours)
+    access_token = create_access_token(
+        data={"sub": user["id"], "role": user.get("role", "standard"), "source": "extension"},
+        expires_delta=timedelta(days=30)
+    )
+    
+    return Token(access_token=access_token)
+
+
+@router.get("/extension/status")
+async def get_extension_status(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """
+    Vérifie si l'extension est connectée (si un token extension existe).
+    """
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    
+    return {
+        "connected": bool(user.get("extension_connected")),
+        "last_sync": user.get("extension_last_sync"),
+        "user_email": user["email"],
+        "user_name": user["full_name"]
+    }
