@@ -104,7 +104,14 @@ export default function SettingsPage() {
       pushDisable: 'Désactiver',
       pushTest: 'Tester',
       pushNotSupported: 'Votre navigateur ne supporte pas les notifications push',
-      pushDenied: 'Vous avez bloqué les notifications. Activez-les dans les paramètres de votre navigateur.'
+      pushDenied: 'Vous avez bloqué les notifications. Activez-les dans les paramètres de votre navigateur.',
+      // Goals
+      goals: 'Objectifs',
+      goalsDesc: 'Définissez vos objectifs de candidature',
+      monthlyGoal: 'Objectif mensuel',
+      weeklyGoal: 'Objectif hebdomadaire',
+      goalsSaved: 'Objectifs enregistrés !',
+      candidatures: 'candidatures'
     },
     en: {
       title: 'Settings',
