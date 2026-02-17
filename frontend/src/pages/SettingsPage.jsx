@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
+import { useStatistics } from '../hooks/useStatistics';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
-import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing } from 'lucide-react';
+import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing, Target } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import axios from 'axios';
 
@@ -15,6 +16,7 @@ export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
+  const { preferences, fetchPreferences, updatePreferences } = useStatistics();
   const { 
     isSupported: pushSupported, 
     isSubscribed: pushSubscribed, 
@@ -27,12 +29,18 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
+  const [goalsLoading, setGoalsLoading] = useState(false);
   
   const [formData, setFormData] = useState({
     full_name: user?.full_name || '',
     google_ai_key: '',
     openai_key: '',
     groq_key: ''
+  });
+
+  const [goalsData, setGoalsData] = useState({
+    monthly_goal: 40,
+    weekly_goal: 10
   });
 
   const [notifSettings, setNotifSettings] = useState({
@@ -96,7 +104,14 @@ export default function SettingsPage() {
       pushDisable: 'Désactiver',
       pushTest: 'Tester',
       pushNotSupported: 'Votre navigateur ne supporte pas les notifications push',
-      pushDenied: 'Vous avez bloqué les notifications. Activez-les dans les paramètres de votre navigateur.'
+      pushDenied: 'Vous avez bloqué les notifications. Activez-les dans les paramètres de votre navigateur.',
+      // Goals
+      goals: 'Objectifs',
+      goalsDesc: 'Définissez vos objectifs de candidature',
+      monthlyGoal: 'Objectif mensuel',
+      weeklyGoal: 'Objectif hebdomadaire',
+      goalsSaved: 'Objectifs enregistrés !',
+      candidatures: 'candidatures'
     },
     en: {
       title: 'Settings',
@@ -144,7 +159,14 @@ export default function SettingsPage() {
       pushDisable: 'Disable',
       pushTest: 'Test',
       pushNotSupported: 'Your browser does not support push notifications',
-      pushDenied: 'You have blocked notifications. Enable them in your browser settings.'
+      pushDenied: 'You have blocked notifications. Enable them in your browser settings.',
+      // Goals
+      goals: 'Goals',
+      goalsDesc: 'Set your application goals',
+      monthlyGoal: 'Monthly goal',
+      weeklyGoal: 'Weekly goal',
+      goalsSaved: 'Goals saved!',
+      candidatures: 'applications'
     }
   }[language];
 
@@ -163,6 +185,20 @@ export default function SettingsPage() {
     };
     fetchNotifSettings();
   }, []);
+
+  // Fetch user goals/preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await fetchPreferences();
+      if (prefs) {
+        setGoalsData({
+          monthly_goal: prefs.monthly_goal || 40,
+          weekly_goal: prefs.weekly_goal || 10
+        });
+      }
+    };
+    loadPreferences();
+  }, [fetchPreferences]);
 
   // Fetch Google Calendar status
   useEffect(() => {
@@ -326,6 +362,19 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveGoals = async () => {
+    setGoalsLoading(true);
+    try {
+      await updatePreferences(goalsData);
+      setMessage(t.goalsSaved);
+      setTimeout(() => setMessage(''), 2000);
+    } catch (error) {
+      setMessage('Erreur');
+    } finally {
+      setGoalsLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-8" data-testid="settings-page">
       <div>
@@ -459,6 +508,60 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Goals Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800 border-gold/30 bg-gradient-to-br from-slate-900 to-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
+              <Target size={20} className="text-gold" />
+              {t.goals}
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">{t.goalsDesc}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.monthlyGoal}
+                </label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={goalsData.monthly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, monthly_goal: parseInt(e.target.value) || 40 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-24"
+                  />
+                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.weeklyGoal}
+                </label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={goalsData.weekly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, weekly_goal: parseInt(e.target.value) || 10 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-24"
+                  />
+                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
+                </div>
+              </div>
+              
+              <Button
+                onClick={handleSaveGoals}
+                disabled={goalsLoading}
+                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {goalsLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
+                {t.save}
+              </Button>
+            </div>
           </div>
 
           {/* Google Calendar Section */}

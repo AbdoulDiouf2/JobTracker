@@ -728,3 +728,87 @@ class ActivityDataPoint(BaseModel):
     applications: int
     interviews: int
 
+
+# ============================================
+# DASHBOARD V2 - INTELLIGENT STATS
+# ============================================
+
+class UserPreferences(BaseModel):
+    """Préférences utilisateur pour le dashboard"""
+    monthly_goal: int = Field(default=40, ge=1, le=500, description="Objectif mensuel de candidatures")
+    weekly_goal: int = Field(default=10, ge=1, le=100, description="Objectif hebdomadaire de candidatures")
+
+
+class UserPreferencesUpdate(BaseModel):
+    """Mise à jour des préférences utilisateur"""
+    monthly_goal: Optional[int] = Field(None, ge=1, le=500)
+    weekly_goal: Optional[int] = Field(None, ge=1, le=100)
+
+
+class JobSearchScore(BaseModel):
+    """Score global de recherche d'emploi"""
+    total_score: int = Field(ge=0, le=100, description="Score total sur 100")
+    regularity_score: int = Field(ge=0, le=30, description="Score régularité (0-30)")
+    response_rate_score: int = Field(ge=0, le=25, description="Score taux de réponse (0-25)")
+    interview_ratio_score: int = Field(ge=0, le=25, description="Score ratio entretiens (0-25)")
+    followup_score: int = Field(ge=0, le=20, description="Score relances (0-20)")
+    trend: str = Field(default="stable", description="Tendance: up, down, stable")
+    trend_value: int = Field(default=0, description="Variation en points")
+
+
+class GoalProgress(BaseModel):
+    """Progression vers l'objectif"""
+    monthly_goal: int = 40
+    monthly_current: int = 0
+    monthly_percentage: float = 0.0
+    weekly_goal: int = 10
+    weekly_current: int = 0
+    weekly_percentage: float = 0.0
+
+
+class DashboardInsight(BaseModel):
+    """Un insight intelligent pour le dashboard"""
+    type: str  # positive, warning, tip, info
+    icon: str  # emoji or icon name
+    message: str
+    priority: int = Field(default=0, description="Priorité 0=haute, 1=moyenne, 2=basse")
+
+
+class PriorityAction(BaseModel):
+    """Action prioritaire à effectuer"""
+    type: str  # interview_soon, needs_followup, inactive_favorite, cv_update
+    icon: str
+    title: str
+    description: str
+    count: Optional[int] = None
+    action_url: Optional[str] = None
+
+
+class WeeklyEvolution(BaseModel):
+    """Données d'évolution hebdomadaire"""
+    week: str  # "Sem 1", "Sem 2", etc.
+    start_date: str
+    applications: int
+    responses: int
+    interviews: int
+
+
+class DashboardV2Response(BaseModel):
+    """Réponse complète du Dashboard V2"""
+    # Stats de base
+    stats: DashboardStats
+    # Objectifs
+    goal_progress: GoalProgress
+    # Score global
+    job_search_score: JobSearchScore
+    # Insights intelligents
+    insights: List[DashboardInsight] = []
+    # Actions prioritaires
+    priority_actions: List[PriorityAction] = []
+    # Évolution hebdomadaire (4 dernières semaines)
+    weekly_evolution: List[WeeklyEvolution] = []
+    # Stats ce mois
+    this_month_applications: int = 0
+    last_month_applications: int = 0
+    month_over_month_change: float = 0.0
+
