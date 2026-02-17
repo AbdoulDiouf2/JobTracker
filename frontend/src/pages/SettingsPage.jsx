@@ -510,6 +510,60 @@ export default function SettingsPage() {
             )}
           </div>
 
+          {/* Goals Section */}
+          <div className="glass-card rounded-xl p-6 border border-slate-800 border-gold/30 bg-gradient-to-br from-slate-900 to-slate-800">
+            <h2 className="font-heading text-lg font-semibold text-white mb-2 flex items-center gap-2">
+              <Target size={20} className="text-gold" />
+              {t.goals}
+            </h2>
+            <p className="text-slate-400 text-sm mb-4">{t.goalsDesc}</p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.monthlyGoal}
+                </label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="500"
+                    value={goalsData.monthly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, monthly_goal: parseInt(e.target.value) || 40 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-24"
+                  />
+                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  {t.weeklyGoal}
+                </label>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={goalsData.weekly_goal}
+                    onChange={(e) => setGoalsData(prev => ({ ...prev, weekly_goal: parseInt(e.target.value) || 10 }))}
+                    className="bg-slate-900/50 border-slate-700 text-white w-24"
+                  />
+                  <span className="text-slate-400 text-sm">{t.candidatures}</span>
+                </div>
+              </div>
+              
+              <Button
+                onClick={handleSaveGoals}
+                disabled={goalsLoading}
+                className="w-full bg-gold hover:bg-gold-light text-[#020817]"
+              >
+                {goalsLoading ? <Loader2 className="animate-spin mr-2" size={16} /> : <Save className="mr-2" size={16} />}
+                {t.save}
+              </Button>
+            </div>
+          </div>
+
           {/* Google Calendar Section */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h2 className="font-heading text-lg font-semibold text-white mb-4 flex items-center gap-2">
