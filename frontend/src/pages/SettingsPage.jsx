@@ -179,7 +179,16 @@ export default function SettingsPage() {
       monthlyGoal: 'Monthly goal',
       weeklyGoal: 'Weekly goal',
       goalsSaved: 'Goals saved!',
-      candidatures: 'applications'
+      candidatures: 'applications',
+      // Chrome Extension
+      chromeExtension: 'Chrome Extension',
+      chromeExtensionDesc: 'Connect the extension to add job offers in one click',
+      generateCode: 'Generate code',
+      codeExpires: 'Expires in 5 minutes',
+      copyCode: 'Copy',
+      copied: 'Copied!',
+      extensionInstructions: 'Open the Chrome extension and enter this code in the "Quick code" tab',
+      newCode: 'New code'
     }
   }[language];
 
