@@ -4,13 +4,17 @@ JobTracker SaaS - Routes des statistiques
 
 from fastapi import APIRouter, Depends
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
 from models import (
     DashboardStats, TimelineDataPoint, StatusDistribution,
     TypeDistribution, MethodDistribution, StatisticsOverview,
-    ApplicationStatus, JobType, ApplicationMethod
+    ApplicationStatus, JobType, ApplicationMethod,
+    # Dashboard V2
+    DashboardV2Response, GoalProgress, JobSearchScore,
+    DashboardInsight, PriorityAction, WeeklyEvolution,
+    UserPreferences, UserPreferencesUpdate
 )
 from utils.auth import get_current_user
 
