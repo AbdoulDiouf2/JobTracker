@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Auto-detect API URL if not set
   if (!config.jt_apiUrl) {
-    config.jt_apiUrl = 'https://careertracker-10.preview.emergentagent.com';
+    config.jt_apiUrl = 'https://job-tracker-steel-eight.vercel.app';
     await chrome.storage.sync.set({ jt_apiUrl: config.jt_apiUrl });
   }
 
