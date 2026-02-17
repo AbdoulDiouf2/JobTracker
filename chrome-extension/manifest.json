@@ -1,15 +1,12 @@
 {
   "manifest_version": 3,
   "name": "JobTracker Clipper",
-  "version": "2.0",
+  "version": "2.1.0",
   "description": "Ajoutez des offres d'emploi à votre JobTracker avec extraction IA automatique.",
   "permissions": [
     "activeTab",
     "scripting",
     "storage"
-  ],
-  "host_permissions": [
-    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
