@@ -186,6 +186,20 @@ export default function SettingsPage() {
     fetchNotifSettings();
   }, []);
 
+  // Fetch user goals/preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const prefs = await fetchPreferences();
+      if (prefs) {
+        setGoalsData({
+          monthly_goal: prefs.monthly_goal || 40,
+          weekly_goal: prefs.weekly_goal || 10
+        });
+      }
+    };
+    loadPreferences();
+  }, [fetchPreferences]);
+
   // Fetch Google Calendar status
   useEffect(() => {
     const fetchCalendarStatus = async () => {
