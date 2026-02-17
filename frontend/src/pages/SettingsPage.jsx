@@ -397,6 +397,29 @@ export default function SettingsPage() {
     }
   };
 
+  const handleGenerateExtensionCode = async () => {
+    setExtensionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/auth/extension/generate-code`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setExtensionCode(response.data.code);
+      setExtensionCodeExpiry(response.data.expires_at);
+      setCodeCopied(false);
+    } catch (error) {
+      console.error('Error generating code:', error);
+    } finally {
+      setExtensionLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(extensionCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
   return (
     <div className="space-y-8" data-testid="settings-page">
       <div>
