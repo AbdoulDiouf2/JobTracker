@@ -75,6 +75,44 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+  const loginWithGoogle = () => {
+    const redirectUrl = window.location.origin + '/auth/callback';
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  };
+
+  const handleGoogleCallback = async (sessionId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await api.post('/api/auth/google/session', { session_id: sessionId });
+      const { access_token, id, email, full_name, picture, is_new_user } = response.data;
+      
+      localStorage.setItem('token', access_token);
+      setToken(access_token);
+      
+      const userData = {
+        id,
+        email,
+        full_name,
+        picture,
+        role: 'standard',
+        is_new_user
+      };
+      
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+      
+      return { success: true, is_new_user };
+    } catch (err) {
+      const message = err.response?.data?.detail || 'Erreur de connexion Google';
+      setError(message);
+      return { success: false, error: message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const register = async (email, password, fullName) => {
     setLoading(true);
     setError(null);
@@ -122,6 +160,8 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin,
     login,
+    loginWithGoogle,
+    handleGoogleCallback,
     register,
     logout,
     updateProfile,

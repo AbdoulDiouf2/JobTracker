@@ -1,242 +1,259 @@
-# JobTracker SaaS 🚀
+# JobTracker - Application de Suivi de Candidatures
 
-Application SaaS complète de suivi de candidatures avec intelligence artificielle, développée pour démontrer des compétences en Full-Stack et AI Engineering.
+![JobTracker Logo](frontend/public/Tech-driven_job_tracking_logo_design-removebg-preview.png)
 
-![Version](https://img.shields.io/badge/version-2.0-gold)
-![License](https://img.shields.io/badge/license-MIT-blue)
+## 🎯 Description
 
-## 🎯 Fonctionnalités
+JobTracker est une application SaaS de suivi de candidatures conçue pour aider les chercheurs d'emploi à s'organiser efficacement. Créée par un Data Engineer après avoir envoyé plus de 200 candidatures, cette application offre une approche réaliste : elle ne promet pas de miracle, mais aide ceux qui se donnent les moyens.
 
-### Gestion des Candidatures
-- ✅ CRUD complet (créer, lire, modifier, supprimer)
-- ✅ Vue carte et vue tableau
-- ✅ Système de favoris
-- ✅ Recherche et filtres par statut
-- ✅ Changement de statut via dropdown
+## ✨ Fonctionnalités
 
-### Gestion des Entretiens
-- ✅ CRUD complet avec liaison aux candidatures
-- ✅ Calendrier interactif (jour, semaine, mois, année)
-- ✅ Indicateurs d'urgence (24h, 1h)
-- ✅ Types : RH, Technique, Manager, Final
-- ✅ Formats : Téléphone, Visio, Présentiel
-- ✅ Recherche de candidatures avec autocomplétion
+### 🔐 Authentification
+- **Connexion avec Google** (OAuth via Emergent Auth - aucune configuration requise)
+- Authentification email/mot de passe classique
+- JWT avec expiration configurable
 
-### Administration Multi-Tenant
-- ✅ Panel admin sécurisé
-- ✅ Dashboard avec statistiques globales
-- ✅ Gestion des utilisateurs (rôles, activation)
-- ✅ Graphiques de croissance et d'activité
-- ✅ Export des statistiques admin
+### 📊 Dashboard Intelligent (V2)
+- **Job Search Score** : Score composite de 0 à 100
+- **Objectif mensuel** : Suivi de progression vers votre objectif
+- **Insights IA** : Recommandations basées sur vos données
+- **Graphique d'évolution** : Visualisation hebdomadaire de votre activité
 
-### Intelligence Artificielle
-- ✅ **Conseiller Carrière** (Google Gemini) - Analyse et conseils personnalisés
-- ✅ **Assistant Chatbot** (OpenAI GPT-4o) - Aide CV, entretiens, négociation
-- ✅ **Analyse de CV** - Score, compétences, recommandations, postes suggérés
+### 📝 Gestion des Candidatures
+- CRUD complet des candidatures
+- Statuts personnalisables (Postulé, Entretien, Offre, Refusé, etc.)
+- Filtres et recherche avancés
+- Import/Export CSV
 
-### Import/Export
-- ✅ Import JSON, NDJSON, CSV, Excel avec prévisualisation
-- ✅ Import des entretiens avec mapping de colonnes
-- ✅ Détection des doublons
-- ✅ Export Excel, JSON, CSV
+### 📅 Suivi des Entretiens
+- Calendrier des entretiens
+- Rappels automatiques
+- Notes de préparation
 
-### Notifications
-- ✅ Cloche de notification avec compteur
-- ✅ Rappels automatiques 24h et 1h avant entretien
-- ✅ Paramètres personnalisables
+### 🧠 Conseiller IA
+- Analyse de CV
+- Suggestions d'amélioration
+- Support multi-LLM (Gemini, GPT-4, Groq)
 
-### Interface
-- ✅ Design dark mode premium (style Stripe/Vercel)
-- ✅ Sidebar fixe avec navigation intuitive
-- ✅ Internationalisation FR/EN
-- ✅ Responsive (desktop, tablet, mobile)
-- ✅ Statistiques avec graphiques Recharts
+### 🔌 Extension Chrome
+- Ajout rapide de candidatures depuis LinkedIn, Indeed, etc.
+- Authentification par code ou login direct
 
----
+### 👨‍💼 Panel Admin
+- Gestion des utilisateurs
+- Statistiques globales
+- Création de comptes utilisateurs
 
-## 🛠 Stack Technique
+## 🛠️ Stack Technique
 
 ### Backend
-| Technologie | Usage |
-|-------------|-------|
-| FastAPI | Framework API REST async |
-| MongoDB | Base de données NoSQL |
-| Motor | Driver async MongoDB |
-| Pydantic | Validation des données |
-| JWT | Authentification |
-| bcrypt | Hash des mots de passe |
-| emergentintegrations | Intégration LLM |
-| openpyxl | Export Excel |
-| PyPDF2/python-docx | Extraction texte CV |
+- **FastAPI** - Framework Python asynchrone
+- **MongoDB** - Base de données NoSQL
+- **JWT** - Authentification
+- **APScheduler** - Tâches planifiées (rappels)
 
 ### Frontend
-| Technologie | Usage |
-|-------------|-------|
-| React 19 | Framework UI |
-| Tailwind CSS | Styling utility-first |
-| Shadcn/UI | Composants accessibles |
-| Framer Motion | Animations fluides |
-| Recharts | Graphiques interactifs |
-| React Hook Form | Gestion des formulaires |
-| Zod | Validation côté client |
-| i18next | Internationalisation |
-| Axios | Client HTTP |
-| date-fns | Manipulation des dates |
-| react-markdown | Rendu Markdown chatbot |
-| xlsx | Parsing fichiers Excel |
+- **React 18** - Framework UI
+- **Tailwind CSS** - Styling
+- **Shadcn/UI** - Composants
+- **Framer Motion** - Animations
+- **Recharts** - Graphiques
 
----
+### Authentification
+- **Emergent Auth** - OAuth Google managé (aucune configuration requise)
+
+## 🚀 Installation
+
+### Prérequis
+- Node.js 18+
+- Python 3.10+
+- MongoDB 6+
+
+### Backend
+
+```bash
+cd backend
+
+# Créer un environnement virtuel
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# ou
+.\venv\Scripts\activate  # Windows
+
+# Installer les dépendances
+pip install -r requirements.txt
+
+# Configurer les variables d'environnement
+cp .env.example .env
+# Éditer .env avec vos valeurs
+
+# Lancer le serveur
+uvicorn server:app --reload --port 8001
+```
+
+### Frontend
+
+```bash
+cd frontend
+
+# Installer les dépendances
+yarn install
+
+# Configurer les variables d'environnement
+cp .env.example .env
+# Éditer .env avec l'URL du backend
+
+# Lancer le serveur de développement
+yarn start
+```
+
+## ⚙️ Configuration
+
+### Variables d'environnement Backend (`backend/.env`)
+
+```env
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=jobtracker
+JWT_SECRET=votre_secret_jwt_super_long
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+```
+
+### Variables d'environnement Frontend (`frontend/.env`)
+
+```env
+REACT_APP_BACKEND_URL=http://localhost:8001
+```
+
+## 🔐 Authentification Google
+
+L'authentification Google utilise **Emergent Auth**, un service OAuth managé.
+
+### ✅ Ce que tu n'as PAS besoin de faire :
+- ❌ Créer un projet Google Cloud
+- ❌ Configurer des credentials OAuth
+- ❌ Gérer des clés API Google
+- ❌ Configurer des URLs de redirect
+
+### ✅ Ce qui fonctionne automatiquement :
+- ✅ En local (`localhost:3000`)
+- ✅ En production (n'importe quel domaine)
+- ✅ L'URL de callback est générée dynamiquement
+
+### Comment ça marche ?
+1. L'utilisateur clique sur "Continuer avec Google"
+2. Redirection vers `auth.emergentagent.com`
+3. L'utilisateur se connecte avec Google
+4. Retour vers ton app avec un `session_id`
+5. Le backend échange le `session_id` contre les infos utilisateur
+6. Un JWT est créé et l'utilisateur est connecté
 
 ## 📁 Structure du Projet
 
 ```
 /app/
 ├── backend/
-│   ├── models/              # Modèles Pydantic
-│   ├── routes/              # Endpoints API
-│   │   ├── admin.py         # Panel administration
-│   │   ├── applications.py  # CRUD candidatures
-│   │   ├── auth.py          # Authentification
-│   │   ├── interviews.py    # CRUD entretiens
-│   │   ├── statistics.py    # Statistiques
-│   │   ├── export.py        # Export données
-│   │   ├── ai.py            # IA (Gemini, GPT)
-│   │   ├── data_import.py   # Import + Analyse CV
-│   │   └── notifications.py # Notifications
-│   ├── utils/               # Utilitaires
-│   ├── config.py            # Configuration
-│   ├── server.py            # Point d'entrée
-│   └── requirements.txt
+│   ├── models/             # Modèles Pydantic
+│   ├── routes/
+│   │   ├── auth.py         # Auth (email + Google OAuth)
+│   │   ├── applications.py # CRUD candidatures
+│   │   ├── interviews.py   # Gestion entretiens
+│   │   ├── statistics.py   # Dashboard V2
+│   │   └── admin.py        # Panel admin
+│   ├── utils/
+│   │   ├── auth.py         # Helpers JWT
+│   │   └── scheduler.py    # Tâches planifiées
+│   └── server.py           # Point d'entrée FastAPI
 ├── frontend/
 │   ├── src/
-│   │   ├── components/      # Composants réutilisables
-│   │   ├── contexts/        # Contextes React
-│   │   ├── hooks/           # Hooks personnalisés
-│   │   ├── i18n/            # Traductions
-│   │   ├── layouts/         # Layouts (Dashboard, Admin)
-│   │   └── pages/           # Pages
-│   │       └── admin/       # Pages administration
-│   └── package.json
-└── memory/
-    └── PRD.md
+│   │   ├── components/ui/  # Composants Shadcn
+│   │   ├── contexts/       # Auth, Refresh contexts
+│   │   ├── hooks/          # Custom hooks
+│   │   ├── pages/          # Pages React
+│   │   └── layouts/        # Layouts (Dashboard, Admin)
+│   └── public/
+└── chrome-extension/       # Extension navigateur
 ```
 
----
+## 🧪 Tests
 
-## 🚀 Installation
+```bash
+# Backend
+cd backend
+pytest
 
-### Prérequis
-- Python 3.11+
-- Node.js 18+
-- MongoDB 6+
+# Frontend
+cd frontend
+yarn test
+```
 
-### Backend
+## 📦 Déploiement
+
+### Option 1 : Emergent Platform (Recommandé)
+L'application est déjà configurée pour Emergent. Cliquez sur "Deploy" dans l'interface.
+
+### Option 2 : Déploiement Manuel
+
+#### Backend (ex: Railway, Render, Fly.io)
 ```bash
 cd backend
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
-cp .env.example .env  # Configurer les variables
-uvicorn server:app --reload --port 8001
+# Configurer les variables d'environnement sur la plateforme
+# MONGO_URL, JWT_SECRET, etc.
 ```
 
-### Frontend
+#### Frontend (ex: Vercel, Netlify)
 ```bash
 cd frontend
-yarn install
-cp .env.example .env
-yarn start
+yarn build
+# Déployer le dossier build/
+# Configurer REACT_APP_BACKEND_URL
 ```
 
----
-
-## 🔑 Variables d'Environnement
-
-### Backend (`/backend/.env`)
-```env
-# BASE DE DONNÉES (obligatoire)
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=jobtracker
-
-# SÉCURITÉ (obligatoire)
-# Générez avec: openssl rand -hex 32
-JWT_SECRET=votre-cle-secrete-tres-longue
-
-# CORS (optionnel, défaut: *)
-CORS_ORIGINS=*
-
-# IA - Au moins une clé requise pour les fonctionnalités IA
-EMERGENT_LLM_KEY=sk-emergent-xxx   # Clé universelle Emergent (recommandé)
-# OU
-GOOGLE_AI_API_KEY=AIzaSy...        # Google AI Studio
-OPENAI_API_KEY=sk-...              # OpenAI Platform
+### Option 3 : Docker
+```bash
+docker-compose up -d
 ```
 
-### Frontend (`/frontend/.env`)
-```env
-# URL de l'API Backend (obligatoire)
-REACT_APP_BACKEND_URL=http://localhost:8001
+## 🔑 Comptes de Test
 
-# En production:
-# REACT_APP_BACKEND_URL=https://api.votre-domaine.com
-```
+| Type | Email | Mot de passe |
+|------|-------|--------------|
+| Admin | admin@test.com | password123 |
+| Standard | demo@test.com | password123 |
 
-### 🔗 Où obtenir les clés API
+## 📝 API Endpoints Principaux
 
-| Service | URL |
-|---------|-----|
-| Emergent LLM Key | [emergentagent.com](https://emergentagent.com) |
-| Google AI (Gemini) | [makersuite.google.com](https://makersuite.google.com/app/apikey) |
-| OpenAI (GPT) | [platform.openai.com](https://platform.openai.com/api-keys) |
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| POST | `/api/auth/login` | Connexion email/password |
+| POST | `/api/auth/register` | Inscription |
+| POST | `/api/auth/google/session` | Échange session Google |
+| GET | `/api/auth/me` | Profil utilisateur |
+| GET | `/api/applications` | Liste candidatures |
+| POST | `/api/applications` | Créer candidature |
+| POST | `/api/statistics/dashboard-v2` | Données dashboard |
+| GET | `/api/admin/users` | Liste utilisateurs (admin) |
+| POST | `/api/admin/users` | Créer utilisateur (admin) |
 
----
+## 🤝 Contribution
 
-## 📊 API Endpoints
+Les contributions sont les bienvenues ! 
 
-### Authentification
-- `POST /api/auth/register` - Inscription
-- `POST /api/auth/login` - Connexion
-- `GET /api/auth/me` - Profil
-
-### Candidatures
-- `GET /api/applications` - Liste paginée
-- `POST /api/applications` - Créer
-- `PUT /api/applications/{id}` - Modifier
-- `DELETE /api/applications/{id}` - Supprimer
-- `POST /api/applications/{id}/favorite` - Toggle favori
-
-### Entretiens
-- `GET /api/interviews` - Liste
-- `POST /api/interviews` - Créer
-- `PUT /api/interviews/{id}` - Modifier
-- `DELETE /api/interviews/{id}` - Supprimer
-
-### IA
-- `POST /api/ai/career-advisor` - Conseiller (Gemini)
-- `POST /api/ai/chatbot` - Chatbot (GPT-4o)
-
-### Import/Export
-- `POST /api/import/applications` - Import candidatures
-- `POST /api/import/interviews` - Import entretiens
-- `POST /api/analyze-cv` - Analyse CV
-- `GET /api/export/applications/{format}` - Export candidatures
-- `GET /api/export/interviews/{format}` - Export entretiens
-
-### Administration (🔐 Admin requis)
-- `GET /api/admin/dashboard` - Statistiques globales
-- `GET /api/admin/users` - Liste utilisateurs
-- `PUT /api/admin/users/{id}` - Modifier utilisateur
-- `DELETE /api/admin/users/{id}` - Désactiver utilisateur
-
----
+1. Fork le projet
+2. Créez une branche (`git checkout -b feature/ma-feature`)
+3. Committez (`git commit -m 'Ajout de ma feature'`)
+4. Push (`git push origin feature/ma-feature`)
+5. Ouvrez une Pull Request
 
 ## 📄 Licence
 
-MIT © 2025 MAADEC - MAAD Engineering & Consulting
-
----
+MIT License - Voir [LICENSE](LICENSE)
 
 ## 👨‍💻 Auteur
 
-**MAADEC**  
-Full-Stack & AI Engineering
+**Abdoul** - Data Engineer
+- Créé après 200+ candidatures sans organisation claire
+- Conçu pour aider ceux qui se donnent les moyens
+
+---
+
+*JobTracker ne promet pas de job miracle, mais aide à rester organisé et à mettre toutes les chances de son côté.*

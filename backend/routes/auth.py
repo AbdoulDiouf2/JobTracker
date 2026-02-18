@@ -2,8 +2,10 @@
 JobTracker SaaS - Routes d'authentification
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response, Request
 from datetime import timedelta
+import httpx
+import uuid
 
 from models import (
     UserCreate, UserLogin, UserUpdate, User, UserResponse, Token, UserRole
@@ -302,3 +304,138 @@ async def get_extension_status(
         "user_email": user["email"],
         "user_name": user["full_name"]
     }
+
+
+# ============================================
+# GOOGLE OAUTH AUTHENTICATION (Emergent Auth)
+# ============================================
+# REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+
+from pydantic import BaseModel as PydanticBaseModel
+
+class GoogleSessionRequest(PydanticBaseModel):
+    """Requête pour échanger un session_id Google"""
+    session_id: str
+
+
+class GoogleUserResponse(PydanticBaseModel):
+    """Réponse utilisateur après auth Google"""
+    id: str
+    email: str
+    full_name: str
+    picture: str | None = None
+    access_token: str
+    is_new_user: bool = False
+
+
+@router.post("/google/session", response_model=GoogleUserResponse)
+async def exchange_google_session(
+    request: GoogleSessionRequest,
+    response: Response,
+    db = Depends(get_db)
+):
+    """
+    Échange un session_id Emergent Auth contre les données utilisateur et un JWT.
+    Crée l'utilisateur s'il n'existe pas.
+    """
+    # Appeler l'API Emergent Auth pour récupérer les données de session
+    async with httpx.AsyncClient() as client:
+        try:
+            auth_response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": request.session_id},
+                timeout=10.0
+            )
+            
+            if auth_response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session invalide ou expirée"
+                )
+            
+            google_data = auth_response.json()
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Service d'authentification indisponible"
+            )
+    
+    email = google_data.get("email", "").lower()
+    name = google_data.get("name", "")
+    picture = google_data.get("picture")
+    session_token = google_data.get("session_token")
+    
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email non fourni par Google"
+        )
+    
+    # Chercher l'utilisateur existant
+    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+    is_new_user = False
+    
+    if existing_user:
+        # Utilisateur existant - mettre à jour les infos Google
+        user_id = existing_user["id"]
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "google_picture": picture,
+                "last_login": datetime.now(timezone.utc).isoformat(),
+                "auth_provider": "google"
+            }}
+        )
+    else:
+        # Nouvel utilisateur - créer le compte
+        user_id = str(uuid.uuid4())
+        is_new_user = True
+        
+        new_user = {
+            "id": user_id,
+            "email": email,
+            "full_name": name,
+            "hashed_password": None,  # Pas de mot de passe pour auth Google
+            "role": "standard",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_active": True,
+            "last_login": datetime.now(timezone.utc).isoformat(),
+            "google_picture": picture,
+            "auth_provider": "google",
+            "google_ai_key": None,
+            "openai_key": None,
+            "groq_key": None
+        }
+        
+        await db.users.insert_one(new_user)
+    
+    # Stocker la session Google (optionnel, pour logout global)
+    if session_token:
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        await db.google_sessions.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "session_token": session_token,
+                "expires_at": expires_at.isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }},
+            upsert=True
+        )
+    
+    # Créer notre propre JWT
+    access_token = create_access_token(
+        data={"sub": user_id, "role": "standard", "provider": "google"},
+        expires_delta=timedelta(days=7)
+    )
+    
+    # Récupérer l'utilisateur mis à jour
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    return GoogleUserResponse(
+        id=user_id,
+        email=email,
+        full_name=user.get("full_name", name),
+        picture=picture,
+        access_token=access_token,
+        is_new_user=is_new_user
+    )
