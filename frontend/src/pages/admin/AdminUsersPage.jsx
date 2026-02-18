@@ -487,6 +487,7 @@ export default function AdminUsersPage() {
     updateUser,
     deleteUser,
     reactivateUser,
+    createUser,
     exportStats,
     loading 
   } = useAdmin();
@@ -498,7 +499,9 @@ export default function AdminUsersPage() {
   const [viewingUser, setViewingUser] = useState(null);
   const [viewingUserStats, setViewingUserStats] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     const params = {};
