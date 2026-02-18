@@ -737,6 +737,14 @@ export default function AdminUsersPage() {
         loading={saving}
       />
 
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateUser}
+        loading={saving}
+      />
+
       {/* Confirm Dialog */}
       {ConfirmDialog}
     </div>
