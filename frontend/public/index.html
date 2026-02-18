@@ -68,17 +68,27 @@
                         .then(function(registration) {
                             console.log('[PWA] Service Worker enregistré:', registration.scope);
                             
-                            // Vérifier les mises à jour
+                            // Helper pour notifier l'app React
+                            function notifyUpdate(worker) {
+                                window.dispatchEvent(new CustomEvent('pwa-update-available', { 
+                                    detail: registration 
+                                }));
+                            }
+
+                            // Si un update est déjà en attente au chargement
+                            if (registration.waiting) {
+                                console.log('[PWA] Service Worker en attente détecté au chargement');
+                                notifyUpdate(registration.waiting);
+                            }
+
+                            // Vérifier les mises à jour futures
                             registration.addEventListener('updatefound', function() {
                                 const newWorker = registration.installing;
                                 newWorker.addEventListener('statechange', function() {
                                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                                         // Nouvelle version disponible
                                         console.log('[PWA] Nouvelle version disponible!');
-                                        // Dispatch event for React application
-                                        window.dispatchEvent(new CustomEvent('pwa-update-available', { 
-                                            detail: registration 
-                                        }));
+                                        notifyUpdate(newWorker);
                                     }
                                 });
                             });
