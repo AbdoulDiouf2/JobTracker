@@ -116,28 +116,28 @@ const HeroSection = () => {
 
   const t = {
     fr: {
-      badge: '🚀 La plateforme #1 de suivi de candidatures',
-      title1: 'Décrochez votre',
-      title2: 'job de rêve',
-      title3: 'plus rapidement',
-      description: 'Centralisez vos candidatures, suivez vos entretiens et boostez votre recherche d\'emploi grâce à l\'IA. Rejoignez des milliers de chercheurs d\'emploi qui ont trouvé leur voie.',
+      badge: '🎯 Organisez-vous. Préparez-vous. Réussissez.',
+      title1: 'Mettez toutes les',
+      title2: 'chances',
+      title3: 'de votre côté',
+      description: 'JobTracker ne vous promet pas de job miracle. Mais si vous vous donnez les moyens, il vous aide à rester organisé, à ne rien oublier et à être dans les meilleures conditions pour décrocher le poste que vous méritez.',
       cta: 'Commencer gratuitement',
       ctaSecondary: 'Voir la démo',
       stat1: 'Utilisateurs actifs',
       stat2: 'Candidatures suivies',
-      stat3: 'Taux de satisfaction',
+      stat3: 'Recommanderaient',
     },
     en: {
-      badge: '🚀 #1 Job Application Tracking Platform',
-      title1: 'Land your',
-      title2: 'dream job',
-      title3: 'faster',
-      description: 'Centralize your applications, track your interviews, and boost your job search with AI. Join thousands of job seekers who found their path.',
+      badge: '🎯 Get organized. Get prepared. Get hired.',
+      title1: 'Stack the',
+      title2: 'odds',
+      title3: 'in your favor',
+      description: 'JobTracker won\'t magically land you a job. But if you put in the work, it helps you stay organized, never miss a follow-up, and be in the best position to land the role you deserve.',
       cta: 'Start for free',
       ctaSecondary: 'Watch demo',
       stat1: 'Active users',
       stat2: 'Applications tracked',
-      stat3: 'Satisfaction rate',
+      stat3: 'Would recommend',
     }
   }[language];
 
@@ -194,66 +194,37 @@ const HeroSection = () => {
             </div>
           </motion.div>
 
-          {/* Dashboard Preview */}
-          <motion.div initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.7, delay: 0.2 }} className="hidden lg:block">
+          {/* Hero Illustration */}
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }} 
+            animate={{ opacity: 1, scale: 1 }} 
+            transition={{ duration: 0.7, delay: 0.2 }} 
+            className="hidden lg:flex items-center justify-center"
+          >
             <div className="relative">
-              <div className="glass-card rounded-2xl p-6 shadow-2xl border border-slate-700/50">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="font-heading font-semibold text-white">Tableau de bord</h3>
-                  <div className="flex gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-                    <div className="w-3 h-3 rounded-full bg-green-500/80" />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4 mb-6">
-                  <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-slate-500 text-sm mb-1">Candidatures</p>
-                    <p className="text-2xl font-bold text-white">147</p>
-                    <p className="text-green-400 text-sm flex items-center mt-1"><TrendingUp size={14} className="mr-1" /> +12%</p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-slate-500 text-sm mb-1">Entretiens</p>
-                    <p className="text-2xl font-bold text-gold">23</p>
-                    <p className="text-gold/70 text-sm flex items-center mt-1"><Calendar size={14} className="mr-1" /> 3 cette sem.</p>
-                  </div>
-                  <div className="bg-slate-800/50 rounded-xl p-4">
-                    <p className="text-slate-500 text-sm mb-1">Taux réponse</p>
-                    <p className="text-2xl font-bold text-white">34%</p>
-                    <p className="text-blue-400 text-sm flex items-center mt-1"><Target size={14} className="mr-1" /> Au-dessus moy.</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    { company: 'Google', role: 'Senior Engineer', status: 'Entretien', color: 'text-green-400' },
-                    { company: 'Stripe', role: 'Full Stack Dev', status: 'Postulé', color: 'text-blue-400' },
-                    { company: 'Notion', role: 'Backend Lead', status: 'En cours', color: 'text-yellow-400' },
-                  ].map((app, i) => (
-                    <div key={i} className="flex items-center justify-between bg-slate-800/30 rounded-lg p-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white font-bold text-sm">{app.company[0]}</div>
-                        <div>
-                          <p className="text-white text-sm font-medium">{app.company}</p>
-                          <p className="text-slate-500 text-xs">{app.role}</p>
-                        </div>
-                      </div>
-                      <span className={`text-xs font-medium ${app.color}`}>{app.status}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Floating AI badge */}
+              <img 
+                src="/hero-illustration.png" 
+                alt="Organisez votre recherche d'emploi" 
+                className="w-full max-w-lg drop-shadow-2xl"
+              />
+              {/* Floating badge */}
               <motion.div 
-                className="absolute -top-4 -right-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
+                className="absolute -bottom-4 -left-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
+                <Target size={24} className="text-gold mb-2" />
+                <p className="text-white text-sm font-semibold">{language === 'fr' ? 'Restez focus' : 'Stay focused'}</p>
+                <p className="text-slate-400 text-xs">{language === 'fr' ? 'Zéro oubli' : 'Never miss a thing'}</p>
+              </motion.div>
+              <motion.div 
+                className="absolute -top-4 -right-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
+                animate={{ y: [0, 8, 0] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
+              >
                 <Brain size={24} className="text-gold mb-2" />
-                <p className="text-white text-sm font-semibold">Conseiller IA</p>
-                <p className="text-slate-400 text-xs">Actif 24/7</p>
+                <p className="text-white text-sm font-semibold">{language === 'fr' ? 'Conseils IA' : 'AI Advisor'}</p>
+                <p className="text-slate-400 text-xs">{language === 'fr' ? 'Pour progresser' : 'Level up'}</p>
               </motion.div>
             </div>
           </motion.div>
