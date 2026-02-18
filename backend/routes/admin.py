@@ -422,6 +422,58 @@ async def reactivate_user(
     return {"message": "Utilisateur réactivé avec succès"}
 
 
+@router.post("/users", response_model=UserAdminResponse)
+async def create_user(
+    user_data: AdminUserCreate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Crée un nouvel utilisateur (réservé aux admins)"""
+    from datetime import datetime, timezone
+    
+    # Vérifier si l'email existe déjà
+    existing_user = await db.users.find_one({"email": user_data.email.lower()})
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Un utilisateur avec cet email existe déjà"
+        )
+    
+    # Hasher le mot de passe
+    hashed_password = pwd_context.hash(user_data.password)
+    
+    # Créer l'utilisateur
+    new_user = {
+        "id": str(uuid.uuid4()),
+        "email": user_data.email.lower(),
+        "full_name": user_data.full_name,
+        "hashed_password": hashed_password,
+        "role": user_data.role.value,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "is_active": True,
+        "last_login": None,
+        "google_ai_key": None,
+        "openai_key": None,
+        "groq_key": None
+    }
+    
+    await db.users.insert_one(new_user)
+    
+    return UserAdminResponse(
+        id=new_user["id"],
+        email=new_user["email"],
+        full_name=new_user["full_name"],
+        role=new_user["role"],
+        created_at=new_user["created_at"],
+        last_login=None,
+        is_active=True,
+        has_google_ai_key=False,
+        has_openai_key=False,
+        applications_count=0,
+        interviews_count=0
+    )
+
+
 # ============================================
 # EXPORT ADMIN
 # ============================================
