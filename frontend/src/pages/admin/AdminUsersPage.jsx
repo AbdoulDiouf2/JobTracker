@@ -569,6 +569,22 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateUser = async (userData) => {
+    setSaving(true);
+    setCreateError('');
+    try {
+      await createUser(userData);
+      setShowCreateModal(false);
+      fetchUsers();
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || 'Erreur lors de la création';
+      setCreateError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleExport = async () => {
     try {
       const data = await exportStats();
