@@ -272,14 +272,14 @@ const InsightsCard = ({ insights }) => {
         <Lightbulb className="text-gold" size={20} />
         Insights
       </h3>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {insights.map((insight, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
-            className={`flex items-start gap-3 p-3 rounded-lg border ${getBgColor(insight.type)}`}
+            className={`flex items-start gap-3 p-3 rounded-lg border ${getBgColor(insight.type)} mb-2`}
           >
             {getIcon(insight.type)}
             <p className="text-sm text-slate-300">{insight.message}</p>
@@ -587,17 +587,17 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* Insights & Actions Row */}
-      {!statsLoading && (dashboardV2?.insights?.length > 0 || dashboardV2?.priority_actions?.length > 0) && (
-        <div className="grid lg:grid-cols-2 gap-6">
+      {/* Insights & Chart Row */}
+      {!statsLoading && (
+        <div className="grid lg:grid-cols-2 gap-6 mt-8">
           <InsightsCard insights={dashboardV2?.insights} />
-          <PriorityActionsCard actions={dashboardV2?.priority_actions} />
+          <WeeklyChart data={dashboardV2?.weekly_evolution} />
         </div>
       )}
 
-      {/* Chart */}
-      {!statsLoading && dashboardV2?.weekly_evolution?.length > 0 && (
-        <WeeklyChart data={dashboardV2?.weekly_evolution} />
+      {/* Priority Actions */}
+      {!statsLoading && (
+        <PriorityActionsCard actions={dashboardV2?.priority_actions} />
       )}
 
       {/* Interviews & Applications */}

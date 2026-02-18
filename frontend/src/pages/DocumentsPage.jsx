@@ -326,20 +326,22 @@ export default function DocumentsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-slate-800/50 border border-slate-700">
-          <TabsTrigger value="cv" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
-            <FileText size={16} className="mr-2" />
-            {t.cvTab}
-          </TabsTrigger>
-          <TabsTrigger value="templates" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
-            <FileCheck size={16} className="mr-2" />
-            {t.coverLettersTab}
-          </TabsTrigger>
-          <TabsTrigger value="portfolio" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
-            <LinkIcon size={16} className="mr-2" />
-            {t.portfolioTab}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto pb-2">
+          <TabsList className="bg-slate-800/50 w-max min-w-full sm:min-w-0 justify-start">
+            <TabsTrigger value="cv" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
+              <FileText size={16} className="mr-2" />
+              {t.cvTab}
+            </TabsTrigger>
+            <TabsTrigger value="templates" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
+              <FileCheck size={16} className="mr-2" />
+              {t.coverLettersTab}
+            </TabsTrigger>
+            <TabsTrigger value="portfolio" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
+              <LinkIcon size={16} className="mr-2" />
+              {t.portfolioTab}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* CV Tab */}
         <TabsContent value="cv" className="mt-6">

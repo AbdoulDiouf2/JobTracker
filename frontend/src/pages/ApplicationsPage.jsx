@@ -1037,27 +1037,78 @@ export default function ApplicationsPage() {
       </div>
 
       {/* Search & Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="flex flex-col xl:flex-row gap-4">
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.search}
-            className="pl-10 bg-slate-900/50 border-slate-700 text-white"
+            className="pl-10 bg-slate-900/50 border-slate-700 text-white w-full"
           />
         </div>
-        <Select onValueChange={(v) => setFilters(prev => ({ ...prev, status: v === 'all' ? undefined : v }))}>
-          <SelectTrigger className="w-[180px] bg-slate-900/50 border-slate-700 text-white">
-            <SelectValue placeholder="Statut" />
-          </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700">
-            <SelectItem value="all">Tous</SelectItem>
-            {STATUS_OPTIONS.map(opt => (
-              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 overflow-x-auto pb-2 xl:pb-0">
+          {/* Status Filter */}
+          <Select onValueChange={(v) => setFilters(prev => ({ ...prev, status: v === 'all' ? undefined : v }))}>
+            <SelectTrigger className="w-[150px] sm:w-[180px] bg-slate-900/50 border-slate-700 text-white">
+              <SelectValue placeholder={t.status} />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectItem value="all">{language === 'fr' ? 'Tous les statuts' : 'All statuses'}</SelectItem>
+              {STATUS_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Type Filter */}
+          <Select onValueChange={(v) => setFilters(prev => ({ ...prev, job_type: v === 'all' ? undefined : v }))}>
+            <SelectTrigger className="w-[150px] sm:w-[180px] bg-slate-900/50 border-slate-700 text-white">
+              <SelectValue placeholder={t.jobType} />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectItem value="all">{language === 'fr' ? 'Tous les types' : 'All types'}</SelectItem>
+              {TYPE_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Date Filter */}
+          <div className="flex items-center gap-2 bg-slate-900/50 border border-slate-700 rounded-md p-1">
+            <Calendar size={16} className="text-slate-500 ml-2 hidden sm:block" />
+            <input 
+              type="date"
+              className="bg-transparent border-none text-white text-sm focus:ring-0 w-[100px] sm:w-[110px] [&::-webkit-calendar-picker-indicator]:invert"
+              onChange={(e) => setFilters(prev => ({ ...prev, date_from: e.target.value || undefined }))}
+              placeholder="Du"
+            />
+            <span className="text-slate-500">-</span>
+            <input 
+              type="date" 
+              className="bg-transparent border-none text-white text-sm focus:ring-0 w-[100px] sm:w-[110px] [&::-webkit-calendar-picker-indicator]:invert"
+              onChange={(e) => setFilters(prev => ({ ...prev, date_to: e.target.value || undefined }))}
+              placeholder="Au"
+            />
+          </div>
+
+          {/* Clear Filters */}
+          {(Object.values(filters).some(v => v !== undefined) || searchQuery) && (
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => {
+                setFilters({});
+                setSearchQuery('');
+              }}
+              className="text-slate-400 hover:text-white"
+            >
+              <X size={16} className="mr-1" />
+              {language === 'fr' ? 'Effacer' : 'Clear'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Applications List */}

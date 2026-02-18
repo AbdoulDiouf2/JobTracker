@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Bot, User, Loader2, Sparkles, MessageSquare, Trash2, Settings2, ChevronDown } from 'lucide-react';
+import { 
+  Send, Bot, User, Loader2, Sparkles, MessageSquare, Trash2, Settings2, ChevronDown,
+  Upload, Award, Target, TrendingUp, CheckCircle, AlertCircle, Briefcase, Lightbulb, FileUp
+} from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Progress } from '../components/ui/progress';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,11 +26,17 @@ export default function AIAdvisorPage() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('advisor'); // 'advisor' or 'chatbot'
+  const [activeTab, setActiveTab] = useState('advisor'); // 'advisor', 'chatbot', 'cv'
   const [sessionId, setSessionId] = useState(null);
   const [availableModels, setAvailableModels] = useState([]);
   const [selectedModel, setSelectedModel] = useState(null);
   const [modelUsed, setModelUsed] = useState(null);
+  
+  // CV Analysis State
+  const [analyzing, setAnalyzing] = useState(false);
+  const [cvAnalysis, setCvAnalysis] = useState(null);
+  const cvInputRef = useRef(null);
+  
   const messagesEndRef = useRef(null);
 
   const t = {
@@ -35,6 +45,7 @@ export default function AIAdvisorPage() {
       subtitle: 'Votre conseiller carrière personnel',
       advisorTab: 'Conseiller Carrière',
       chatbotTab: 'Assistant',
+      cvTab: 'Analyse CV',
       placeholder: 'Posez votre question...',
       send: 'Envoyer',
       clearChat: 'Effacer',
@@ -49,13 +60,28 @@ export default function AIAdvisorPage() {
       ],
       selectModel: 'Sélectionner un modèle',
       noModels: 'Aucun modèle disponible. Configurez vos clés API dans les paramètres.',
-      modelUsed: 'Modèle utilisé'
+      modelUsed: 'Modèle utilisé',
+      // CV Analysis Translations
+      cvTitle: 'Analyse de CV',
+      cvDesc: 'Uploadez votre CV pour une analyse IA complète',
+      uploadCv: 'Uploader votre CV',
+      cvFormats: 'Formats: PDF, DOCX, TXT',
+      analyzing: 'Analyse en cours...',
+      score: 'Score global',
+      summary: 'Résumé',
+      skills: 'Compétences détectées',
+      strengths: 'Points forts',
+      improvements: 'Améliorations suggérées',
+      matchingJobs: 'Postes recommandés',
+      recommendations: 'Recommandations',
+      experience: 'Années d\'expérience'
     },
     en: {
       title: 'AI Assistant',
       subtitle: 'Your personal career advisor',
       advisorTab: 'Career Advisor',
       chatbotTab: 'Assistant',
+      cvTab: 'CV Analysis',
       placeholder: 'Ask your question...',
       send: 'Send',
       clearChat: 'Clear',
@@ -70,7 +96,21 @@ export default function AIAdvisorPage() {
       ],
       selectModel: 'Select a model',
       noModels: 'No models available. Configure your API keys in settings.',
-      modelUsed: 'Model used'
+      modelUsed: 'Model used',
+      // CV Analysis Translations
+      cvTitle: 'CV Analysis',
+      cvDesc: 'Upload your CV for a complete AI analysis',
+      uploadCv: 'Upload your CV',
+      cvFormats: 'Formats: PDF, DOCX, TXT',
+      analyzing: 'Analyzing...',
+      score: 'Overall score',
+      summary: 'Summary',
+      skills: 'Detected skills',
+      strengths: 'Strengths',
+      improvements: 'Suggested improvements',
+      matchingJobs: 'Recommended jobs',
+      recommendations: 'Recommendations',
+      experience: 'Years of experience'
     }
   }[language];
 
@@ -103,11 +143,13 @@ export default function AIAdvisorPage() {
 
   useEffect(() => {
     // Reset messages when switching tabs
-    setMessages([{
-      role: 'assistant',
-      content: activeTab === 'advisor' ? t.welcomeAdvisor : t.welcomeChatbot
-    }]);
-    setSessionId(null);
+    if (activeTab !== 'cv') {
+      setMessages([{
+        role: 'assistant',
+        content: activeTab === 'advisor' ? t.welcomeAdvisor : t.welcomeChatbot
+      }]);
+      setSessionId(null);
+    }
   }, [activeTab, t.welcomeAdvisor, t.welcomeChatbot]);
 
   const sendMessage = async () => {
@@ -175,6 +217,55 @@ export default function AIAdvisorPage() {
     }]);
     setSessionId(null);
     setModelUsed(null);
+  };
+
+  const handleCVUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAnalyzing(true);
+    setCvAnalysis(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('file', file);
+      // Pass selected model if available
+      if (selectedModel) {
+        formData.append('model_provider', selectedModel.provider);
+        formData.append('model_name', selectedModel.model_id);
+      }
+
+      const response = await axios.post(`${API_URL}/api/import/analyze-cv`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      setCvAnalysis(response.data);
+    } catch (error) {
+      console.error('CV Analysis error:', error);
+      setCvAnalysis({
+        score: 0,
+        summary: error.response?.data?.detail || 'Erreur lors de l\'analyse',
+        skills: [],
+        strengths: [],
+        improvements: [],
+        matching_jobs: [],
+        recommendations: ''
+      });
+    } finally {
+      setAnalyzing(false);
+      if (cvInputRef.current) cvInputRef.current.value = '';
+    }
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 80) return 'text-green-400';
+    if (score >= 60) return 'text-yellow-400';
+    if (score >= 40) return 'text-orange-400';
+    return 'text-red-400';
   };
 
   // Group models by provider
@@ -263,7 +354,7 @@ export default function AIAdvisorPage() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1">
+          <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg p-1 overflow-x-auto">
             <button
               onClick={() => setActiveTab('advisor')}
               className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2
@@ -280,122 +371,312 @@ export default function AIAdvisorPage() {
               <MessageSquare size={16} />
               <span className="whitespace-nowrap">{t.chatbotTab}</span>
             </button>
+            <button
+              onClick={() => setActiveTab('cv')}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center justify-center gap-2
+                ${activeTab === 'cv' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
+            >
+              <FileUp size={16} />
+              <span className="whitespace-nowrap">{t.cvTab}</span>
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Chat Container */}
-      <div className="flex-1 flex flex-col glass-card rounded-xl border border-slate-800 overflow-hidden">
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          <AnimatePresence>
-            {messages.map((msg, idx) => (
+      {/* Main Content Area */}
+      <AnimatePresence mode="wait">
+        {activeTab === 'cv' ? (
+          // CV Analysis View
+          <motion.div
+            key="cv"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex-1 overflow-y-auto space-y-6"
+          >
+            {/* Upload Section */}
+            <div className="glass-card rounded-xl border border-slate-800 p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gold/20 flex items-center justify-center">
+                  <Sparkles className="text-gold" size={24} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-semibold text-white">{t.cvTitle}</h2>
+                  <p className="text-slate-400 text-sm">{t.cvDesc}</p>
+                </div>
+              </div>
+
+              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-gold/50 transition-colors">
+                <input
+                  ref={cvInputRef}
+                  type="file"
+                  accept=".pdf,.docx,.doc,.txt"
+                  onChange={handleCVUpload}
+                  className="hidden"
+                  id="cv-file"
+                />
+                <label htmlFor="cv-file" className="cursor-pointer">
+                  <FileUp size={48} className="mx-auto text-gold/50 mb-4" />
+                  <p className="text-white font-medium mb-2">{t.uploadCv}</p>
+                  <p className="text-slate-500 text-sm">{t.cvFormats}</p>
+                </label>
+              </div>
+
+              {analyzing && (
+                <div className="mt-4 flex items-center justify-center gap-3 text-gold py-8">
+                  <Loader2 className="animate-spin" size={24} />
+                  <span className="text-lg">{t.analyzing}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Analysis Results */}
+            {cvAnalysis && (
               <motion.div
-                key={idx}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className="space-y-6 pb-6"
               >
-                {msg.role === 'assistant' && (
-                  <div className="w-8 h-8 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
-                    <Bot size={18} className="text-gold" />
-                  </div>
-                )}
-                <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
-                  msg.role === 'user' 
-                    ? 'bg-gold text-[#020817]' 
-                    : 'bg-slate-800/80 text-white'
-                }`}>
-                  {msg.role === 'assistant' ? (
-                    <div className="prose prose-sm prose-invert max-w-none prose-headings:text-gold prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:text-white prose-a:text-gold">
-                      <Markdown>{msg.content}</Markdown>
+                {/* Score Card */}
+                <div className="glass-card rounded-xl border border-slate-800 p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Award className="text-gold" size={28} />
+                      <h3 className="text-xl font-semibold text-white">{t.score}</h3>
                     </div>
-                  ) : (
-                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                    <div className={`text-5xl font-bold ${getScoreColor(cvAnalysis.score)}`}>
+                      {cvAnalysis.score}
+                      <span className="text-2xl text-slate-500">/100</span>
+                    </div>
+                  </div>
+                  <Progress value={cvAnalysis.score} className="h-3" />
+                  {cvAnalysis.experience_years && (
+                    <p className="text-slate-400 mt-4">
+                      {t.experience}: <span className="text-white font-medium">{cvAnalysis.experience_years} ans</span>
+                    </p>
                   )}
                 </div>
-                {msg.role === 'user' && (
-                  <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
-                    <User size={18} className="text-slate-300" />
+
+                {/* Summary */}
+                {cvAnalysis.summary && (
+                  <div className="glass-card rounded-xl border border-slate-800 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                      <Target className="text-blue-400" size={20} />
+                      {t.summary}
+                    </h3>
+                    <p className="text-slate-300 leading-relaxed">{cvAnalysis.summary}</p>
+                  </div>
+                )}
+
+                {/* Skills */}
+                {cvAnalysis.skills?.length > 0 && (
+                  <div className="glass-card rounded-xl border border-slate-800 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                      <TrendingUp className="text-green-400" size={20} />
+                      {t.skills}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {cvAnalysis.skills.map((skill, i) => (
+                        <span key={i} className="px-3 py-1.5 bg-slate-800 rounded-full text-sm text-slate-300">
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Strengths & Improvements */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {cvAnalysis.strengths?.length > 0 && (
+                    <div className="glass-card rounded-xl border border-green-500/30 p-6">
+                      <h3 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
+                        <CheckCircle size={20} />
+                        {t.strengths}
+                      </h3>
+                      <ul className="space-y-2">
+                        {cvAnalysis.strengths.map((item, i) => (
+                          <li key={i} className="text-slate-300 flex items-start gap-2">
+                            <span className="text-green-400 mt-1">•</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {cvAnalysis.improvements?.length > 0 && (
+                    <div className="glass-card rounded-xl border border-yellow-500/30 p-6">
+                      <h3 className="text-lg font-semibold text-yellow-400 mb-3 flex items-center gap-2">
+                        <AlertCircle size={20} />
+                        {t.improvements}
+                      </h3>
+                      <ul className="space-y-2">
+                        {cvAnalysis.improvements.map((item, i) => (
+                          <li key={i} className="text-slate-300 flex items-start gap-2">
+                            <span className="text-yellow-400 mt-1">•</span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {/* Matching Jobs */}
+                {cvAnalysis.matching_jobs?.length > 0 && (
+                  <div className="glass-card rounded-xl border border-slate-800 p-6">
+                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                      <Briefcase className="text-gold" size={20} />
+                      {t.matchingJobs}
+                    </h3>
+                    <div className="space-y-3">
+                      {cvAnalysis.matching_jobs.map((job, i) => (
+                        <div key={i} className="p-4 bg-slate-800/50 rounded-xl">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-white font-medium">{job.title}</h4>
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                              job.match_score >= 80 ? 'bg-green-500/20 text-green-400' :
+                              job.match_score >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
+                              'bg-slate-500/20 text-slate-400'
+                            }`}>
+                              {job.match_score}% match
+                            </span>
+                          </div>
+                          <p className="text-slate-400 text-sm">{job.reason}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {cvAnalysis.recommendations && (
+                  <div className="glass-card rounded-xl border border-gold/30 p-6">
+                    <h3 className="text-lg font-semibold text-gold mb-3 flex items-center gap-2">
+                      <Lightbulb size={20} />
+                      {t.recommendations}
+                    </h3>
+                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{cvAnalysis.recommendations}</p>
                   </div>
                 )}
               </motion.div>
-            ))}
-          </AnimatePresence>
-          
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex gap-3"
-            >
-              <div className="w-8 h-8 rounded-lg bg-gold/20 flex items-center justify-center">
-                <Bot size={18} className="text-gold" />
-              </div>
-              <div className="bg-slate-800/80 rounded-xl px-4 py-3">
-                <Loader2 className="animate-spin text-gold" size={20} />
-              </div>
-            </motion.div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Suggestions (show only at start) */}
-        {messages.length <= 1 && (
-          <div className="px-4 pb-4">
-            <p className="text-slate-500 text-xs mb-2">{t.suggestionsTitle}</p>
-            <div className="flex flex-wrap gap-2">
-              {t.suggestions.map((suggestion, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className="px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-full text-xs text-slate-300 hover:text-white transition-colors"
+            )}
+          </motion.div>
+        ) : (
+          // Chat View (Advisor & Chatbot)
+          <div className="flex-1 flex flex-col glass-card rounded-xl border border-slate-800 overflow-hidden">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <AnimatePresence>
+                {messages.map((msg, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    {msg.role === 'assistant' && (
+                      <div className="w-8 h-8 rounded-lg bg-gold/20 flex items-center justify-center flex-shrink-0">
+                        <Bot size={18} className="text-gold" />
+                      </div>
+                    )}
+                    <div className={`max-w-[80%] rounded-xl px-4 py-3 ${
+                      msg.role === 'user' 
+                        ? 'bg-gold text-[#020817]' 
+                        : 'bg-slate-800/80 text-white'
+                    }`}>
+                      {msg.role === 'assistant' ? (
+                        <div className="prose prose-sm prose-invert max-w-none prose-headings:text-gold prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:text-white prose-a:text-gold">
+                          <Markdown>{msg.content}</Markdown>
+                        </div>
+                      ) : (
+                        <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                      )}
+                    </div>
+                    {msg.role === 'user' && (
+                      <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center flex-shrink-0">
+                        <User size={18} className="text-slate-300" />
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {loading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex gap-3"
                 >
-                  {suggestion}
-                </button>
-              ))}
+                  <div className="w-8 h-8 rounded-lg bg-gold/20 flex items-center justify-center">
+                    <Bot size={18} className="text-gold" />
+                  </div>
+                  <div className="bg-slate-800/80 rounded-xl px-4 py-3">
+                    <Loader2 className="animate-spin text-gold" size={20} />
+                  </div>
+                </motion.div>
+              )}
+              
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Suggestions (show only at start) */}
+            {messages.length <= 1 && (
+              <div className="px-4 pb-4">
+                <p className="text-slate-500 text-xs mb-2">{t.suggestionsTitle}</p>
+                <div className="flex flex-wrap gap-2">
+                  {t.suggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      className="px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700 rounded-full text-xs text-slate-300 hover:text-white transition-colors"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Input */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/50">
+              {modelUsed && (
+                <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
+                  <Settings2 size={12} />
+                  {t.modelUsed}: <span className="text-gold">{modelUsed}</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={clearChat}
+                  className="border-slate-700 text-slate-400 hover:text-red-400"
+                  title={t.clearChat}
+                >
+                  <Trash2 size={18} />
+                </Button>
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+                  placeholder={t.placeholder}
+                  className="flex-1 bg-slate-800/50 border-slate-700 text-white"
+                  disabled={loading}
+                />
+                <Button
+                  onClick={sendMessage}
+                  disabled={loading || !input.trim()}
+                  className="bg-gold hover:bg-gold-light text-[#020817]"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                </Button>
+              </div>
             </div>
           </div>
         )}
-
-        {/* Input */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-          {modelUsed && (
-            <div className="text-xs text-slate-500 mb-2 flex items-center gap-1">
-              <Settings2 size={12} />
-              {t.modelUsed}: <span className="text-gold">{modelUsed}</span>
-            </div>
-          )}
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={clearChat}
-              className="border-slate-700 text-slate-400 hover:text-red-400"
-              title={t.clearChat}
-            >
-              <Trash2 size={18} />
-            </Button>
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-              placeholder={t.placeholder}
-              className="flex-1 bg-slate-800/50 border-slate-700 text-white"
-              disabled={loading}
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={loading || !input.trim()}
-              className="bg-gold hover:bg-gold-light text-[#020817]"
-            >
-              {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-            </Button>
-          </div>
-        </div>
-      </div>
+      </AnimatePresence>
     </div>
   );
 }

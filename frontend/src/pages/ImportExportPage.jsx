@@ -2,13 +2,12 @@ import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Upload, Download, FileJson, FileSpreadsheet, FileText,
-  CheckCircle, XCircle, AlertCircle, Loader2, Sparkles,
-  FileUp, Award, Target, TrendingUp, Lightbulb, Briefcase,
+  CheckCircle, XCircle, AlertCircle, Loader2,
+  Briefcase, FileUp,
   HelpCircle, Eye, ArrowRight, Table, Calendar
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
-import { Progress } from '../components/ui/progress';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 
@@ -84,8 +83,7 @@ export default function ImportExportPage() {
   const { language } = useLanguage();
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [cvAnalysis, setCvAnalysis] = useState(null);
+
   const [activeTab, setActiveTab] = useState('import');
   const [importType, setImportType] = useState('applications'); // 'applications' or 'interviews'
   const [exportType, setExportType] = useState('applications'); // 'applications' or 'interviews'
@@ -94,7 +92,7 @@ export default function ImportExportPage() {
   const [fullData, setFullData] = useState(null);
   const [previewFile, setPreviewFile] = useState(null);
   const fileInputRef = useRef(null);
-  const cvInputRef = useRef(null);
+
 
   const t = {
     fr: {
@@ -102,7 +100,7 @@ export default function ImportExportPage() {
       subtitle: 'Gérez vos données et analysez votre CV',
       importTab: 'Importer',
       exportTab: 'Exporter',
-      cvTab: 'Analyse CV',
+
       importTitle: 'Importer des données',
       importDesc: 'Importez vos candidatures ou entretiens depuis un fichier',
       importApplications: 'Candidatures',
@@ -123,19 +121,7 @@ export default function ImportExportPage() {
       exportJson: 'Exporter JSON',
       exportExcel: 'Exporter Excel',
       exportCsv: 'Exporter CSV',
-      cvTitle: 'Analyse de CV',
-      cvDesc: 'Uploadez votre CV pour une analyse IA complète',
-      uploadCv: 'Uploader votre CV',
-      cvFormats: 'Formats: PDF, DOCX, TXT',
-      analyzing: 'Analyse en cours...',
-      score: 'Score global',
-      summary: 'Résumé',
-      skills: 'Compétences détectées',
-      strengths: 'Points forts',
-      improvements: 'Améliorations suggérées',
-      matchingJobs: 'Postes recommandés',
-      recommendations: 'Recommandations',
-      experience: 'Années d\'expérience',
+
       guideTitle: 'Guide des colonnes',
       guideDesc: 'Structure attendue pour l\'import',
       requiredColumns: 'Colonnes obligatoires',
@@ -157,7 +143,7 @@ export default function ImportExportPage() {
       subtitle: 'Manage your data and analyze your CV',
       importTab: 'Import',
       exportTab: 'Export',
-      cvTab: 'CV Analysis',
+
       importTitle: 'Import data',
       importDesc: 'Import your applications or interviews from a file',
       importApplications: 'Applications',
@@ -178,19 +164,7 @@ export default function ImportExportPage() {
       exportJson: 'Export JSON',
       exportExcel: 'Export Excel',
       exportCsv: 'Export CSV',
-      cvTitle: 'CV Analysis',
-      cvDesc: 'Upload your CV for a complete AI analysis',
-      uploadCv: 'Upload your CV',
-      cvFormats: 'Formats: PDF, DOCX, TXT',
-      analyzing: 'Analyzing...',
-      score: 'Overall score',
-      summary: 'Summary',
-      skills: 'Detected skills',
-      strengths: 'Strengths',
-      improvements: 'Suggested improvements',
-      matchingJobs: 'Recommended jobs',
-      recommendations: 'Recommendations',
-      experience: 'Years of experience',
+
       guideTitle: 'Column guide',
       guideDesc: 'Expected structure for import',
       requiredColumns: 'Required columns',
@@ -576,49 +550,9 @@ export default function ImportExportPage() {
     document.body.removeChild(a);
   };
 
-  const handleCVUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    setAnalyzing(true);
-    setCvAnalysis(null);
 
-    try {
-      const token = localStorage.getItem('token');
-      const formData = new FormData();
-      formData.append('file', file);
 
-      const response = await axios.post(`${API_URL}/api/import/analyze-cv`, formData, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'multipart/form-data'
-        }
-      });
-
-      setCvAnalysis(response.data);
-    } catch (error) {
-      console.error('CV Analysis error:', error);
-      setCvAnalysis({
-        score: 0,
-        summary: error.response?.data?.detail || 'Erreur lors de l\'analyse',
-        skills: [],
-        strengths: [],
-        improvements: [],
-        matching_jobs: [],
-        recommendations: ''
-      });
-    } finally {
-      setAnalyzing(false);
-      if (cvInputRef.current) cvInputRef.current.value = '';
-    }
-  };
-
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'text-green-400';
-    if (score >= 60) return 'text-yellow-400';
-    if (score >= 40) return 'text-orange-400';
-    return 'text-red-400';
-  };
 
   return (
     <div className="space-y-6" data-testid="import-export-page">
@@ -647,14 +581,7 @@ export default function ImportExportPage() {
             <Download size={16} />
             {t.exportTab}
           </button>
-          <button
-            onClick={() => setActiveTab('cv')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2
-              ${activeTab === 'cv' ? 'bg-gold text-[#020817]' : 'text-slate-400 hover:text-white'}`}
-          >
-            <Sparkles size={16} />
-            {t.cvTab}
-          </button>
+
         </div>
       </div>
 
@@ -1012,184 +939,6 @@ Meta,Frontend Developer,cdi,Londres`}
           </motion.div>
         )}
 
-        {/* CV Analysis Tab */}
-        {activeTab === 'cv' && (
-          <motion.div
-            key="cv"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            {/* Upload Section */}
-            <div className="glass-card rounded-xl border border-slate-800 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gold/20 flex items-center justify-center">
-                  <Sparkles className="text-gold" size={24} />
-                </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white">{t.cvTitle}</h2>
-                  <p className="text-slate-400 text-sm">{t.cvDesc}</p>
-                </div>
-              </div>
-
-              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-gold/50 transition-colors">
-                <input
-                  ref={cvInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.doc,.txt"
-                  onChange={handleCVUpload}
-                  className="hidden"
-                  id="cv-file"
-                />
-                <label htmlFor="cv-file" className="cursor-pointer">
-                  <FileUp size={48} className="mx-auto text-gold/50 mb-4" />
-                  <p className="text-white font-medium mb-2">{t.uploadCv}</p>
-                  <p className="text-slate-500 text-sm">{t.cvFormats}</p>
-                </label>
-              </div>
-
-              {analyzing && (
-                <div className="mt-4 flex items-center justify-center gap-3 text-gold py-8">
-                  <Loader2 className="animate-spin" size={24} />
-                  <span className="text-lg">{t.analyzing}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Analysis Results */}
-            {cvAnalysis && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-6"
-              >
-                {/* Score Card */}
-                <div className="glass-card rounded-xl border border-slate-800 p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Award className="text-gold" size={28} />
-                      <h3 className="text-xl font-semibold text-white">{t.score}</h3>
-                    </div>
-                    <div className={`text-5xl font-bold ${getScoreColor(cvAnalysis.score)}`}>
-                      {cvAnalysis.score}
-                      <span className="text-2xl text-slate-500">/100</span>
-                    </div>
-                  </div>
-                  <Progress value={cvAnalysis.score} className="h-3" />
-                  {cvAnalysis.experience_years && (
-                    <p className="text-slate-400 mt-4">
-                      {t.experience}: <span className="text-white font-medium">{cvAnalysis.experience_years} ans</span>
-                    </p>
-                  )}
-                </div>
-
-                {/* Summary */}
-                {cvAnalysis.summary && (
-                  <div className="glass-card rounded-xl border border-slate-800 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                      <Target className="text-blue-400" size={20} />
-                      {t.summary}
-                    </h3>
-                    <p className="text-slate-300 leading-relaxed">{cvAnalysis.summary}</p>
-                  </div>
-                )}
-
-                {/* Skills */}
-                {cvAnalysis.skills?.length > 0 && (
-                  <div className="glass-card rounded-xl border border-slate-800 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
-                      <TrendingUp className="text-green-400" size={20} />
-                      {t.skills}
-                    </h3>
-                    <div className="flex flex-wrap gap-2">
-                      {cvAnalysis.skills.map((skill, i) => (
-                        <span key={i} className="px-3 py-1.5 bg-slate-800 rounded-full text-sm text-slate-300">
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Strengths & Improvements */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  {cvAnalysis.strengths?.length > 0 && (
-                    <div className="glass-card rounded-xl border border-green-500/30 p-6">
-                      <h3 className="text-lg font-semibold text-green-400 mb-3 flex items-center gap-2">
-                        <CheckCircle size={20} />
-                        {t.strengths}
-                      </h3>
-                      <ul className="space-y-2">
-                        {cvAnalysis.strengths.map((item, i) => (
-                          <li key={i} className="text-slate-300 flex items-start gap-2">
-                            <span className="text-green-400 mt-1">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {cvAnalysis.improvements?.length > 0 && (
-                    <div className="glass-card rounded-xl border border-yellow-500/30 p-6">
-                      <h3 className="text-lg font-semibold text-yellow-400 mb-3 flex items-center gap-2">
-                        <AlertCircle size={20} />
-                        {t.improvements}
-                      </h3>
-                      <ul className="space-y-2">
-                        {cvAnalysis.improvements.map((item, i) => (
-                          <li key={i} className="text-slate-300 flex items-start gap-2">
-                            <span className="text-yellow-400 mt-1">•</span>
-                            {item}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Matching Jobs */}
-                {cvAnalysis.matching_jobs?.length > 0 && (
-                  <div className="glass-card rounded-xl border border-slate-800 p-6">
-                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                      <Briefcase className="text-gold" size={20} />
-                      {t.matchingJobs}
-                    </h3>
-                    <div className="space-y-3">
-                      {cvAnalysis.matching_jobs.map((job, i) => (
-                        <div key={i} className="p-4 bg-slate-800/50 rounded-xl">
-                          <div className="flex items-center justify-between mb-2">
-                            <h4 className="text-white font-medium">{job.title}</h4>
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                              job.match_score >= 80 ? 'bg-green-500/20 text-green-400' :
-                              job.match_score >= 60 ? 'bg-yellow-500/20 text-yellow-400' :
-                              'bg-slate-500/20 text-slate-400'
-                            }`}>
-                              {job.match_score}% match
-                            </span>
-                          </div>
-                          <p className="text-slate-400 text-sm">{job.reason}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Recommendations */}
-                {cvAnalysis.recommendations && (
-                  <div className="glass-card rounded-xl border border-gold/30 p-6">
-                    <h3 className="text-lg font-semibold text-gold mb-3 flex items-center gap-2">
-                      <Lightbulb size={20} />
-                      {t.recommendations}
-                    </h3>
-                    <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{cvAnalysis.recommendations}</p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );
