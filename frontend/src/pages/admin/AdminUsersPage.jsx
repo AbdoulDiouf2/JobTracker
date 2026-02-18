@@ -614,10 +614,16 @@ export default function AdminUsersPage() {
             {usersPagination.total} utilisateur(s) au total
           </p>
         </div>
-        <Button onClick={handleExport} variant="outline" className="border-slate-700">
-          <Download size={18} className="mr-2" />
-          Exporter les stats
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={() => setShowCreateModal(true)} className="bg-gold hover:bg-gold-light text-[#020817]" data-testid="create-user-button">
+            <UserPlus size={18} className="mr-2" />
+            Créer un utilisateur
+          </Button>
+          <Button onClick={handleExport} variant="outline" className="border-slate-700">
+            <Download size={18} className="mr-2" />
+            Exporter
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filters */}
