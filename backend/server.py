@@ -171,6 +171,10 @@ app.dependency_overrides[documents_get_db] = override_get_db
 app.dependency_overrides[calendar_get_db] = override_get_db
 app.dependency_overrides[reminders_get_db] = override_get_db
 
+# Session Middleware (Required for OAuth)
+from starlette.middleware.sessions import SessionMiddleware
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,

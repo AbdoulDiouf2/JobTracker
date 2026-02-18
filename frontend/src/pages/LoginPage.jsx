@@ -122,7 +122,7 @@ export default function LoginPage() {
           <Button
             type="button"
             onClick={handleGoogleLogin}
-            className="w-full bg-white hover:bg-gray-100 text-gray-800 font-semibold py-6 rounded-xl mb-6 flex items-center justify-center gap-3"
+            className="w-full bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 font-semibold py-6 rounded-xl mb-6 flex items-center justify-center gap-3 transition-colors"
             data-testid="google-login-button"
           >
             <GoogleIcon />

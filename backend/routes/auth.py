@@ -307,63 +307,65 @@ async def get_extension_status(
 
 
 # ============================================
-# GOOGLE OAUTH AUTHENTICATION (Emergent Auth)
+# GOOGLE OAUTH AUTHENTICATION (Native)
 # ============================================
-# REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 
-from pydantic import BaseModel as PydanticBaseModel
+from authlib.integrations.starlette_client import OAuth
+from starlette.config import Config
+from starlette.requests import Request
+from starlette.responses import RedirectResponse
 
-class GoogleSessionRequest(PydanticBaseModel):
-    """Requête pour échanger un session_id Google"""
-    session_id: str
+# Init OAuth
+oauth = OAuth()
+
+oauth.register(
+    name='google',
+    client_id=settings.GOOGLE_CLIENT_ID,
+    client_secret=settings.GOOGLE_CLIENT_SECRET,
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
 
 
-class GoogleUserResponse(PydanticBaseModel):
-    """Réponse utilisateur après auth Google"""
-    id: str
-    email: str
-    full_name: str
-    picture: str | None = None
-    access_token: str
-    is_new_user: bool = False
-
-
-@router.post("/google/session", response_model=GoogleUserResponse)
-async def exchange_google_session(
-    request: GoogleSessionRequest,
-    response: Response,
-    db = Depends(get_db)
-):
+@router.get("/google/login")
+async def google_login(request: Request):
     """
-    Échange un session_id Emergent Auth contre les données utilisateur et un JWT.
-    Crée l'utilisateur s'il n'existe pas.
+    Initie le flux OAuth Google.
+    Redirige l'utilisateur vers la page de connexion Google.
     """
-    # Appeler l'API Emergent Auth pour récupérer les données de session
-    async with httpx.AsyncClient() as client:
-        try:
-            auth_response = await client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": request.session_id},
-                timeout=10.0
-            )
-            
-            if auth_response.status_code != 200:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Session invalide ou expirée"
-                )
-            
-            google_data = auth_response.json()
-        except httpx.RequestError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Service d'authentification indisponible"
-            )
-    
-    email = google_data.get("email", "").lower()
-    name = google_data.get("name", "")
-    picture = google_data.get("picture")
-    session_token = google_data.get("session_token")
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Google OAuth not configured (missing keys)"
+        )
+        
+    redirect_uri = f"{settings.BACKEND_URL}/api/auth/google/callback"
+    return await oauth.google.authorize_redirect(request, redirect_uri)
+
+
+@router.get("/google/callback")
+async def google_callback(request: Request, db = Depends(get_db)):
+    """
+    Callback appelé par Google après connexion réussie.
+    Échange le code contre un token, récupère les infos et connecte l'utilisateur.
+    """
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except Exception as e:
+        # Gérer le cas où l'utilisateur annule ou erreur OAuth
+        frontend_error_url = f"{settings.FRONTEND_URL}/login?error=OAuth failed: {str(e)}"
+        return RedirectResponse(url=frontend_error_url)
+
+    user_info = token.get('userinfo')
+    if not user_info:
+        # Fallback si userinfo n'est pas dans le token
+        user_info = await oauth.google.userinfo(token=token)
+
+    email = user_info.get("email", "").lower()
+    name = user_info.get("name", "")
+    picture = user_info.get("picture")
     
     if not email:
         raise HTTPException(
@@ -372,8 +374,9 @@ async def exchange_google_session(
         )
     
     # Chercher l'utilisateur existant
-    existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+    existing_user = await db.users.find_one({"email": email})
     is_new_user = False
+    user_id = None
     
     if existing_user:
         # Utilisateur existant - mettre à jour les infos Google
@@ -409,33 +412,17 @@ async def exchange_google_session(
         
         await db.users.insert_one(new_user)
     
-    # Stocker la session Google (optionnel, pour logout global)
-    if session_token:
-        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-        await db.google_sessions.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "session_token": session_token,
-                "expires_at": expires_at.isoformat(),
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }},
-            upsert=True
-        )
-    
     # Créer notre propre JWT
+    # Note: On inclut 'is_new_user' dans le token temporairement ou on le passe en paramètre d'URL
     access_token = create_access_token(
         data={"sub": user_id, "role": "standard", "provider": "google"},
         expires_delta=timedelta(days=7)
     )
     
-    # Récupérer l'utilisateur mis à jour
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    # Rediriger vers le frontend avec le token en fragment (hash)
+    # Le frontend (AuthCallback.jsx) le lira et le stockera
+    # Format: /auth/callback#access_token=...
     
-    return GoogleUserResponse(
-        id=user_id,
-        email=email,
-        full_name=user.get("full_name", name),
-        picture=picture,
-        access_token=access_token,
-        is_new_user=is_new_user
-    )
+    redirect_url = f"{settings.FRONTEND_URL}/auth/callback#session_id={access_token}" # On garde le nom paramètre session_id pour compatibilité minimale avec le frontend existant ou on adapte le frontend
+    
+    return RedirectResponse(url=redirect_url)

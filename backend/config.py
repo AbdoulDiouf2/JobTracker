@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     # Google Calendar
     GOOGLE_CALENDAR_CLIENT_ID: Optional[str] = os.environ.get('GOOGLE_CALENDAR_CLIENT_ID')
     GOOGLE_CALENDAR_CLIENT_SECRET: Optional[str] = os.environ.get('GOOGLE_CALENDAR_CLIENT_SECRET')
+
+    # Google OAuth (Native)
+    GOOGLE_CLIENT_ID: Optional[str] = os.environ.get('GOOGLE_CLIENT_ID')
+    GOOGLE_CLIENT_SECRET: Optional[str] = os.environ.get('GOOGLE_CLIENT_SECRET')
+    SECRET_KEY: str = os.environ.get('SECRET_KEY', 'super-secret-session-key') # For SessionMiddleware
     
     # URLs
     BACKEND_URL: str = os.environ.get('BACKEND_URL', 'http://localhost:8001')

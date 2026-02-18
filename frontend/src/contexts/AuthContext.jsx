@@ -75,38 +75,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
+  // Native Google OAuth
   const loginWithGoogle = () => {
-    const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    // Rediriger vers la route backend qui initie le flux OAuth
+    window.location.href = `${API_URL}/api/auth/google/login`;
   };
 
-  const handleGoogleCallback = async (sessionId) => {
+  const handleGoogleCallback = async (accessToken) => {
     setLoading(true);
     setError(null);
     try {
-      const response = await api.post('/api/auth/google/session', { session_id: sessionId });
-      const { access_token, id, email, full_name, picture, is_new_user } = response.data;
+      // Le token est déjà reçu via l'URL (mis dans 'session_id' pour compatibilité)
+      localStorage.setItem('token', accessToken);
+      setToken(accessToken);
       
-      localStorage.setItem('token', access_token);
-      setToken(access_token);
+      // Récupérer le profil utilisateur avec le nouveau token
+      const userResponse = await api.get('/api/auth/me', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
       
-      const userData = {
-        id,
-        email,
-        full_name,
-        picture,
-        role: 'standard',
-        is_new_user
-      };
+      const userData = userResponse.data;
       
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
       
-      return { success: true, is_new_user };
+      // Note: is_new_user n'est pas renvoyé par /me, on assume false ou géré par le backend
+      // Si on a besoin de savoir si c'est un nouveau user, on pourrait le passer dans l'URL aussi
+      return { success: true };
     } catch (err) {
+      console.error(err);
       const message = err.response?.data?.detail || 'Erreur de connexion Google';
       setError(message);
+      // Nettoyer si échec
+      localStorage.removeItem('token'); 
+      setToken(null);
       return { success: false, error: message };
     } finally {
       setLoading(false);

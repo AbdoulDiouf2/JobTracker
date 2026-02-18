@@ -43,6 +43,10 @@
 - [x] Sidebar fixe avec scroll interne
 - [x] Page Paramètres : layout 2 colonnes (était entassé à gauche)
 
+## 🔐 Sécurité & Authentification
+- [x] **Google OAuth Natif** : Remplacement de Emergent Auth par authlib (clé API perso).
+- [ ] **MFA (Multi-Factor Auth)** : Implémenter TOTP (Google Authenticator) ou Email OTP pour sécuriser le login mot de passe.
+
 ## 🔴 Bugs & Corrections UI (P0)
 - [ ] (Aucun bug critique en attente)
 
