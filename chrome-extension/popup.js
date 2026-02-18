@@ -17,6 +17,32 @@ document.addEventListener('DOMContentLoaded', async () => {
   const messageDiv = document.getElementById('message');
   const extractBtn = document.getElementById('extractBtn');
   const loadingDiv = document.getElementById('loading');
+  const modeBtns = document.querySelectorAll('.mode-btn');
+  
+  // Mode switching
+  // Mode switching
+  let currentMode = 'ai';
+  
+  modeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update UI
+      modeBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      currentMode = btn.dataset.mode;
+      
+      if (currentMode === 'manual') {
+        extractBtn.classList.add('hidden');
+      } else {
+        extractBtn.classList.remove('hidden');
+        if (currentMode === 'ai') {
+          extractBtn.innerHTML = 'Extraire avec IA ✨';
+        } else {
+          extractBtn.innerHTML = 'Scraper la page 🕷️';
+        }
+      }
+    });
+  });
   
   // Form fields
   const titleInput = document.getElementById('title');
@@ -229,15 +255,72 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ============================================
 
   // AI Extraction button
+  // AI/Scraping Extraction button
   extractBtn.addEventListener('click', async () => {
     loadingDiv.classList.remove('hidden');
-    loadingDiv.textContent = 'Extraction IA en cours...';
     extractBtn.disabled = true;
 
     try {
-      // Get page content from content script
       const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-      
+
+      // ============================================
+      // MODE: SCRAPING
+      // ============================================
+      if (currentMode === 'scraping') {
+        loadingDiv.textContent = 'Scraping de la page...';
+        
+        // Send message to content script
+        try {
+          // Attempt 1: Send message directly
+          let response = await chrome.tabs.sendMessage(tab.id, {action: "scrape"}).catch(() => null);
+          
+          // Attempt 2: Inject script if message failed (probably not a supported site in manifest)
+          if (!response) {
+             loadingDiv.textContent = 'Injection du script (Universel)...';
+             console.log("Injecting content script dynamically...");
+             await chrome.scripting.executeScript({
+               target: { tabId: tab.id },
+               files: ['content.js']
+             });
+             // Wait a bit for script to initialize
+             await new Promise(r => setTimeout(r, 200));
+             // Retry message
+             response = await chrome.tabs.sendMessage(tab.id, {action: "scrape"});
+          }
+          
+          if (response) {
+            if (response.title) titleInput.value = response.title;
+            if (response.company) companyInput.value = response.company;
+            if (response.location) locationInput.value = response.location;
+            if (response.description) descriptionInput.value = response.description.substring(0, 500) + '...';
+            
+            // Try to guess URL type if not already set
+            if (!typeSelect.value && response.description) {
+               const desc = response.description.toLowerCase();
+               if (desc.includes('stage') || desc.includes('internship')) typeSelect.value = 'stage';
+               else if (desc.includes('alternance') || desc.includes('apprenticeship')) typeSelect.value = 'alternance';
+               else if (desc.includes('freelance') || desc.includes('indépendant')) typeSelect.value = 'freelance';
+               else if (desc.includes('cdd')) typeSelect.value = 'cdd';
+               else typeSelect.value = 'cdi';
+            }
+
+            showMessage("Scraping terminé !", "success");
+          } else {
+            throw new Error("Aucune donnée trouvée");
+          }
+        } catch (e) {
+          console.error("Scraping error:", e);
+          showMessage("Impossible de scraper cette page. Vérifiez que vous êtes sur un site supporté (LinkedIn, Indeed, etc.) ou rechargez la page.", "error");
+        }
+        return;
+      }
+
+      // ============================================
+      // MODE: AI
+      // ============================================
+      loadingDiv.textContent = 'Extraction IA en cours...';
+
+      // Get page content from content script
       const pageContent = await chrome.scripting.executeScript({
         target: {tabId: tab.id},
         func: () => {

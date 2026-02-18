@@ -191,6 +191,52 @@ header .subtitle {
 }
 
 /* ============================================
+   MODE SWITCH
+   ============================================ */
+
+.mode-switch-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mode-label {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.mode-toggle {
+  display: flex;
+  background: #0f172a;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #334155;
+}
+
+.mode-btn {
+  padding: 4px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  color: #e2e8f0;
+}
+
+.mode-btn.active {
+  background: #334155;
+  color: #fbbf24;
+}
+
+/* ============================================
    MAIN FORM
    ============================================ */
 
