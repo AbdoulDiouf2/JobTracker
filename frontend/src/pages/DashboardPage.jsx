@@ -516,7 +516,7 @@ export default function DashboardPage() {
   const stats = dashboardV2?.stats;
 
   return (
-    <div className="space-y-6" data-testid="dashboard-page">
+    <div className="space-y-8" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
