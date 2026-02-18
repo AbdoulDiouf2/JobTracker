@@ -2,8 +2,10 @@
 JobTracker SaaS - Routes d'authentification
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response, Request
 from datetime import timedelta
+import httpx
+import uuid
 
 from models import (
     UserCreate, UserLogin, UserUpdate, User, UserResponse, Token, UserRole
