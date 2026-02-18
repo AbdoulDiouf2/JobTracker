@@ -455,108 +455,143 @@ const HowItWorksSection = () => {
 };
 
 // ============================================
-// PRICING SECTION
+// PRICING SECTION - EARLY STAGE
 // ============================================
 const PricingSection = () => {
   const { language } = useLanguage();
 
-  const plans = language === 'fr' ? [
-    {
-      name: 'Gratuit',
-      price: '0€',
-      period: '/mois',
-      description: 'Parfait pour commencer',
-      features: ['50 candidatures', 'Suivi des entretiens', 'Statistiques de base', 'Extension Chrome'],
-      cta: 'Commencer',
-      popular: false,
+  const content = {
+    fr: {
+      badge: 'Tarifs',
+      title: 'Simple et',
+      titleHighlight: 'transparent',
+      subtitle: 'Gratuit pendant la phase de lancement. Pas de carte bancaire requise.',
+      plans: [
+        {
+          name: 'Gratuit',
+          badge: 'Disponible maintenant',
+          price: '0€',
+          period: '/mois',
+          description: 'Tout ce qu\'il faut pour commencer',
+          features: [
+            'Candidatures illimitées',
+            'Suivi des entretiens',
+            'Statistiques et insights',
+            'Conseiller IA',
+            'Extension Chrome',
+            'Rappels automatiques',
+          ],
+          cta: 'Commencer gratuitement',
+          popular: true,
+        },
+        {
+          name: 'Pro',
+          badge: 'Bientôt disponible',
+          price: '9€',
+          period: '/mois',
+          description: 'Fonctionnalités avancées',
+          features: [
+            'Tout du plan Gratuit',
+            'Export PDF/CSV',
+            'Intégration Google Calendar',
+            'Analyse IA avancée',
+            'Support prioritaire',
+            'Fonctionnalités à venir...',
+          ],
+          cta: 'Être notifié',
+          popular: false,
+          disabled: true,
+        },
+      ]
     },
-    {
-      name: 'Pro',
-      price: '9€',
-      period: '/mois',
-      description: 'Pour les chercheurs actifs',
-      features: ['Candidatures illimitées', 'Conseiller IA avancé', 'Rappels automatiques', 'Export des données', 'Support prioritaire'],
-      cta: 'Essai gratuit 14 jours',
-      popular: true,
-    },
-    {
-      name: 'Équipe',
-      price: '29€',
-      period: '/mois',
-      description: 'Pour les coachs et écoles',
-      features: ['Tout du plan Pro', 'Multi-utilisateurs', 'Dashboard admin', 'Rapports avancés', 'API access'],
-      cta: 'Nous contacter',
-      popular: false,
-    },
-  ] : [
-    {
-      name: 'Free',
-      price: '$0',
-      period: '/month',
-      description: 'Perfect to get started',
-      features: ['50 applications', 'Interview tracking', 'Basic statistics', 'Chrome extension'],
-      cta: 'Get started',
-      popular: false,
-    },
-    {
-      name: 'Pro',
-      price: '$9',
-      period: '/month',
-      description: 'For active job seekers',
-      features: ['Unlimited applications', 'Advanced AI advisor', 'Automatic reminders', 'Data export', 'Priority support'],
-      cta: '14-day free trial',
-      popular: true,
-    },
-    {
-      name: 'Team',
-      price: '$29',
-      period: '/month',
-      description: 'For coaches and schools',
-      features: ['Everything in Pro', 'Multi-users', 'Admin dashboard', 'Advanced reports', 'API access'],
-      cta: 'Contact us',
-      popular: false,
-    },
-  ];
+    en: {
+      badge: 'Pricing',
+      title: 'Simple and',
+      titleHighlight: 'transparent',
+      subtitle: 'Free during launch phase. No credit card required.',
+      plans: [
+        {
+          name: 'Free',
+          badge: 'Available now',
+          price: '$0',
+          period: '/month',
+          description: 'Everything you need to start',
+          features: [
+            'Unlimited applications',
+            'Interview tracking',
+            'Statistics and insights',
+            'AI Advisor',
+            'Chrome extension',
+            'Automatic reminders',
+          ],
+          cta: 'Start for free',
+          popular: true,
+        },
+        {
+          name: 'Pro',
+          badge: 'Coming soon',
+          price: '$9',
+          period: '/month',
+          description: 'Advanced features',
+          features: [
+            'Everything in Free',
+            'PDF/CSV export',
+            'Google Calendar integration',
+            'Advanced AI analysis',
+            'Priority support',
+            'More features coming...',
+          ],
+          cta: 'Get notified',
+          popular: false,
+          disabled: true,
+        },
+      ]
+    }
+  }[language];
 
   return (
     <section id="pricing" className="py-24 md:py-32">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
           <span className="text-gold font-medium text-sm uppercase tracking-widest">
-            {language === 'fr' ? 'Tarifs' : 'Pricing'}
+            {content.badge}
           </span>
           <h2 className="font-heading text-3xl md:text-5xl font-bold mt-4 text-white">
-            {language === 'fr' ? 'Choisissez votre ' : 'Choose your '}
-            <span className="gradient-text">{language === 'fr' ? 'formule' : 'plan'}</span>
+            {content.title}{' '}
+            <span className="gradient-text">{content.titleHighlight}</span>
           </h2>
           <p className="text-slate-400 mt-4 max-w-2xl mx-auto text-lg">
-            {language === 'fr' 
-              ? 'Commencez gratuitement, évoluez selon vos besoins.'
-              : 'Start for free, scale as you grow.'}
+            {content.subtitle}
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          {plans.map((plan, index) => (
+        <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+          {content.plans.map((plan, index) => (
             <motion.div
               key={index}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: index * 0.1 }}
               viewport={{ once: true }}
-              className={`glass-card rounded-2xl p-8 relative ${plan.popular ? 'border-gold/50 scale-105' : ''}`}
+              className={`glass-card rounded-2xl p-8 relative ${plan.popular ? 'border-gold/50' : ''} ${plan.disabled ? 'opacity-70' : ''}`}
             >
-              {plan.popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-gold text-[#020817] text-sm font-semibold px-4 py-1 rounded-full">
-                  {language === 'fr' ? 'Populaire' : 'Popular'}
-                </div>
-              )}
-              <h3 className="font-heading text-xl font-semibold text-white mb-2">{plan.name}</h3>
+              {/* Badge */}
+              <div className={`absolute -top-3 left-6 px-3 py-1 rounded-full text-xs font-semibold ${
+                plan.popular 
+                  ? 'bg-gold text-[#020817]' 
+                  : 'bg-slate-700 text-slate-300'
+              }`}>
+                {plan.badge}
+              </div>
+
+              <h3 className="font-heading text-2xl font-semibold text-white mb-2 mt-2">{plan.name}</h3>
               <p className="text-slate-500 text-sm mb-4">{plan.description}</p>
+              
               <div className="mb-6">
                 <span className="text-4xl font-bold text-white">{plan.price}</span>
                 <span className="text-slate-500">{plan.period}</span>
               </div>
+
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-3 text-slate-300">
@@ -565,9 +600,21 @@ const PricingSection = () => {
                   </li>
                 ))}
               </ul>
-              <Button className={`w-full ${plan.popular ? 'bg-gold text-[#020817] hover:bg-gold-light' : 'bg-slate-800 text-white hover:bg-slate-700'}`}>
-                {plan.cta}
-              </Button>
+
+              {plan.disabled ? (
+                <Button 
+                  disabled
+                  className="w-full bg-slate-800 text-slate-400 cursor-not-allowed"
+                >
+                  {plan.cta}
+                </Button>
+              ) : (
+                <a href="/register" className="block">
+                  <Button className="w-full bg-gold text-[#020817] hover:bg-gold-light">
+                    {plan.cta}
+                  </Button>
+                </a>
+              )}
             </motion.div>
           ))}
         </div>
