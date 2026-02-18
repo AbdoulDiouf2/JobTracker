@@ -937,8 +937,9 @@ export default function LandingPage() {
       <LogosSection />
       <FeaturesSection />
       <HowItWorksSection />
+      <StorySection />
       <PricingSection />
-      <TestimonialsSection />
+      <EarlyAccessSection />
       <FAQSection />
       <CTASection />
       <Footer />
