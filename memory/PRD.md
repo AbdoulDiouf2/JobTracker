@@ -62,6 +62,13 @@ Build a professional SaaS-style job tracking application called "Job Tracking" /
 - [x] Global font-size adjustment (14px base)
 - [x] Dashboard card spacing improvement
 
+### Phase 6 - Google OAuth (Completed - Feb 2026)
+- [x] Emergent Auth integration (managed Google OAuth)
+- [x] "Continue with Google" button on Login/Register
+- [x] AuthCallback component for OAuth flow
+- [x] Automatic user creation for new Google users
+- [x] No configuration required (works on localhost & production)
+
 ## Architecture
 
 ```
