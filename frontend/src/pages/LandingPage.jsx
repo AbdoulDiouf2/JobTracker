@@ -934,7 +934,6 @@ export default function LandingPage() {
     <div className="relative">
       <Navigation />
       <HeroSection />
-      <LogosSection />
       <FeaturesSection />
       <HowItWorksSection />
       <StorySection />
