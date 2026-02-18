@@ -1,205 +1,164 @@
-# JobTracker Frontend 🎨
+# Frontend - JobTracker
 
-Interface utilisateur React pour l'application JobTracker SaaS.
+Interface React pour l'application JobTracker.
 
-## 🛠 Technologies
+## 🚀 Démarrage Rapide
 
-- **React 19** - Framework UI moderne
-- **Tailwind CSS** - Styling utility-first
-- **Shadcn/UI** - Composants accessibles et personnalisables
-- **Framer Motion** - Animations fluides
-- **Recharts** - Graphiques interactifs
-- **React Router v6** - Navigation SPA
-- **React Hook Form + Zod** - Formulaires validés
-- **i18next** - Internationalisation (FR/EN)
-- **Axios** - Client HTTP
-- **date-fns** - Manipulation des dates
+```bash
+# Installation
+yarn install
+
+# Variables d'environnement
+cp .env.example .env
+
+# Lancer le serveur
+yarn start
+```
+
+## ⚙️ Configuration (.env)
+
+```env
+REACT_APP_BACKEND_URL=http://localhost:8001
+```
+
+**En production**, remplacez par l'URL de votre backend déployé.
 
 ## 📁 Structure
 
 ```
 frontend/src/
 ├── components/
-│   ├── ui/                   # Composants Shadcn/UI
-│   │   ├── button.jsx
-│   │   ├── input.jsx
-│   │   ├── dialog.jsx
-│   │   ├── select.jsx
-│   │   ├── switch.jsx
-│   │   ├── progress.jsx
-│   │   └── ...
-│   ├── NotificationBell.jsx  # Cloche de notifications
-│   └── confirm-dialog.jsx    # Modal de confirmation
+│   └── ui/              # Composants Shadcn/UI
 ├── contexts/
-│   └── AuthContext.jsx       # Contexte authentification (+ isAdmin)
+│   ├── AuthContext.jsx  # Authentification
+│   └── RefreshContext.jsx
 ├── hooks/
-│   ├── useApplications.js    # Hook candidatures
-│   ├── useInterviews.js      # Hook entretiens
-│   ├── useStatistics.js      # Hook statistiques
-│   └── useAdmin.js           # Hook administration
-├── i18n/
-│   └── index.js              # Configuration i18next
+│   ├── useApplications.js
+│   ├── useInterviews.js
+│   ├── useStatistics.js
+│   └── useAdmin.js
 ├── layouts/
-│   ├── DashboardLayout.jsx   # Layout dashboard (sidebar fixe)
-│   └── AdminLayout.jsx       # Layout administration
+│   ├── DashboardLayout.jsx
+│   └── AdminLayout.jsx
 ├── pages/
-│   ├── admin/                # Pages administration
-│   │   ├── AdminDashboardPage.jsx
-│   │   └── AdminUsersPage.jsx
-│   ├── LandingPage.jsx       # Page d'accueil
-│   ├── LoginPage.jsx         # Connexion
-│   ├── RegisterPage.jsx      # Inscription
-│   ├── DashboardPage.jsx     # Tableau de bord
-│   ├── ApplicationsPage.jsx  # Candidatures (carte/table)
-│   ├── InterviewsPage.jsx    # Entretiens (liste/calendrier)
-│   ├── StatisticsPage.jsx    # Statistiques + Export
-│   ├── AIAdvisorPage.jsx     # Assistant IA
-│   ├── ImportExportPage.jsx  # Import/Export + Analyse CV
-│   └── SettingsPage.jsx      # Paramètres + Notifications
-├── App.js                    # Routes principales
-├── App.css                   # Styles globaux
-└── index.js                  # Point d'entrée
+│   ├── LandingPage.jsx
+│   ├── LoginPage.jsx
+│   ├── RegisterPage.jsx
+│   ├── AuthCallback.jsx     # Callback OAuth Google
+│   ├── DashboardPage.jsx
+│   ├── ApplicationsPage.jsx
+│   ├── InterviewsPage.jsx
+│   ├── SettingsPage.jsx
+│   └── admin/
+│       ├── AdminDashboardPage.jsx
+│       └── AdminUsersPage.jsx
+├── i18n/
+│   └── index.js         # Traductions FR/EN
+├── App.js
+└── index.js
 ```
 
-## 🚀 Installation
+## 🔐 Authentification
 
-```bash
-# Installer les dépendances
-yarn install
+### Email/Password
+Formulaire classique de connexion/inscription.
 
-# Configurer l'environnement
-cp .env.example .env
+### Google OAuth
+Cliquez sur "Continuer avec Google" → Emergent Auth → Retour automatique.
 
-# Lancer en développement
-yarn start
+**Aucune configuration requise** - Emergent Auth gère tout :
+- ✅ Fonctionne en local (localhost)
+- ✅ Fonctionne en production
+- ✅ Pas de clés Google à configurer
 
-# Build production
-yarn build
-```
+### Flow OAuth
+1. Clic sur bouton Google
+2. Redirect vers `auth.emergentagent.com`
+3. Connexion Google
+4. Retour vers `/auth/callback#session_id=xxx`
+5. `AuthCallback.jsx` échange le session_id
+6. JWT stocké, utilisateur connecté
 
-## ⚙️ Configuration (.env)
+## 🎨 Composants UI
 
-Copiez `.env.example` vers `.env` :
-
-```env
-# URL de l'API Backend (obligatoire)
-REACT_APP_BACKEND_URL=http://localhost:8001
-```
-
-### Notes importantes
-- Toutes les variables **DOIVENT** commencer par `REACT_APP_`
-- **Redémarrez** le serveur après modification du `.env`
-- Ne committez **JAMAIS** le fichier `.env` dans git
-
-## 📄 Pages
-
-### 🏠 Landing Page (`/`)
-- Hero section avec CTA
-- Fonctionnalités clés
-- Logo MAADEC
-
-### 🔐 Authentification (`/login`, `/register`)
-- Formulaires avec validation
-- Redirection automatique
-
-### 📊 Dashboard (`/dashboard`)
-- KPIs temps réel (candidatures, taux de réponse)
-- Candidatures récentes
-- Prochains entretiens
-
-### 📋 Candidatures (`/dashboard/applications`)
-- Vue carte (défaut) et vue tableau
-- Recherche et filtres
-- Création/édition via modal
-- Changement de statut via dropdown
-- Système de favoris
-
-### 🔐 Administration (`/admin`)
-- Dashboard admin avec statistiques globales
-- Gestion des utilisateurs (rôles, activation)
-
-### 📅 Entretiens (`/dashboard/interviews`)
-- Vue liste avec cards
-- Vue calendrier interactif (jour, semaine, mois, année)
-- Indicateurs d'urgence (couleurs)
-- Filtres : Tous, Planifiés, Effectués
-- Autocomplétion pour la sélection de candidature
-
-### 📈 Statistiques (`/dashboard/statistics`)
-- Graphiques Recharts :
-  - Évolution temporelle (LineChart)
-  - Répartition par statut (PieChart)
-  - Par type de poste (BarChart)
-- Boutons export (Excel, JSON, CSV)
-
-### 🤖 Assistant IA (`/dashboard/ai-advisor`)
-- Conseiller Carrière (Gemini) - Analyse candidatures
-- Assistant Chatbot (GPT-4o) - Aide générale
-- Suggestions de questions
-- Historique conversations
-
-### 📥 Import/Export (`/dashboard/import-export`)
-- Import JSON/CSV avec :
-  - Guide des colonnes (dépliable)
-  - Prévisualisation avant import
-- Export multi-format
-- Analyse CV IA :
-  - Score global
-  - Compétences détectées
-  - Points forts / Améliorations
-  - Postes recommandés
-
-### ⚙️ Paramètres (`/dashboard/settings`)
-- Profil utilisateur
-- Notifications :
-  - Rappel 24h avant entretien
-  - Rappel 1h avant entretien
-  - Notifications navigateur
-- Clés API (Google AI, OpenAI)
-- Changement de langue (FR/EN)
-
-## 🎨 Design System
-
-### Couleurs
-```css
---gold: #C9A227        /* Accent principal */
---gold-light: #D4B84A  /* Accent hover */
---navy: #1a1f2e        /* Fond secondaire */
---bg-dark: #020817     /* Fond principal */
-```
-
-### Composants Shadcn/UI
-Tous les composants sont dans `/src/components/ui/` :
+Utilisation de **Shadcn/UI** (`/src/components/ui/`):
 - Button, Input, Select
-- Dialog, DropdownMenu
-- Switch, Progress
-- Sonner (toasts)
+- Dialog, Sheet
+- Card, Badge
+- Calendar, DatePicker
+- Toast (Sonner)
+- etc.
 
 ## 🌐 Internationalisation
 
-Langues supportées : **Français** (défaut), **Anglais**
+Support Français/Anglais via `useLanguage()`:
 
 ```jsx
 import { useLanguage } from '../i18n';
 
-const { language, toggleLanguage } = useLanguage();
+function MyComponent() {
+  const { language, setLanguage } = useLanguage();
+  
+  const t = {
+    fr: { hello: 'Bonjour' },
+    en: { hello: 'Hello' }
+  }[language];
+  
+  return <p>{t.hello}</p>;
+}
+```
 
-const t = {
-  fr: { title: 'Bonjour' },
-  en: { title: 'Hello' }
-}[language];
+## 📦 Build Production
+
+```bash
+# Build
+yarn build
+
+# Le dossier build/ contient les fichiers statiques
+```
+
+## 🚀 Déploiement
+
+### Vercel (Recommandé)
+```bash
+# Via CLI
+vercel
+
+# Configurer REACT_APP_BACKEND_URL dans les settings
+```
+
+### Netlify
+```bash
+# Build command: yarn build
+# Publish directory: build
+```
+
+### Nginx
+```nginx
+server {
+    listen 80;
+    root /var/www/jobtracker/build;
+    
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
 ```
 
 ## 🧪 Tests
 
 ```bash
-# Lancer les tests
 yarn test
-
-# Coverage
-yarn test --coverage
 ```
 
----
+## 📝 Variables d'environnement
 
-© 2025 MAADEC - MAAD Engineering & Consulting
+| Variable | Description | Exemple |
+|----------|-------------|---------|
+| `REACT_APP_BACKEND_URL` | URL du backend API | `https://api.monsite.com` |
+
+## ⚠️ Notes Importantes
+
+1. **Toujours utiliser `REACT_APP_BACKEND_URL`** pour les appels API
+2. **Ne pas hardcoder d'URLs** - Utiliser les variables d'environnement
+3. **OAuth Google** - Fonctionne automatiquement via Emergent Auth
