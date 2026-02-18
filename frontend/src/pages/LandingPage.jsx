@@ -577,62 +577,188 @@ const PricingSection = () => {
 };
 
 // ============================================
-// TESTIMONIALS SECTION
+// WHY I BUILT THIS - STORYTELLING SECTION
 // ============================================
-const TestimonialsSection = () => {
+const StorySection = () => {
   const { language } = useLanguage();
 
-  const testimonials = language === 'fr' ? [
-    { name: 'Marie L.', role: 'Développeuse Frontend', quote: 'J\'ai décroché mon CDI en 3 semaines grâce à JobTracker. L\'IA m\'a aidé à améliorer mon CV.' },
-    { name: 'Thomas R.', role: 'Data Analyst', quote: 'Fini les Excel ! Je peux enfin suivre mes 50+ candidatures sans m\'y perdre.' },
-    { name: 'Sophie M.', role: 'Product Manager', quote: 'Les rappels automatiques m\'ont sauvé plusieurs entretiens. Indispensable !' },
-  ] : [
-    { name: 'Marie L.', role: 'Frontend Developer', quote: 'I got my permanent contract in 3 weeks thanks to JobTracker. The AI helped me improve my CV.' },
-    { name: 'Thomas R.', role: 'Data Analyst', quote: 'No more Excel! I can finally track my 50+ applications without getting lost.' },
-    { name: 'Sophie M.', role: 'Product Manager', quote: 'Automatic reminders saved me several interviews. Essential!' },
-  ];
+  const content = {
+    fr: {
+      badge: 'L\'histoire derrière JobTracker',
+      title: 'Pourquoi j\'ai créé',
+      titleHighlight: 'JobTracker',
+      story: 'Après avoir envoyé plus de 200 candidatures sans organisation claire, j\'ai réalisé que le problème n\'était pas mon CV ou mes compétences — c\'était le chaos. Des relances oubliées, des entretiens mal préparés, aucune visibilité sur ma progression.',
+      story2: 'En tant que Data Engineer, j\'ai décidé de construire l\'outil que j\'aurais aimé avoir. Pas une promesse magique, mais un système qui aide ceux qui se donnent les moyens.',
+      signature: '— Abdoul, créateur de JobTracker',
+      stats: [
+        { icon: Briefcase, value: '200+', label: 'Candidatures envoyées avant de créer cet outil' },
+        { icon: Brain, value: 'IA', label: 'Analyse personnalisée intégrée' },
+        { icon: Target, value: '40%', label: 'Temps de suivi réduit en moyenne' },
+        { icon: Zap, value: '0', label: 'Relance oubliée depuis' },
+      ],
+      proofs: [
+        { icon: Users, text: 'Créé par un Data Engineer' },
+        { icon: Brain, text: 'IA intégrée (Gemini, GPT-4)' },
+        { icon: Target, text: 'Basé sur une expérience réelle' },
+      ]
+    },
+    en: {
+      badge: 'The story behind JobTracker',
+      title: 'Why I built',
+      titleHighlight: 'JobTracker',
+      story: 'After sending over 200 applications without clear organization, I realized the problem wasn\'t my resume or skills — it was the chaos. Forgotten follow-ups, poorly prepared interviews, no visibility on my progress.',
+      story2: 'As a Data Engineer, I decided to build the tool I wish I had. Not a magic promise, but a system that helps those who put in the work.',
+      signature: '— Abdoul, creator of JobTracker',
+      stats: [
+        { icon: Briefcase, value: '200+', label: 'Applications sent before building this tool' },
+        { icon: Brain, value: 'AI', label: 'Personalized analysis integrated' },
+        { icon: Target, value: '40%', label: 'Average tracking time reduced' },
+        { icon: Zap, value: '0', label: 'Forgotten follow-ups since' },
+      ],
+      proofs: [
+        { icon: Users, text: 'Built by a Data Engineer' },
+        { icon: Brain, text: 'AI integrated (Gemini, GPT-4)' },
+        { icon: Target, text: 'Based on real experience' },
+      ]
+    }
+  }[language];
 
   return (
     <section className="py-24 md:py-32 bg-[#0a0f1a]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <span className="text-gold font-medium text-sm uppercase tracking-widest">
-            {language === 'fr' ? 'Témoignages' : 'Testimonials'}
-          </span>
-          <h2 className="font-heading text-3xl md:text-5xl font-bold mt-4 text-white">
-            {language === 'fr' ? 'Ils ont trouvé leur ' : 'They found their '}
-            <span className="gradient-text">{language === 'fr' ? 'emploi' : 'job'}</span>
-          </h2>
-        </div>
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Story */}
+          <motion.div
+            initial={{ opacity: 0, x: -30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7 }}
+            viewport={{ once: true }}
+          >
+            <span className="text-gold font-medium text-sm uppercase tracking-widest">
+              {content.badge}
+            </span>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold mt-4 mb-8 text-white">
+              {content.title}{' '}
+              <span className="gradient-text">{content.titleHighlight}</span>
+            </h2>
+            
+            <div className="space-y-6 text-slate-400 text-lg leading-relaxed">
+              <p>{content.story}</p>
+              <p>{content.story2}</p>
+            </div>
+            
+            <p className="mt-8 text-gold font-semibold">{content.signature}</p>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="glass-card rounded-2xl p-8"
-            >
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} size={16} className="text-gold fill-gold" />
-                ))}
-              </div>
-              <p className="text-slate-300 mb-6 italic">"{testimonial.quote}"</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center text-gold font-bold">
-                  {testimonial.name[0]}
+            {/* Expertise Proofs */}
+            <div className="flex flex-wrap gap-4 mt-8">
+              {content.proofs.map((proof, i) => (
+                <div key={i} className="flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-full px-4 py-2">
+                  <proof.icon size={16} className="text-gold" />
+                  <span className="text-sm text-slate-300">{proof.text}</span>
                 </div>
-                <div>
-                  <p className="text-white font-semibold">{testimonial.name}</p>
-                  <p className="text-slate-500 text-sm">{testimonial.role}</p>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Stats Grid */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7, delay: 0.2 }}
+            viewport={{ once: true }}
+            className="grid grid-cols-2 gap-6"
+          >
+            {content.stats.map((stat, index) => (
+              <div 
+                key={index} 
+                className="glass-card rounded-2xl p-6 text-center hover:border-gold/30 transition-all"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mx-auto mb-4">
+                  <stat.icon size={24} className="text-gold" />
                 </div>
+                <p className="text-3xl font-bold text-white mb-2">{stat.value}</p>
+                <p className="text-slate-400 text-sm">{stat.label}</p>
               </div>
-            </motion.div>
-          ))}
+            ))}
+          </motion.div>
         </div>
+      </div>
+    </section>
+  );
+};
+
+// ============================================
+// EARLY ACCESS CTA
+// ============================================
+const EarlyAccessSection = () => {
+  const { language } = useLanguage();
+
+  const content = {
+    fr: {
+      badge: '🚀 Early Access',
+      title: 'Soyez parmi les',
+      titleHighlight: 'premiers',
+      description: 'JobTracker est en phase de lancement. Rejoignez les premiers utilisateurs et participez à façonner l\'avenir de l\'outil.',
+      cta: 'Rejoindre gratuitement',
+      features: [
+        'Accès complet et gratuit pendant le lancement',
+        'Vos retours façonnent les prochaines fonctionnalités',
+        'Support prioritaire direct avec le créateur',
+      ]
+    },
+    en: {
+      badge: '🚀 Early Access',
+      title: 'Be among the',
+      titleHighlight: 'first',
+      description: 'JobTracker is in launch phase. Join the first users and help shape the future of the tool.',
+      cta: 'Join for free',
+      features: [
+        'Full access free during launch',
+        'Your feedback shapes upcoming features',
+        'Priority support directly with the creator',
+      ]
+    }
+  }[language];
+
+  return (
+    <section className="py-24 md:py-32">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7 }}
+          viewport={{ once: true }}
+          className="glass-card rounded-3xl p-10 md:p-14 text-center relative overflow-hidden"
+        >
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
+          
+          <span className="inline-block bg-gold/10 border border-gold/30 text-gold font-medium text-sm px-4 py-2 rounded-full mb-6">
+            {content.badge}
+          </span>
+          
+          <h2 className="font-heading text-3xl md:text-4xl font-bold mb-6 text-white">
+            {content.title}{' '}
+            <span className="gradient-text">{content.titleHighlight}</span>
+          </h2>
+          
+          <p className="text-slate-400 text-lg mb-8 max-w-2xl mx-auto">
+            {content.description}
+          </p>
+
+          <ul className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-8 mb-10">
+            {content.features.map((feature, i) => (
+              <li key={i} className="flex items-center gap-2 text-slate-300 text-sm">
+                <Check size={18} className="text-gold flex-shrink-0" />
+                {feature}
+              </li>
+            ))}
+          </ul>
+
+          <a href="/register" className="inline-flex items-center bg-gold text-[#020817] hover:bg-gold-light px-10 py-4 rounded-full font-semibold text-lg shadow-lg hover:shadow-gold/30 transition-all">
+            {content.cta}
+            <ArrowRight size={20} className="ml-2" />
+          </a>
+        </motion.div>
       </div>
     </section>
   );
