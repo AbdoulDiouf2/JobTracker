@@ -1,263 +1,147 @@
-# JobTracker Backend API 🔧
+# Backend - JobTracker API
 
-API REST FastAPI pour l'application JobTracker SaaS.
+API FastAPI pour l'application JobTracker.
 
-## 🛠 Technologies
+## 🚀 Démarrage Rapide
 
-- **FastAPI** - Framework async haute performance
-- **MongoDB** - Base de données NoSQL (via Motor)
-- **Pydantic** - Validation et sérialisation
-- **JWT** - Authentification sécurisée
-- **bcrypt** - Hash des mots de passe
-- **Google Generative AI** - Intégration Gemini
-- **OpenAI** - Intégration GPT-4o
-- **openpyxl** - Export Excel
+```bash
+# Installation
+pip install -r requirements.txt
+
+# Variables d'environnement
+cp .env.example .env
+
+# Lancer le serveur
+uvicorn server:app --reload --port 8001
+```
+
+## ⚙️ Configuration (.env)
+
+```env
+# MongoDB
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=jobtracker
+
+# JWT
+JWT_SECRET=votre_secret_super_long_et_securise
+ACCESS_TOKEN_EXPIRE_MINUTES=10080  # 7 jours
+
+# Optionnel - Clés IA (peuvent être ajoutées par utilisateur)
+# GOOGLE_AI_KEY=
+# OPENAI_KEY=
+# GROQ_KEY=
+```
 
 ## 📁 Structure
 
 ```
 backend/
 ├── models/
-│   └── __init__.py         # Modèles Pydantic (User, Application, Interview, Admin)
+│   └── __init__.py      # Modèles Pydantic
 ├── routes/
-│   ├── admin.py            # 🔐 Panel administration
-│   ├── auth.py             # Authentification (register, login, profile)
-│   ├── applications.py     # CRUD candidatures
-│   ├── interviews.py       # CRUD entretiens
-│   ├── statistics.py       # Statistiques dashboard
-│   ├── export.py           # Export JSON/CSV/Excel
-│   ├── ai.py               # IA (Gemini, GPT-4o) - Mode dual
-│   ├── data_import.py      # Import JSON/CSV/Excel + Analyse CV
-│   └── notifications.py    # Système de notifications
+│   ├── auth.py          # Authentification (email + Google OAuth)
+│   ├── applications.py  # CRUD candidatures
+│   ├── interviews.py    # Gestion entretiens
+│   ├── statistics.py    # Dashboard V2
+│   ├── ai_advisor.py    # Conseiller IA
+│   ├── documents.py     # Gestion documents
+│   └── admin.py         # Panel admin
 ├── utils/
-│   └── auth.py             # Utilitaires JWT
-├── config.py               # Configuration centralisée
-├── server.py               # Point d'entrée FastAPI
-├── seed_admin.py           # Script d'initialisation admin (voir docs privées)
-└── requirements.txt        # Dépendances Python
+│   ├── auth.py          # Helpers JWT
+│   └── scheduler.py     # Rappels automatiques
+├── config.py            # Configuration
+├── server.py            # Point d'entrée
+└── requirements.txt
 ```
 
-## 🚀 Installation Locale
+## 🔐 Authentification
 
+### Email/Password
 ```bash
-# Créer environnement virtuel
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# ou: venv\Scripts\activate  # Windows
+# Inscription
+curl -X POST http://localhost:8001/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@test.com","password":"password123","full_name":"Test User"}'
 
-# Installer dépendances de base
-pip install -r requirements.txt
-
-# ⚠️ Le package 'emergentintegrations' n'est disponible QUE sur la plateforme Emergent
-# En local, installez les SDKs standards pour l'IA :
-pip install openai google-generativeai
-
-# Configurer variables d'environnement
-cp .env.example .env
-# Éditez .env avec vos clés API
-
-# Lancer le serveur
-uvicorn server:app --reload --host 0.0.0.0 --port 8001
+# Connexion
+curl -X POST http://localhost:8001/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@test.com","password":"password123"}'
 ```
 
-## 🤖 Modes d'IA
-
-Le backend supporte **deux modes** pour les fonctionnalités IA :
-
-### Mode Emergent (Plateforme)
-Utilisé automatiquement quand le package `emergentintegrations` est disponible.
-- Clé API : `EMERGENT_LLM_KEY`
-- Avantage : Une seule clé pour Gemini et GPT-4o
-
-### Mode Local (SDKs Standards)
-Utilisé quand `emergentintegrations` n'est pas installé.
-- Clés API requises : `GOOGLE_API_KEY` + `OPENAI_API_KEY`
-- Installez : `pip install openai google-generativeai`
-
-Le mode est détecté **automatiquement** au démarrage :
-```
-✅ Using Emergent integrations for AI    # Mode Emergent
-⚠️ emergentintegrations not available    # Mode Local
+### Google OAuth (Emergent Auth)
+```bash
+# Échange session_id contre JWT
+curl -X POST http://localhost:8001/api/auth/google/session \
+  -H "Content-Type: application/json" \
+  -d '{"session_id":"abc123..."}'
 ```
 
-## ⚙️ Configuration (.env)
+**Note** : L'authentification Google utilise Emergent Auth. Aucune configuration Google Cloud n'est requise.
 
-Copiez `.env.example` vers `.env` et configurez :
+## 📝 Endpoints Principaux
 
-```env
-# BASE DE DONNÉES (obligatoire)
-MONGO_URL=mongodb://localhost:27017
-DB_NAME=jobtracker
-
-# SÉCURITÉ (obligatoire)
-JWT_SECRET=votre-cle-secrete-generee-avec-openssl
-
-# CORS (optionnel)
-CORS_ORIGINS=*
-
-# INTELLIGENCE ARTIFICIELLE (au moins une clé requise pour l'IA)
-EMERGENT_LLM_KEY=sk-emergent-xxx    # Clé universelle Emergent
-# OU
-GOOGLE_AI_API_KEY=AIzaSy...          # Pour Gemini
-OPENAI_API_KEY=sk-...                # Pour GPT-4o
-
-# DEBUG (optionnel)
-DEBUG=false
-```
-
-### 🔑 Obtenir les clés API
-
-| Clé | Où l'obtenir |
-|-----|--------------|
-| EMERGENT_LLM_KEY | [emergentagent.com](https://emergentagent.com) |
-| GOOGLE_AI_API_KEY | [Google AI Studio](https://makersuite.google.com/app/apikey) |
-| OPENAI_API_KEY | [OpenAI Platform](https://platform.openai.com/api-keys) |
-
-## 📊 Endpoints API
-
-### 🔐 Authentification (`/api/auth`)
+### Auth
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| POST | `/register` | Créer un compte |
-| POST | `/login` | Se connecter |
-| GET | `/me` | Profil utilisateur |
-| PUT | `/update-profile` | Modifier profil |
-| PUT | `/update-api-keys` | Modifier clés API |
+| POST | `/api/auth/register` | Inscription |
+| POST | `/api/auth/login` | Connexion |
+| POST | `/api/auth/google/session` | OAuth Google |
+| GET | `/api/auth/me` | Profil courant |
+| PUT | `/api/auth/update-profile` | Mise à jour profil |
 
-### 📋 Candidatures (`/api/applications`)
+### Applications
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/` | Liste paginée avec filtres |
-| POST | `/` | Créer une candidature |
-| GET | `/{id}` | Détails d'une candidature |
-| PUT | `/{id}` | Modifier une candidature |
-| DELETE | `/{id}` | Supprimer une candidature |
-| POST | `/{id}/favorite` | Toggle favori |
-| PUT | `/bulk-update` | Mise à jour en masse |
+| GET | `/api/applications` | Liste (pagination, filtres) |
+| POST | `/api/applications` | Créer |
+| GET | `/api/applications/{id}` | Détail |
+| PUT | `/api/applications/{id}` | Modifier |
+| DELETE | `/api/applications/{id}` | Supprimer |
 
-### 📅 Entretiens (`/api/interviews`)
+### Statistics
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/` | Liste avec filtres |
-| POST | `/` | Créer un entretien |
-| GET | `/{id}` | Détails d'un entretien |
-| PUT | `/{id}` | Modifier un entretien |
-| DELETE | `/{id}` | Supprimer un entretien |
-| GET | `/upcoming` | Prochains entretiens |
+| POST | `/api/statistics/dashboard-v2` | Données dashboard complet |
+| GET | `/api/statistics/overview` | Statistiques générales |
 
-### 📈 Statistiques (`/api/statistics`)
+### Admin
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
-| GET | `/dashboard` | KPIs dashboard |
-| GET | `/overview` | Vue complète |
-| GET | `/timeline` | Évolution temporelle |
-
-### 📤 Export (`/api/export`)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/json` | Export JSON |
-| GET | `/csv` | Export CSV |
-| GET | `/excel` | Export Excel (.xlsx) |
-
-### 📥 Import (`/api/import`)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/json` | Import depuis JSON |
-| POST | `/csv` | Import depuis CSV |
-| POST | `/analyze-cv` | Analyse CV avec IA |
-| GET | `/cv-history` | Historique analyses CV |
-
-### 🤖 IA (`/api/ai`)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| POST | `/career-advisor` | Conseiller carrière (Gemini) |
-| POST | `/chatbot` | Assistant chatbot (GPT-4o) |
-| GET | `/chat-history/{session_id}` | Historique conversation |
-| GET | `/chat-sessions` | Liste des sessions |
-| DELETE | `/chat-session/{session_id}` | Supprimer session |
-
-### 🔔 Notifications (`/api/notifications`)
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/` | Liste des notifications |
-| GET | `/settings` | Paramètres notifications |
-| PUT | `/settings` | Modifier paramètres |
-| PUT | `/{id}/read` | Marquer comme lu |
-| PUT | `/read-all` | Tout marquer comme lu |
-| DELETE | `/{id}` | Supprimer notification |
-| POST | `/generate-reminders` | Générer rappels |
-
-### 🔐 Administration (`/api/admin`) - Accès Admin requis
-| Méthode | Endpoint | Description |
-|---------|----------|-------------|
-| GET | `/dashboard` | Statistiques globales plateforme |
-| GET | `/stats/user-growth` | Données croissance utilisateurs |
-| GET | `/stats/activity` | Activité (candidatures/entretiens) |
-| GET | `/users` | Liste utilisateurs avec pagination |
-| GET | `/users/{id}` | Détails d'un utilisateur |
-| PUT | `/users/{id}` | Modifier rôle/statut utilisateur |
-| DELETE | `/users/{id}` | Désactiver un utilisateur |
-| POST | `/users/{id}/reactivate` | Réactiver un utilisateur |
-| GET | `/export/stats` | Export statistiques admin |
+| GET | `/api/admin/dashboard` | Stats admin |
+| GET | `/api/admin/users` | Liste utilisateurs |
+| POST | `/api/admin/users` | Créer utilisateur |
+| PUT | `/api/admin/users/{id}` | Modifier utilisateur |
 
 ## 🧪 Tests
 
 ```bash
-# Tester l'API
-curl http://localhost:8001/api/health
+# Lancer les tests
+pytest
 
-# Login
-curl -X POST http://localhost:8001/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"demo@jobtracker.com","password":"Demo123!"}'
+# Avec couverture
+pytest --cov=.
 ```
 
-## 📝 Modèles de Données
+## 📦 Déploiement
 
-### User
-```json
-{
-  "id": "uuid",
-  "email": "string",
-  "full_name": "string",
-  "hashed_password": "string",
-  "role": "admin|standard|premium",
-  "is_active": true,
-  "last_login": "datetime",
-  "has_google_ai_key": false,
-  "has_openai_key": false
-}
+### Variables d'environnement requises
+- `MONGO_URL` - URI MongoDB (Atlas ou self-hosted)
+- `JWT_SECRET` - Secret pour signer les JWT
+- `DB_NAME` - Nom de la base de données
+
+### Plateformes recommandées
+- Railway
+- Render
+- Fly.io
+- Google Cloud Run
+
+### Docker
+```dockerfile
+FROM python:3.10-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+COPY . .
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
 ```
-
-### Application
-```json
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "entreprise": "string",
-  "poste": "string",
-  "type_poste": "cdi|cdd|stage|alternance|freelance",
-  "lieu": "string",
-  "moyen": "linkedin|email|...",
-  "date_candidature": "datetime",
-  "reponse": "pending|positive|negative|no_response",
-  "is_favorite": false
-}
-```
-
-### Interview
-```json
-{
-  "id": "uuid",
-  "user_id": "uuid",
-  "candidature_id": "uuid",
-  "date_entretien": "datetime",
-  "type_entretien": "rh|technical|manager|final",
-  "format_entretien": "phone|video|in_person",
-  "statut": "planned|completed|cancelled"
-}
-```
-
----
-
-© 2025 MAADEC - MAAD Engineering & Consulting
