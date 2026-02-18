@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/ui/skeleton';
 import axios from 'axios';
 
 const applicationSchema = z.object({
@@ -1061,9 +1062,81 @@ export default function ApplicationsPage() {
 
       {/* Applications List */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="animate-spin text-gold" size={32} />
-        </div>
+        viewMode === 'card' ? (
+          /* Card View Skeleton */
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="glass-card rounded-xl p-5 border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="w-12 h-12 rounded-xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-8 w-8 rounded-lg" />
+                </div>
+                <div className="flex gap-2">
+                  <Skeleton className="h-6 w-20 rounded" />
+                  <Skeleton className="h-6 w-16 rounded" />
+                  <Skeleton className="h-6 w-24 rounded" />
+                </div>
+                <div className="flex justify-between items-center pt-2">
+                  <Skeleton className="h-4 w-28" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                    <Skeleton className="h-8 w-8 rounded-lg" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Table View Skeleton */
+          <div className="mt-6 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-700 text-left">
+                  <th className="py-3 px-4 w-12"><Skeleton className="h-4 w-4" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-24" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-32" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-20" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-16" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-24" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-24" /></th>
+                  <th className="py-3 px-4"><Skeleton className="h-4 w-20" /></th>
+                </tr>
+              </thead>
+              <tbody>
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <tr key={i} className="border-b border-slate-800">
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-4" /></td>
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="w-8 h-8 rounded-lg" />
+                        <Skeleton className="h-4 w-24" />
+                      </div>
+                    </td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-32" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-6 w-20 rounded" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-16" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-24" /></td>
+                    <td className="py-4 px-4"><Skeleton className="h-4 w-20" /></td>
+                    <td className="py-4 px-4">
+                      <div className="flex gap-1">
+                        <Skeleton className="h-7 w-7 rounded" />
+                        <Skeleton className="h-7 w-7 rounded" />
+                        <Skeleton className="h-7 w-7 rounded" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       ) : applications.length > 0 ? (
         <>
           {/* Total Count */}
