@@ -88,11 +88,31 @@ Build a professional SaaS-style job tracking application called "Job Tracking" /
 
 ## Key API Endpoints
 - `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+- `POST /api/auth/google/session` - Google OAuth (exchange session_id for JWT)
 - `POST /api/auth/extension/generate-code` - Generate temp code for extension
 - `POST /api/auth/extension/verify-code` - Verify temp code
 - `POST /api/statistics/dashboard-v2` - Dashboard V2 data
 - `POST /api/admin/users` - Create user (admin only)
 - `GET /api/admin/users` - List users (admin only)
+
+## Authentication
+
+### Google OAuth (Emergent Auth)
+- **Service**: Emergent Auth (managed OAuth)
+- **Configuration required**: NONE
+- **Works automatically on**: localhost, any production domain
+- **Flow**:
+  1. User clicks "Continue with Google"
+  2. Redirect to `auth.emergentagent.com`
+  3. User authenticates with Google
+  4. Return to `/auth/callback#session_id=xxx`
+  5. Backend exchanges session_id for user data
+  6. JWT created and user is logged in
+
+### Email/Password
+- Standard JWT-based authentication
+- Token expires in 7 days (configurable)
 
 ## Credentials
 - Admin: `admin@test.com` / `password123`
