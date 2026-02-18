@@ -73,6 +73,7 @@ agenthub/agents/youtube/db
 *.pack
 *.deb
 *.dylib
+brouillon.md
 
 # Build caches
 .cache/
