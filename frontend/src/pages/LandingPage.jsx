@@ -194,19 +194,19 @@ const HeroSection = () => {
               </Button>
             </div>
 
-            {/* Social proof stats */}
-            <div className="flex flex-wrap gap-8">
-              <div>
-                <p className="text-3xl font-bold text-gold">10,000+</p>
-                <p className="text-slate-500 text-sm">{t.stat1}</p>
+            {/* Real proof stats - no fake numbers */}
+            <div className="flex flex-wrap gap-6">
+              <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/50 rounded-full px-4 py-2">
+                <Briefcase size={18} className="text-gold" />
+                <span className="text-slate-300 text-sm font-medium">{language === 'fr' ? '200+ candidatures testées' : '200+ applications tested'}</span>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-white">500,000+</p>
-                <p className="text-slate-500 text-sm">{t.stat2}</p>
+              <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/50 rounded-full px-4 py-2">
+                <Brain size={18} className="text-gold" />
+                <span className="text-slate-300 text-sm font-medium">{language === 'fr' ? 'IA intégrée' : 'AI integrated'}</span>
               </div>
-              <div>
-                <p className="text-3xl font-bold text-green-400">98%</p>
-                <p className="text-slate-500 text-sm">{t.stat3}</p>
+              <div className="flex items-center gap-2 bg-slate-800/30 border border-slate-700/50 rounded-full px-4 py-2">
+                <Zap size={18} className="text-gold" />
+                <span className="text-slate-300 text-sm font-medium">{language === 'fr' ? '0 relance oubliée' : '0 missed follow-ups'}</span>
               </div>
             </div>
           </motion.div>
