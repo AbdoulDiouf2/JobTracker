@@ -124,6 +124,16 @@ export const useAdmin = () => {
     }
   }, [headers]);
 
+  // Create User (Admin)
+  const createUser = useCallback(async (userData) => {
+    try {
+      const response = await axios.post(`${API_URL}/api/admin/users`, userData, { headers });
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  }, [headers]);
+
   // Export Stats
   const exportStats = useCallback(async () => {
     try {
@@ -150,6 +160,7 @@ export const useAdmin = () => {
     updateUser,
     deleteUser,
     reactivateUser,
+    createUser,
     exportStats
   };
 };
