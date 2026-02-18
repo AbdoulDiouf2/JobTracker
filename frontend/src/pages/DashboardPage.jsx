@@ -516,7 +516,7 @@ export default function DashboardPage() {
   const stats = dashboardV2?.stats;
 
   return (
-    <div className="space-y-6" data-testid="dashboard-page">
+    <div className="space-y-8" data-testid="dashboard-page">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -539,7 +539,7 @@ export default function DashboardPage() {
       {statsLoading ? (
         <HeroSkeleton />
       ) : (
-        <div className="grid lg:grid-cols-2 gap-4">
+        <div className="grid lg:grid-cols-2 gap-6">
           <GoalProgressCard 
             goalProgress={dashboardV2?.goal_progress} 
             thisMonth={dashboardV2?.this_month_applications}
@@ -549,7 +549,7 @@ export default function DashboardPage() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4" data-testid="stats-grid">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-5" data-testid="stats-grid">
         {statsLoading ? (
           <>
             <StatCardSkeleton />

@@ -1,227 +1,125 @@
 # JobTracker SaaS - Product Requirements Document
 
-## Problème Original
-Application SaaS de suivi de candidatures avec intégration IA pour impressionner les recruteurs tech.
+## Original Problem Statement
+Build a professional SaaS-style job tracking application called "Job Tracking" / "JobTracker". The application helps job seekers organize their job search, track applications, manage interviews, and improve their chances of success through AI-powered insights.
 
-## Stack Technique
-- **Backend:** FastAPI, MongoDB, JWT, emergentintegrations, APScheduler
-- **Frontend:** React 19, Tailwind CSS, Shadcn/UI, Recharts
-- **IA:** Google Gemini (2.0 Flash, 1.5 Pro), OpenAI (GPT-4o, GPT-4o Mini), Groq (Llama 3.3, Mixtral)
+## Target Users
+- Active job seekers
+- Career changers
+- Students/bootcamp graduates
+- Career coaches and schools (B2B)
 
----
+## Core Requirements
 
-## ✅ Phases Complétées
+### User-Facing Features
+1. **Application Tracking**: Centralized dashboard to track all job applications
+2. **Interview Management**: Calendar view, reminders, preparation notes
+3. **Statistics & Insights**: Response rates, weekly progress, Job Search Score
+4. **AI Advisor**: Personalized recommendations for improving job search
+5. **Chrome Extension**: Quick-add job postings from LinkedIn, Indeed, etc.
+6. **Documents**: Store CVs, cover letters, and other documents
 
-### Phase 1-2: Core
-- CRUD Candidatures et Entretiens
-- Authentification JWT
-- Dashboard avec KPIs
-- Internationalisation FR/EN
+### Admin Features
+1. **User Management**: View, edit, activate/deactivate users
+2. **User Creation**: Admins can create new user accounts
+3. **Analytics Dashboard**: Global statistics, user growth, activity metrics
 
-### Phase 3: Fonctionnalités Avancées
-- Calendrier interactif entretiens (jour, semaine, mois, année)
-- Vue carte/table candidatures
-- Changement de statut via dropdown
-- Vue détaillée (modal)
-- Export Excel/JSON/CSV
+## What's Been Implemented
 
-### Phase 4: Intégration IA
-- Conseiller Carrière (Gemini)
-- Assistant Chatbot (GPT-4o)
-- Interface chat avec suggestions
+### Phase 1 - Core MVP (Completed)
+- [x] User authentication (JWT-based)
+- [x] Application CRUD operations
+- [x] Interview management
+- [x] Basic statistics
+- [x] Settings page
+- [x] PWA support
 
-### Phase 5: Import/Export & Analyse CV
-- Import JSON/CSV/Excel/NDJSON avec prévisualisation
-- Import entretiens avec mapping de colonnes
-- Détection des doublons
-- Analyse CV IA (score, compétences, recommandations)
+### Phase 2 - Dashboard V2 (Completed - Feb 2026)
+- [x] Job Search Score (composite score 0-100)
+- [x] Monthly goal tracking with progress bar
+- [x] Rule-based insights (AI-like recommendations)
+- [x] Weekly evolution chart
+- [x] Priority actions
 
-### Phase 6: Notifications
-- Cloche de notification dans le header
-- Paramètres de notification dans Settings
-- Rappels automatiques 24h et 1h avant entretien
-- Sidebar fixe (ne scroll plus avec la page)
+### Phase 3 - Chrome Extension Auth (Completed - Feb 2026)
+- [x] Direct email/password login in extension
+- [x] One-click "Quick Connect" via temporary code
+- [x] JWT storage in chrome.storage.sync
+- [x] Deployment documentation
 
-### Phase 7: Administration Multi-Tenant (12 Février 2025)
-- Système de rôles (admin, standard, premium)
-- Dashboard admin avec statistiques globales
-- Gestion des utilisateurs (activation, rôles)
-- Graphiques croissance et activité
-- Export des statistiques admin
-- Script seed_admin.py pour initialisation
+### Phase 4 - Admin Features (Completed - Feb 2026)
+- [x] Admin dashboard with statistics
+- [x] User list with search/filter
+- [x] User detail view
+- [x] User edit (role, status)
+- [x] User creation by admin
+- [x] Loading skeletons
 
-### Phase 8: Suivi Avancé des Candidatures (12 Février 2025)
-- **Timeline visuelle** : Historique complet (envoyé → réponse → entretien)
-- **Rappels automatiques** : Alerte si pas de réponse après X jours
-- **Génération relance IA** : Email de relance personnalisé (3 tons)
-- **Score de matching** : Analyse IA CV vs offre d'emploi
-- Nouveaux champs : contact_email, contact_name, description_poste, days_before_reminder
+### Phase 5 - Landing Page & UI (Completed - Feb 2026)
+- [x] Professional SaaS landing page
+- [x] Honest messaging (organization tool, not magic)
+- [x] Hero illustration
+- [x] Global font-size adjustment (14px base)
+- [x] Dashboard card spacing improvement
 
-### Phase 9: IA Multi-Provider & Extension Chrome (12 Février 2025)
-- **Support Groq** : Ajout de Groq comme 3ème fournisseur d'API
-- **Sélection dynamique de modèle** : Dropdown dans le chatbot pour choisir le modèle
-- **Modèles disponibles** :
-  - OpenAI: GPT-4o, GPT-4o Mini, GPT-4 Turbo
-  - Google: Gemini 2.0 Flash, Gemini 1.5 Pro, Gemini 1.5 Flash
-  - Groq: Llama 3.3 70B, Llama 3.1 8B, Mixtral 8x7B, Gemma 2 9B
-- **Extension Chrome v2** : Extraction IA automatique des offres d'emploi
-- **Endpoint `/api/ai/extract-job`** : Extraction IA depuis contenu de page
-- **Endpoint `/api/ai/available-models`** : Liste des modèles disponibles
+## Architecture
 
-### Phase 10: Gestion des Documents (12 Février 2025)
-- **Stockage multi-CV** : Upload de fichiers PDF/DOC/DOCX (max 10 MB)
-- **Étiquettes CV** : Organiser par secteur/poste (CV Tech, CV Data, etc.)
-- **CV par défaut** : Définir un CV principal
-- **Templates LM** : Créer des templates de lettres de motivation avec variables
-- **Variables dynamiques** : {entreprise}, {poste}, {date}, {nom}, {email}
-- **Portfolio & Liens** : Stocker liens GitHub, LinkedIn, Portfolio
-- **Détection automatique** : Icônes selon le type de lien
-- **Liaison candidatures** : Tracker quel CV/LM envoyé à quelle entreprise
+```
+/app/
+├── backend/
+│   ├── models/__init__.py    # Pydantic models
+│   ├── routes/
+│   │   ├── auth.py           # Authentication + extension auth
+│   │   ├── applications.py   # CRUD applications
+│   │   ├── interviews.py     # Interview management
+│   │   ├── statistics.py     # Dashboard V2 logic
+│   │   ├── admin.py          # Admin panel + user creation
+│   │   └── ...
+│   └── server.py             # FastAPI main
+├── frontend/
+│   ├── src/
+│   │   ├── pages/            # React pages
+│   │   ├── components/ui/    # Shadcn components
+│   │   ├── hooks/            # Custom hooks
+│   │   └── contexts/         # Auth, Refresh contexts
+│   └── public/               # Static assets
+└── chrome-extension/         # Browser extension
+```
 
-### Phase 10.5: Intégration CV & Calendrier (12 Février 2025)
-- **Sélecteur CV dans candidatures** : Dropdown pour associer un CV à chaque candidature
-- **Génération LM par IA** : Modal pour générer une lettre de motivation personnalisée
-  - Sélection CV optionnelle pour contexte
-  - Choix du ton (professionnel, enthousiaste, formel)
-  - Génération via OpenAI/Google/Groq selon clés configurées
-- **Google Calendar** : 
-  - Section dédiée dans les Paramètres
-  - Statut de connexion (connecté/non connecté)
-  - OAuth 2.0 flow complet (backend prêt)
-  - Sync entretiens vers Google Calendar
-  - **Note:** Nécessite GOOGLE_CALENDAR_CLIENT_ID et GOOGLE_CALENDAR_CLIENT_SECRET
-
-### Phase 12: PWA & Mode Hors-ligne (14 Février 2025)
-- **Progressive Web App** : Application installable sur mobile/desktop
-  - manifest.json avec métadonnées et icônes
-  - Service Worker pour cache et offline
-  - Prompt d'installation personnalisé
-- **Mode hors-ligne** : Consultation des données même sans connexion
-  - Stratégie Network First avec fallback cache
-  - Cache dynamique des pages visitées
-- **Icônes PWA** : 8 tailles (72px à 512px) + raccourcis
-- **Raccourcis** : "Nouvelle candidature" et "Mes entretiens"
-- **Notifications Push** : Alertes temps réel via Web Push API
-  - Clés VAPID pour authentification serveur
-  - Service Worker pour réception des push
-  - Section dédiée dans les Paramètres
-  - Boutons Activer/Désactiver/Tester
-  - Notification de bienvenue à l'activation
-
-### Phase 13: Rappels Automatiques (14 Février 2025)
-- **Système de rappels** : Notifications automatiques avant les entretiens
-  - Rappel 24h avant (entre 23h et 25h)
-  - Rappel 1h avant (entre 45min et 75min)
-- **APScheduler** : Job automatique intégré au backend
-  - S'exécute toutes les 15 minutes **24/7**
-  - Fonctionne même si l'utilisateur n'a pas l'app ouverte
-  - `/api/reminders/scheduler-status` - Voir le statut du scheduler
-  - `/api/reminders/trigger-now` - Déclencher manuellement
-- **Backend** :
-  - `/api/reminders/process` - Traitement pour l'utilisateur connecté
-  - `/api/reminders/status` - Statut des rappels
-  - Collection `sent_reminders` pour éviter les doublons
-- **Respect des préférences** : Utilise les paramètres `reminder_24h` et `reminder_1h`
-- **Double notification** : Push + notification in-app
-
----
-
-## APIs Disponibles
-
-### Authentication
-- `POST /api/auth/register` - Inscription
-- `POST /api/auth/login` - Connexion
-- `GET /api/auth/me` - Profil utilisateur
-
-### Applications
-- `GET /api/applications` - Liste paginée
-- `POST /api/applications` - Créer
-- `PUT /api/applications/{id}` - Modifier
-- `DELETE /api/applications/{id}` - Supprimer
-
-### Tracking (NOUVEAU)
-- `GET /api/applications/{id}/timeline` - Historique complet
-- `POST /api/applications/{id}/timeline/event` - Ajouter événement
-- `GET /api/applications/reminders/pending` - Candidatures nécessitant relance
-- `POST /api/applications/{id}/reminder/mark-sent` - Marquer rappel envoyé
-- `POST /api/applications/{id}/followup/generate` - Générer email relance IA
-- `POST /api/applications/{id}/matching/calculate` - Calculer score matching
-- `GET /api/applications/{id}/matching` - Récupérer score existant
-
-### IA
-- `GET /api/ai/available-models` - Liste des modèles disponibles
-- `POST /api/ai/career-advisor` - Conseiller carrière (avec sélection modèle)
-- `POST /api/ai/chatbot` - Assistant chat (avec sélection modèle)
-- `POST /api/ai/extract-job` - Extraction IA offre d'emploi (Chrome Extension)
-- `GET /api/ai/chat-history/{session_id}` - Historique de conversation
-- `GET /api/ai/chat-sessions` - Liste des sessions
-
-### Documents
-- `POST /api/documents/upload` - Upload CV/document
-- `POST /api/documents/link` - Ajouter lien portfolio
-- `GET /api/documents/` - Liste des documents
-- `GET /api/documents/cv` - Liste des CV
-- `GET /api/documents/portfolio-links` - Liste des liens portfolio
-- `GET /api/documents/{id}/download` - Télécharger document
-- `PUT /api/documents/{id}` - Modifier document
-- `DELETE /api/documents/{id}` - Supprimer document
-- `POST /api/documents/templates` - Créer template LM
-- `GET /api/documents/templates/` - Liste templates
-- `POST /api/documents/templates/{id}/generate` - Générer LM depuis template
-- `POST /api/documents/generate-cover-letter-ai` - Générer LM avec IA
-- `POST /api/documents/link-to-application` - Lier document à candidature
-- `GET /api/documents/application/{id}` - Documents d'une candidature
-
-### Google Calendar
-- `GET /api/calendar/auth/status` - Vérifier statut connexion
-- `GET /api/calendar/auth/login` - Démarrer OAuth flow
-- `GET /api/calendar/callback` - Callback OAuth
-- `POST /api/calendar/disconnect` - Déconnecter Calendar
-- `GET /api/calendar/events` - Liste événements
-- `POST /api/calendar/events` - Créer événement
-- `DELETE /api/calendar/events/{id}` - Supprimer événement
-- `POST /api/calendar/sync-interview/{id}` - Sync entretien vers Calendar
-
-### Administration
-- `GET /api/admin/dashboard` - Stats globales
-- `GET /api/admin/users` - Liste utilisateurs
-- `PUT /api/admin/users/{id}` - Modifier utilisateur
-- `DELETE /api/admin/users/{id}` - Désactiver utilisateur
-
-### Notifications
-- `GET /api/notifications` - Liste des notifications
-- `GET /api/notifications/settings` - Paramètres
-- `PUT /api/notifications/settings` - Modifier paramètres
-- `PUT /api/notifications/{id}/read` - Marquer comme lu
-- `PUT /api/notifications/read-all` - Tout marquer lu
-- `DELETE /api/notifications/{id}` - Supprimer
-- `POST /api/notifications/generate-reminders` - Générer rappels
-
----
+## Key API Endpoints
+- `POST /api/auth/login` - User login
+- `POST /api/auth/extension/generate-code` - Generate temp code for extension
+- `POST /api/auth/extension/verify-code` - Verify temp code
+- `POST /api/statistics/dashboard-v2` - Dashboard V2 data
+- `POST /api/admin/users` - Create user (admin only)
+- `GET /api/admin/users` - List users (admin only)
 
 ## Credentials
-- **Email Test:** demo@test.com
-- **Password Test:** demo123
-- **URL:** https://careertracker-10.preview.emergentagent.com
+- Admin: `admin@test.com` / `password123`
+- Demo: `demo@test.com` / `password123`
 
----
+## Prioritized Backlog
 
-## Backlog Futur
-- [ ] Notifications push (PWA)
-- [ ] Mode offline
-- [ ] Auto-Fill formulaires candidature (Lever, Greenhouse)
-- [x] Intégration Google Calendar (backend prêt, nécessite OAuth credentials)
-- [ ] Déploiement production (Vercel + MongoDB Atlas)
-- [ ] Monétisation (Stripe)
+### P0 (Next)
+- [ ] Theme switching (Light/Dark/System)
+- [ ] Dashboard spacing fine-tuning if needed
 
----
+### P1
+- [ ] Offline mode (PWA Cache First + IndexedDB)
+- [ ] Student features (reminders, interview notes bank)
+- [ ] Google Calendar integration (currently mocked)
 
-## Extension Chrome
-- **Dossier:** `/app/chrome-extension/`
-- **Fonctionnalités:**
-  - Extraction IA automatique des offres d'emploi
-  - Support: LinkedIn, Indeed, APEC, Welcome to the Jungle, France Travail
-  - Extraction: Entreprise, Poste, Lieu, Salaire, Type contrat, Compétences
-- **Configuration:** Options pour URL API et Token JWT
+### P2
+- [ ] B2B multi-tenant features
+- [ ] Production deployment (Vercel + MongoDB Atlas)
+- [ ] Stripe monetization
 
-© 2025 MAADEC
+## Known Issues
+- Sidebar scroll on small screens (not verified)
+- Google Calendar integration is mocked (UI only)
+
+## Tech Stack
+- **Backend**: FastAPI, MongoDB, APScheduler
+- **Frontend**: React, Tailwind CSS, Shadcn UI, Framer Motion, Recharts
+- **Auth**: JWT tokens
+- **AI**: emergentintegrations (OpenAI, Gemini, Groq)

@@ -5,7 +5,7 @@ import { fr } from 'date-fns/locale';
 import { 
   Search, Users, Shield, ShieldCheck, ShieldX, Eye, 
   Edit2, Trash2, RefreshCw, ChevronLeft, ChevronRight,
-  Loader2, UserCheck, UserX, Briefcase, Calendar, Download
+  Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus
 } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Button } from '../../components/ui/button';
@@ -348,6 +348,136 @@ const EditUserModal = ({ user, isOpen, onClose, onSave, loading }) => {
   );
 };
 
+// Create User Modal
+const CreateUserModal = ({ isOpen, onClose, onCreate, loading }) => {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState('standard');
+  const [error, setError] = useState('');
+
+  const handleCreate = () => {
+    setError('');
+    
+    if (!fullName.trim()) {
+      setError('Le nom complet est requis');
+      return;
+    }
+    if (!email.trim()) {
+      setError("L'email est requis");
+      return;
+    }
+    if (password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères');
+      return;
+    }
+    
+    onCreate({
+      full_name: fullName.trim(),
+      email: email.trim().toLowerCase(),
+      password: password,
+      role: role
+    });
+  };
+
+  const handleClose = () => {
+    setFullName('');
+    setEmail('');
+    setPassword('');
+    setRole('standard');
+    setError('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={handleClose}>
+      <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-xl flex items-center gap-2">
+            <UserPlus size={20} className="text-gold" />
+            Créer un utilisateur
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-4">
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Nom complet *</label>
+            <Input
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="Jean Dupont"
+              className="bg-slate-900/50 border-slate-700 text-white"
+              data-testid="create-user-fullname"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Email *</label>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jean.dupont@example.com"
+              className="bg-slate-900/50 border-slate-700 text-white"
+              data-testid="create-user-email"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Mot de passe *</label>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Minimum 6 caractères"
+              className="bg-slate-900/50 border-slate-700 text-white"
+              data-testid="create-user-password"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">Rôle</label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white" data-testid="create-user-role">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700">
+                {ROLE_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={handleClose}
+              className="flex-1 border-slate-700 text-slate-300"
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={loading}
+              className="flex-1 bg-gold hover:bg-gold-light text-[#020817]"
+              data-testid="create-user-submit"
+            >
+              {loading ? <Loader2 className="animate-spin" size={18} /> : 'Créer'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 export default function AdminUsersPage() {
   const { 
     users, 
@@ -357,6 +487,7 @@ export default function AdminUsersPage() {
     updateUser,
     deleteUser,
     reactivateUser,
+    createUser,
     exportStats,
     loading 
   } = useAdmin();
@@ -368,7 +499,9 @@ export default function AdminUsersPage() {
   const [viewingUser, setViewingUser] = useState(null);
   const [viewingUserStats, setViewingUserStats] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   useEffect(() => {
     const params = {};
@@ -436,6 +569,22 @@ export default function AdminUsersPage() {
     }
   };
 
+  const handleCreateUser = async (userData) => {
+    setSaving(true);
+    setCreateError('');
+    try {
+      await createUser(userData);
+      setShowCreateModal(false);
+      fetchUsers();
+    } catch (err) {
+      const errorMessage = err.response?.data?.detail || 'Erreur lors de la création';
+      setCreateError(errorMessage);
+      throw new Error(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleExport = async () => {
     try {
       const data = await exportStats();
@@ -465,10 +614,16 @@ export default function AdminUsersPage() {
             {usersPagination.total} utilisateur(s) au total
           </p>
         </div>
-        <Button onClick={handleExport} variant="outline" className="border-slate-700">
-          <Download size={18} className="mr-2" />
-          Exporter les stats
-        </Button>
+        <div className="flex gap-3">
+          <Button onClick={() => setShowCreateModal(true)} className="bg-gold hover:bg-gold-light text-[#020817]" data-testid="create-user-button">
+            <UserPlus size={18} className="mr-2" />
+            Créer un utilisateur
+          </Button>
+          <Button onClick={handleExport} variant="outline" className="border-slate-700">
+            <Download size={18} className="mr-2" />
+            Exporter
+          </Button>
+        </div>
       </div>
 
       {/* Search & Filters */}
@@ -579,6 +734,14 @@ export default function AdminUsersPage() {
         isOpen={!!editingUser}
         onClose={() => setEditingUser(null)}
         onSave={handleSaveUser}
+        loading={saving}
+      />
+
+      {/* Create User Modal */}
+      <CreateUserModal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onCreate={handleCreateUser}
         loading={saving}
       />
 
