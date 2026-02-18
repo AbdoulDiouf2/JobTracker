@@ -211,15 +211,15 @@ const HeroSection = () => {
             </div>
           </motion.div>
 
-          {/* Dashboard Mockup */}
+          {/* Dashboard Mockup - Tilted */}
           <motion.div 
             initial={{ opacity: 0, x: 30 }} 
             animate={{ opacity: 1, x: 0 }} 
             transition={{ duration: 0.7, delay: 0.2 }} 
-            className="hidden lg:block"
+            className="hidden lg:block perspective-1000"
           >
-            <div className="relative">
-              <div className="glass-card rounded-2xl p-6 shadow-2xl border border-slate-700/50">
+            <div className="relative transform rotate-y-[-8deg] rotate-x-[5deg] hover:rotate-y-[-4deg] hover:rotate-x-[2deg] transition-transform duration-500" style={{ transform: 'perspective(1000px) rotateY(-8deg) rotateX(5deg)', transformStyle: 'preserve-3d' }}>
+              <div className="glass-card rounded-2xl p-6 shadow-2xl border border-slate-700/50 bg-[#0a0f1a]/90 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="font-heading font-semibold text-white">{t.dashboard}</h3>
                   <div className="flex gap-2">
