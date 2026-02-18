@@ -126,6 +126,14 @@ const HeroSection = () => {
       stat1: 'Utilisateurs actifs',
       stat2: 'Candidatures suivies',
       stat3: 'Recommanderaient',
+      dashboard: 'Tableau de bord',
+      totalApps: 'Candidatures',
+      interviews: 'Entretiens',
+      responseRate: 'Taux réponse',
+      thisWeek: 'cette sem.',
+      aboveAvg: 'Au-dessus moy.',
+      aiAdvisor: 'Conseiller IA',
+      active: 'Actif 24/7',
     },
     en: {
       badge: '🎯 Get organized. Get prepared. Get hired.',
@@ -138,6 +146,14 @@ const HeroSection = () => {
       stat1: 'Active users',
       stat2: 'Applications tracked',
       stat3: 'Would recommend',
+      dashboard: 'Dashboard',
+      totalApps: 'Applications',
+      interviews: 'Interviews',
+      responseRate: 'Response rate',
+      thisWeek: 'this week',
+      aboveAvg: 'Above avg.',
+      aiAdvisor: 'AI Advisor',
+      active: 'Active 24/7',
     }
   }[language];
 
@@ -151,6 +167,7 @@ const HeroSection = () => {
         <div className="grid lg:grid-cols-2 gap-16 items-center">
           <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }}>
             <div className="inline-flex items-center gap-2 bg-slate-800/50 border border-slate-700 rounded-full px-4 py-2 mb-8">
+              <Sparkles size={16} className="text-gold" />
               <span className="text-sm font-medium text-slate-300">{t.badge}</span>
             </div>
 
@@ -194,37 +211,99 @@ const HeroSection = () => {
             </div>
           </motion.div>
 
-          {/* Hero Illustration */}
+          {/* Dashboard Mockup */}
           <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }} 
-            animate={{ opacity: 1, scale: 1 }} 
+            initial={{ opacity: 0, x: 30 }} 
+            animate={{ opacity: 1, x: 0 }} 
             transition={{ duration: 0.7, delay: 0.2 }} 
-            className="hidden lg:flex items-center justify-center"
+            className="hidden lg:block"
           >
             <div className="relative">
-              <img 
-                src="/hero-illustration.png" 
-                alt="Organisez votre recherche d'emploi" 
-                className="w-full max-w-lg drop-shadow-2xl"
-              />
-              {/* Floating badge */}
+              <div className="glass-card rounded-2xl p-6 shadow-2xl border border-slate-700/50">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="font-heading font-semibold text-white">{t.dashboard}</h3>
+                  <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500/80" />
+                    <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
+                    <div className="w-3 h-3 rounded-full bg-green-500/80" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="bg-slate-800/50 rounded-xl p-4">
+                    <p className="text-slate-500 text-sm mb-1">{t.totalApps}</p>
+                    <p className="text-2xl font-bold text-white">147</p>
+                    <p className="text-green-400 text-sm flex items-center mt-1">
+                      <TrendingUp size={14} className="mr-1" /> +12%
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-xl p-4">
+                    <p className="text-slate-500 text-sm mb-1">{t.interviews}</p>
+                    <p className="text-2xl font-bold text-gold">23</p>
+                    <p className="text-gold/70 text-sm flex items-center mt-1">
+                      <Calendar size={14} className="mr-1" /> 3 {t.thisWeek}
+                    </p>
+                  </div>
+                  <div className="bg-slate-800/50 rounded-xl p-4">
+                    <p className="text-slate-500 text-sm mb-1">{t.responseRate}</p>
+                    <p className="text-2xl font-bold text-white">34%</p>
+                    <p className="text-blue-400 text-sm flex items-center mt-1">
+                      <Target size={14} className="mr-1" /> {t.aboveAvg}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Weekly Chart */}
+                <div className="bg-slate-800/30 rounded-xl p-4 mb-4">
+                  <div className="flex items-end justify-between h-24">
+                    {[40, 65, 45, 80, 55, 90, 70].map((height, i) => (
+                      <div 
+                        key={i} 
+                        className="w-6 rounded-t transition-all duration-300"
+                        style={{ 
+                          height: `${height}%`,
+                          background: i === 5 ? '#c4a052' : '#1e293b'
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="flex justify-between mt-2 text-xs text-slate-500">
+                    <span>Lun</span><span>Mar</span><span>Mer</span><span>Jeu</span><span>Ven</span><span>Sam</span><span>Dim</span>
+                  </div>
+                </div>
+
+                {/* Recent Applications */}
+                <div className="space-y-3">
+                  {[
+                    { company: 'Google', role: 'Senior Engineer', status: language === 'fr' ? 'Entretien' : 'Interview', color: 'text-green-400' },
+                    { company: 'Stripe', role: 'Full Stack Dev', status: language === 'fr' ? 'Postulé' : 'Applied', color: 'text-blue-400' },
+                    { company: 'Notion', role: 'Backend Lead', status: language === 'fr' ? 'En cours' : 'In Review', color: 'text-yellow-400' },
+                  ].map((app, i) => (
+                    <div key={i} className="flex items-center justify-between bg-slate-800/30 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-slate-700 flex items-center justify-center text-white font-bold text-sm">
+                          {app.company[0]}
+                        </div>
+                        <div>
+                          <p className="text-white text-sm font-medium">{app.company}</p>
+                          <p className="text-slate-500 text-xs">{app.role}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium ${app.color}`}>{app.status}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Floating AI badge */}
               <motion.div 
-                className="absolute -bottom-4 -left-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
+                className="absolute -top-4 -right-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
               >
-                <Target size={24} className="text-gold mb-2" />
-                <p className="text-white text-sm font-semibold">{language === 'fr' ? 'Restez focus' : 'Stay focused'}</p>
-                <p className="text-slate-400 text-xs">{language === 'fr' ? 'Zéro oubli' : 'Never miss a thing'}</p>
-              </motion.div>
-              <motion.div 
-                className="absolute -top-4 -right-4 bg-navy border border-slate-700 rounded-xl p-4 shadow-xl"
-                animate={{ y: [0, 8, 0] }}
-                transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
-              >
                 <Brain size={24} className="text-gold mb-2" />
-                <p className="text-white text-sm font-semibold">{language === 'fr' ? 'Conseils IA' : 'AI Advisor'}</p>
-                <p className="text-slate-400 text-xs">{language === 'fr' ? 'Pour progresser' : 'Level up'}</p>
+                <p className="text-white text-sm font-semibold">{t.aiAdvisor}</p>
+                <p className="text-slate-400 text-xs">{t.active}</p>
               </motion.div>
             </div>
           </motion.div>
