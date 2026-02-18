@@ -5,7 +5,7 @@ import { fr } from 'date-fns/locale';
 import { 
   Search, Users, Shield, ShieldCheck, ShieldX, Eye, 
   Edit2, Trash2, RefreshCw, ChevronLeft, ChevronRight,
-  Loader2, UserCheck, UserX, Briefcase, Calendar, Download
+  Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus
 } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Button } from '../../components/ui/button';
