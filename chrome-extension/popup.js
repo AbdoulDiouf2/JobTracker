@@ -124,7 +124,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
     
-    const config = await chrome.storage.sync.get({ jt_apiUrl: 'https://careertracker-10.preview.emergentagent.com' });
+    const config = await chrome.storage.sync.get({ jt_apiUrl: 'https://jobscouter-1.preview.emergentagent.com' });
     
     try {
       showAuthMessage('Connexion en cours...', 'info');
@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
     
-    const config = await chrome.storage.sync.get({ jt_apiUrl: 'https://careertracker-10.preview.emergentagent.com' });
+    const config = await chrome.storage.sync.get({ jt_apiUrl: 'https://jobscouter-1.preview.emergentagent.com' });
     
     try {
       showAuthMessage('Vérification du code...', 'info');
@@ -252,7 +252,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       
       // Get config
       const config = await chrome.storage.sync.get({
-        jt_apiUrl: 'https://careertracker-10.preview.emergentagent.com',
+        jt_apiUrl: 'https://jobscouter-1.preview.emergentagent.com',
         jt_token: ''
       });
 
@@ -342,7 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const config = await chrome.storage.sync.get({
-      jt_apiUrl: 'https://careertracker-10.preview.emergentagent.com',
+      jt_apiUrl: 'https://jobscouter-1.preview.emergentagent.com',
       jt_token: ''
     });
 

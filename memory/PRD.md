@@ -202,7 +202,7 @@ Application SaaS de suivi de candidatures avec intégration IA pour impressionne
 ## Credentials
 - **Email Test:** demo@test.com
 - **Password Test:** demo123
-- **URL:** https://careertracker-10.preview.emergentagent.com
+- **URL:** https://jobscouter-1.preview.emergentagent.com
 
 ---
 
