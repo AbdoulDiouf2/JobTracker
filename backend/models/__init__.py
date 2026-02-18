@@ -715,6 +715,14 @@ class AdminUserUpdate(BaseModel):
     is_active: Optional[bool] = None
 
 
+class AdminUserCreate(BaseModel):
+    """Modèle pour la création d'un utilisateur par un admin"""
+    email: EmailStr
+    full_name: str = Field(..., min_length=2, max_length=100)
+    password: str = Field(..., min_length=6, max_length=100)
+    role: UserRole = UserRole.STANDARD
+
+
 class UserGrowthDataPoint(BaseModel):
     """Point de données pour le graphique de croissance"""
     date: str

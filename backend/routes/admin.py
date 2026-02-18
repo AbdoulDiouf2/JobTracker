@@ -9,8 +9,13 @@ from typing import Optional
 
 from models import (
     UserResponse, UserAdminResponse, UserRole, AdminDashboardStats,
-    AdminUserUpdate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse
+    AdminUserUpdate, AdminUserCreate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse
 )
+from passlib.context import CryptContext
+import uuid
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
