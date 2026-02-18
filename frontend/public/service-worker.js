@@ -1,6 +1,6 @@
 // MAADEC Job Tracker - Service Worker
-const CACHE_NAME = 'jobtracker-v1';
-const DYNAMIC_CACHE = 'jobtracker-dynamic-v1';
+const CACHE_NAME = 'jobtracker-v2';
+const DYNAMIC_CACHE = 'jobtracker-dynamic-v2';
 
 // Assets à mettre en cache immédiatement
 const STATIC_ASSETS = [
