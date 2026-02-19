@@ -937,6 +937,7 @@ const Footer = () => {
               <li><a href="#features" className="text-slate-400 hover:text-gold text-sm">{language === 'fr' ? 'Fonctionnalités' : 'Features'}</a></li>
               <li><a href="#pricing" className="text-slate-400 hover:text-gold text-sm">{language === 'fr' ? 'Tarifs' : 'Pricing'}</a></li>
               <li><a href="#faq" className="text-slate-400 hover:text-gold text-sm">FAQ</a></li>
+              <li><a href="/support" className="text-slate-400 hover:text-gold text-sm">Support</a></li>
             </ul>
           </div>
 

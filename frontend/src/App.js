@@ -26,6 +26,8 @@ import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 
+import SupportPage from "./pages/SupportPage";
+
 // Admin Pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -54,6 +56,7 @@ function AppRouter() {
       <Route path="/legal" element={<LegalNoticePage />} />
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
+      <Route path="/support" element={<SupportPage />} />
       
       {/* Protected Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>

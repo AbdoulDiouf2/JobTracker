@@ -11,6 +11,7 @@ import { usePushNotifications } from '../hooks/usePushNotifications';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { Link } from 'react-router-dom';
 
 export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
@@ -124,7 +125,11 @@ export default function SettingsPage() {
       copyCode: 'Copier',
       copied: 'Copié !',
       extensionInstructions: 'Ouvrez l\'extension Chrome et entrez ce code dans l\'onglet "Code rapide"',
-      newCode: 'Nouveau code'
+      newCode: 'Nouveau code',
+      // Support
+      support: 'Support & Aide',
+      supportDesc: 'Besoin d\'aide ? Contactez notre support',
+      contactSupport: 'Contacter le support'
     },
     en: {
       title: 'Settings',
@@ -188,7 +193,11 @@ export default function SettingsPage() {
       copyCode: 'Copy',
       copied: 'Copied!',
       extensionInstructions: 'Open the Chrome extension and enter this code in the "Quick code" tab',
-      newCode: 'New code'
+      newCode: 'New code',
+      // Support
+      support: 'Support & Help',
+      supportDesc: 'Need help? Contact our support',
+      contactSupport: 'Contact Support'
     }
   }[language];
 
@@ -774,7 +783,28 @@ export default function SettingsPage() {
                 </p>
               </div>
             </div>
+        </div>
+        </div>
+      </section>
+
+      {/* ============================================
+          SECTION 3.5: SUPPORT
+          ============================================ */}
+      <section>
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Smartphone size={20} className="text-gold" />
+          {t.support}
+        </h2>
+        <div className="glass-card rounded-xl p-6 border border-slate-800 flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-white mb-1">{t.support}</h3>
+            <p className="text-slate-500 text-sm">{t.supportDesc}</p>
           </div>
+          <Link to="/support">
+            <Button className="bg-slate-800 text-white hover:bg-slate-700 hover:text-gold border border-slate-700">
+              {t.contactSupport}
+            </Button>
+          </Link>
         </div>
       </section>
 
