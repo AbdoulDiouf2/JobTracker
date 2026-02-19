@@ -1004,34 +1004,42 @@ function DocumentViewerModal({ open, onClose, document: doc, t }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let activeUrl = null;
+
+    const fetchDocumentContent = async () => {
+      if (!open || !doc) return;
+
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${API_URL}/api/documents/${doc.id}/download`, {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: 'blob'
+        });
+        const fileType = response.headers['content-type'];
+        const blob = new Blob([response.data], { type: fileType });
+        const url = URL.createObjectURL(blob);
+        activeUrl = url;
+        setContentUrl(url);
+      } catch (err) {
+        console.error('Error fetching document content:', err);
+        setError(t.error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (open && doc) {
       fetchDocumentContent();
     }
-    return () => {
-      if (contentUrl) URL.revokeObjectURL(contentUrl);
-    };
-  }, [open, doc]);
 
-  const fetchDocumentContent = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents/${doc.id}/download`, {
-        headers: { Authorization: `Bearer ${token}` },
-        responseType: 'blob'
-      });
-      const fileType = response.headers['content-type'];
-      const blob = new Blob([response.data], { type: fileType });
-      const url = URL.createObjectURL(blob);
-      setContentUrl(url);
-    } catch (err) {
-      console.error('Error fetching document content:', err);
-      setError(t.error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      if (activeUrl) {
+        URL.revokeObjectURL(activeUrl);
+      }
+    };
+  }, [open, doc, t]);
 
   if (!doc) return null;
 
