@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, Upload, Link as LinkIcon, Trash2, Download, Edit2, 
   Plus, Star, StarOff, File, ExternalLink, Github, Linkedin, Globe,
-  FolderOpen, FileCheck, Copy, Check
+  FolderOpen, FileCheck, Copy, Check, X, Loader2, Eye
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
@@ -46,6 +46,8 @@ export default function DocumentsPage() {
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
   const [editingTemplate, setEditingTemplate] = useState(null);
+  const [viewingDocument, setViewingDocument] = useState(null);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
   const fileInputRef = useRef(null);
 
   const t = {
@@ -91,7 +93,11 @@ export default function DocumentsPage() {
       deleteSuccess: 'Document supprimé',
       error: 'Une erreur est survenue',
       maxSize: 'Taille max: 10 MB',
-      allowedTypes: 'Formats: PDF, DOC, DOCX, PNG, JPG'
+      allowedTypes: 'Formats: PDF, DOC, DOCX, PNG, JPG',
+      preview: 'Aperçu',
+      close: 'Fermer',
+      noPreview: 'Aperçu non disponible pour ce type de fichier',
+      downloadToView: 'Télécharger pour voir'
     },
     en: {
       title: 'My Documents',
@@ -135,7 +141,11 @@ export default function DocumentsPage() {
       deleteSuccess: 'Document deleted',
       error: 'An error occurred',
       maxSize: 'Max size: 10 MB',
-      allowedTypes: 'Formats: PDF, DOC, DOCX, PNG, JPG'
+      allowedTypes: 'Formats: PDF, DOC, DOCX, PNG, JPG',
+      preview: 'Preview',
+      close: 'Close',
+      noPreview: 'Preview not available for this file type',
+      downloadToView: 'Download to view'
     }
   }[language];
 
@@ -304,6 +314,11 @@ export default function DocumentsPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleViewDocument = (document) => {
+    setViewingDocument(document);
+    setViewModalOpen(true);
+  };
+
   const cvDocuments = documents.filter(d => d.document_type === 'cv');
   const portfolioLinks = documents.filter(d => d.document_type === 'portfolio_link');
 
@@ -364,7 +379,8 @@ export default function DocumentsPage() {
                   key={doc.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="glass-card rounded-xl p-4 border border-slate-800 hover:border-gold/50 transition-colors"
+                  className="glass-card rounded-xl p-4 border border-slate-800 hover:border-gold/50 transition-colors cursor-pointer"
+                  onClick={() => handleViewDocument(doc)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
@@ -398,7 +414,7 @@ export default function DocumentsPage() {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      onClick={() => handleDownload(doc)}
+                      onClick={(e) => { e.stopPropagation(); handleDownload(doc); }}
                       className="text-slate-400 hover:text-white"
                     >
                       <Download size={14} className="mr-1" />
@@ -408,7 +424,7 @@ export default function DocumentsPage() {
                       <Button 
                         size="sm" 
                         variant="ghost" 
-                        onClick={() => handleSetDefault(doc.id)}
+                        onClick={(e) => { e.stopPropagation(); handleSetDefault(doc.id); }}
                         className="text-slate-400 hover:text-gold"
                       >
                         <Star size={14} className="mr-1" />
@@ -418,7 +434,7 @@ export default function DocumentsPage() {
                     <Button 
                       size="sm" 
                       variant="ghost" 
-                      onClick={() => handleDelete(doc.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(doc.id); }}
                       className="text-slate-400 hover:text-red-400 ml-auto"
                     >
                       <Trash2 size={14} />
@@ -618,6 +634,17 @@ export default function DocumentsPage() {
         onClose={() => { setTemplateModalOpen(false); setEditingTemplate(null); }}
         onSave={handleCreateTemplate}
         template={editingTemplate}
+        t={t}
+      />
+
+      {/* Document Viewer Modal */}
+      <DocumentViewerModal
+        open={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setViewingDocument(null);
+        }}
+        document={viewingDocument}
         t={t}
       />
     </div>
@@ -965,6 +992,128 @@ Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distin
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Document Viewer Modal Component
+function DocumentViewerModal({ open, onClose, document: doc, t }) {
+  const [contentUrl, setContentUrl] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    if (open && doc) {
+      fetchDocumentContent();
+    }
+    return () => {
+      if (contentUrl) URL.revokeObjectURL(contentUrl);
+    };
+  }, [open, doc]);
+
+  const fetchDocumentContent = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob'
+      });
+      const fileType = response.headers['content-type'];
+      const blob = new Blob([response.data], { type: fileType });
+      const url = URL.createObjectURL(blob);
+      setContentUrl(url);
+    } catch (err) {
+      console.error('Error fetching document content:', err);
+      setError(t.error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!doc) return null;
+
+  const isPdf = doc.original_filename?.toLowerCase().endsWith('.pdf') || doc.name?.toLowerCase().endsWith('.pdf');
+  const isImage = /\.(jpg|jpeg|png)$/i.test(doc.original_filename || doc.name);
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-5xl h-[85vh] bg-slate-900 border-slate-700 text-white flex flex-col p-0 overflow-hidden shadow-2xl">
+        <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50 backdrop-blur-xl z-10">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-slate-800 rounded-lg">
+              <FileText size={20} className="text-gold" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg">{doc.name}</h3>
+              {doc.original_filename && (
+                <p className="text-xs text-slate-400">{doc.original_filename}</p>
+              )}
+            </div>
+          </div>
+          <Button variant="ghost" size="icon" onClick={onClose} className="hover:bg-slate-800 rounded-full">
+            <X size={20} className="text-slate-400" />
+          </Button>
+        </div>
+        
+        <div className="flex-1 overflow-hidden relative bg-slate-950/50 flex items-center justify-center p-4">
+          {loading ? (
+            <div className="text-center">
+              <Loader2 className="animate-spin text-gold mx-auto mb-4" size={48} />
+              <p className="text-slate-400">Chargement du document...</p>
+            </div>
+          ) : error ? (
+            <div className="text-center bg-red-500/10 p-8 rounded-xl border border-red-500/20">
+              <FileText className="mx-auto mb-4 text-red-400" size={48} />
+              <p className="text-red-400 mb-2">{error}</p>
+              <Button onClick={onClose} variant="outline" className="border-red-500/20 hover:bg-red-500/10 text-red-400">
+                {t.close}
+              </Button>
+            </div>
+          ) : (
+            <div className="w-full h-full bg-slate-900 rounded-lg overflow-hidden border border-slate-800 shadow-inner">
+              {isPdf ? (
+                <iframe 
+                  src={contentUrl} 
+                  className="w-full h-full" 
+                  title={doc.name}
+                  style={{ border: 'none' }}
+                />
+              ) : isImage ? (
+                <img 
+                  src={contentUrl} 
+                  className="w-full h-full object-contain" 
+                  alt={doc.name} 
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <FileText size={64} className="text-slate-700 mb-6" />
+                  <p className="text-xl font-semibold mb-2 text-slate-300">{t.noPreview}</p>
+                  <p className="text-slate-500 mb-8 max-w-md">
+                    Ce format de fichier ne peut pas être prévisualisé directement dans le navigateur.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="border-gold/20 text-gold hover:bg-gold/10"
+                    onClick={() => {
+                        const link = document.createElement('a');
+                        link.href = contentUrl;
+                        link.setAttribute('download', doc.original_filename || `${doc.name}`);
+                        document.body.appendChild(link);
+                        link.click();
+                        link.remove();
+                    }}
+                  >
+                    <Download size={18} className="mr-2" />
+                    {t.downloadToView}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

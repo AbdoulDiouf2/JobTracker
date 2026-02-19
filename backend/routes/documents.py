@@ -252,153 +252,7 @@ async def list_portfolio_links(
     return await list_documents(document_type="portfolio_link", current_user=current_user, db=db)
 
 
-@router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(
-    document_id: str,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Get a specific document"""
-    user_id = current_user["user_id"]
-    
-    document = await db.documents.find_one(
-        {"id": document_id, "user_id": user_id},
-        {"_id": 0}
-    )
-    
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document non trouvé"
-        )
-    
-    download_url = None
-    if document.get("file_path"):
-        download_url = f"/api/documents/{document_id}/download"
-    
-    return DocumentResponse(
-        id=document["id"],
-        name=document["name"],
-        document_type=DocumentType(document["document_type"]),
-        label=document.get("label"),
-        description=document.get("description"),
-        is_default=document.get("is_default", False),
-        url=document.get("url"),
-        file_size=document.get("file_size"),
-        mime_type=document.get("mime_type"),
-        original_filename=document.get("original_filename"),
-        created_at=document["created_at"],
-        updated_at=document["updated_at"],
-        download_url=download_url
-    )
 
-
-@router.get("/{document_id}/download")
-async def download_document(
-    document_id: str,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Download a document file"""
-    user_id = current_user["user_id"]
-    
-    document = await db.documents.find_one(
-        {"id": document_id, "user_id": user_id},
-        {"_id": 0}
-    )
-    
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document non trouvé"
-        )
-    
-    if not document.get("file_path"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce document n'a pas de fichier associé"
-        )
-    
-    file_path = Path(document["file_path"])
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Fichier non trouvé sur le serveur"
-        )
-    
-    return FileResponse(
-        path=file_path,
-        filename=document.get("original_filename", file_path.name),
-        media_type=document.get("mime_type", "application/octet-stream")
-    )
-
-
-@router.put("/{document_id}", response_model=DocumentResponse)
-async def update_document(
-    document_id: str,
-    update: DocumentUpdate,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Update a document's metadata"""
-    user_id = current_user["user_id"]
-    
-    document = await db.documents.find_one(
-        {"id": document_id, "user_id": user_id}
-    )
-    
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document non trouvé"
-        )
-    
-    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
-    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    
-    # If setting as default, unset other defaults
-    if update.is_default:
-        await db.documents.update_many(
-            {"user_id": user_id, "document_type": document["document_type"], "is_default": True, "id": {"$ne": document_id}},
-            {"$set": {"is_default": False}}
-        )
-    
-    await db.documents.update_one(
-        {"id": document_id},
-        {"$set": update_data}
-    )
-    
-    return await get_document(document_id, current_user, db)
-
-
-@router.delete("/{document_id}")
-async def delete_document(
-    document_id: str,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Delete a document"""
-    user_id = current_user["user_id"]
-    
-    document = await db.documents.find_one(
-        {"id": document_id, "user_id": user_id}
-    )
-    
-    if not document:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Document non trouvé"
-        )
-    
-    # Delete file if exists
-    if document.get("file_path"):
-        file_path = Path(document["file_path"])
-        if file_path.exists():
-            file_path.unlink()
-    
-    await db.documents.delete_one({"id": document_id})
-    
-    return {"message": "Document supprimé"}
 
 
 # ============================================
@@ -934,4 +788,157 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erreur de génération IA: {str(e)}"
         )
+
+
+# ============================================
+# GENERIC DOCUMENT ROUTES (moved to end to avoid shadowing)
+# ============================================
+
+@router.get("/{document_id}", response_model=DocumentResponse)
+async def get_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Get a specific document"""
+    user_id = current_user["user_id"]
+    
+    document = await db.documents.find_one(
+        {"id": document_id, "user_id": user_id},
+        {"_id": 0}
+    )
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document non trouvé"
+        )
+    
+    download_url = None
+    if document.get("file_path"):
+        download_url = f"/api/documents/{document_id}/download"
+    
+    return DocumentResponse(
+        id=document["id"],
+        name=document["name"],
+        document_type=DocumentType(document["document_type"]),
+        label=document.get("label"),
+        description=document.get("description"),
+        is_default=document.get("is_default", False),
+        url=document.get("url"),
+        file_size=document.get("file_size"),
+        mime_type=document.get("mime_type"),
+        original_filename=document.get("original_filename"),
+        created_at=document["created_at"],
+        updated_at=document["updated_at"],
+        download_url=download_url
+    )
+
+
+@router.get("/{document_id}/download")
+async def download_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Download a document file"""
+    user_id = current_user["user_id"]
+    
+    document = await db.documents.find_one(
+        {"id": document_id, "user_id": user_id},
+        {"_id": 0}
+    )
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document non trouvé"
+        )
+    
+    if not document.get("file_path"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Ce document n'a pas de fichier associé"
+        )
+    
+    file_path = Path(document["file_path"])
+    if not file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Fichier non trouvé sur le serveur"
+        )
+    
+    return FileResponse(
+        path=file_path,
+        filename=document.get("original_filename", file_path.name),
+        media_type=document.get("mime_type", "application/octet-stream")
+    )
+
+
+@router.put("/{document_id}", response_model=DocumentResponse)
+async def update_document(
+    document_id: str,
+    update: DocumentUpdate,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Update a document's metadata"""
+    user_id = current_user["user_id"]
+    
+    document = await db.documents.find_one(
+        {"id": document_id, "user_id": user_id}
+    )
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document non trouvé"
+        )
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    # If setting as default, unset other defaults
+    if update.is_default:
+        await db.documents.update_many(
+            {"user_id": user_id, "document_type": document["document_type"], "is_default": True, "id": {"$ne": document_id}},
+            {"$set": {"is_default": False}}
+        )
+    
+    await db.documents.update_one(
+        {"id": document_id},
+        {"$set": update_data}
+    )
+    
+    return await get_document(document_id, current_user, db)
+
+
+@router.delete("/{document_id}")
+async def delete_document(
+    document_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Delete a document"""
+    user_id = current_user["user_id"]
+    
+    document = await db.documents.find_one(
+        {"id": document_id, "user_id": user_id}
+    )
+    
+    if not document:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Document non trouvé"
+        )
+    
+    # Delete file if exists
+    if document.get("file_path"):
+        file_path = Path(document["file_path"])
+        if file_path.exists():
+            file_path.unlink()
+    
+    await db.documents.delete_one({"id": document_id})
+    
+    return {"message": "Document supprimé"}
 
