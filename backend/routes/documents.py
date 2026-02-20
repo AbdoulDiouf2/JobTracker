@@ -1,15 +1,15 @@
 """
 JobTracker SaaS - Routes Gestion des Documents
 Gestion des CV, lettres de motivation, portfolios et liens.
+Stockage via Cloudinary pour persistance sur Vercel/Production.
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from typing import Optional, List
 from datetime import datetime, timezone
 import os
 import uuid
-import shutil
 from pathlib import Path
 
 from models import (
@@ -18,6 +18,18 @@ from models import (
     GeneratedCoverLetter, ApplicationDocumentLink
 )
 from utils.auth import get_current_user
+
+# Cloudinary configuration
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
+cloudinary.config(
+    cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.environ.get("CLOUDINARY_API_KEY"),
+    api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+    secure=True
+)
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 
@@ -28,15 +40,6 @@ def get_db():
 
 
 # Configuration
-# Configuration
-# Vercel filesystem is read-only except for /tmp
-import sys
-if os.environ.get("VERCEL") or "vercel" in sys.modules:
-    UPLOAD_DIR = Path("/tmp/uploads/documents")
-else:
-    UPLOAD_DIR = Path("/app/uploads/documents") if os.path.exists("/app") else Path("uploads/documents")
-
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MIME_TYPES = [
     "application/pdf",
@@ -48,7 +51,7 @@ ALLOWED_MIME_TYPES = [
 
 
 # ============================================
-# CV & DOCUMENT MANAGEMENT
+# CV & DOCUMENT MANAGEMENT (Cloudinary)
 # ============================================
 
 @router.post("/upload", response_model=DocumentResponse)
@@ -62,7 +65,7 @@ async def upload_document(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Upload a document (CV, cover letter, etc.)"""
+    """Upload a document (CV, cover letter, etc.) to Cloudinary"""
     user_id = current_user["user_id"]
     
     # Validate file size
@@ -83,18 +86,32 @@ async def upload_document(
             detail=f"Type de fichier non autorisé. Types acceptés: PDF, DOC, DOCX, PNG, JPG"
         )
     
-    # Create user directory
-    user_dir = UPLOAD_DIR / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
+    # Generate unique public_id for Cloudinary
+    doc_id = str(uuid.uuid4())
     
-    # Generate unique filename
-    file_ext = Path(file.filename).suffix
-    unique_filename = f"{uuid.uuid4().hex}{file_ext}"
-    file_path = user_dir / unique_filename
-    
-    # Save file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    try:
+        # Upload to Cloudinary
+        # For PDFs and docs, use resource_type="raw" (auto also works)
+        resource_type = "image" if file.content_type.startswith("image/") else "raw"
+        
+        upload_result = cloudinary.uploader.upload(
+            file.file,
+            public_id=f"jobtracker/{user_id}/{doc_id}",
+            resource_type=resource_type,
+            use_filename=True,
+            unique_filename=False,
+            overwrite=True,
+            tags=[user_id, document_type]
+        )
+        
+        cloudinary_url = upload_result.get("secure_url")
+        cloudinary_public_id = upload_result.get("public_id")
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur upload Cloudinary: {str(e)}"
+        )
     
     # If setting as default, unset other defaults of same type
     doc_type = DocumentType(document_type)
@@ -105,7 +122,6 @@ async def upload_document(
         )
     
     # Create document record
-    doc_id = str(uuid.uuid4())
     document = {
         "id": doc_id,
         "user_id": user_id,
@@ -114,11 +130,13 @@ async def upload_document(
         "label": label,
         "description": description,
         "is_default": is_default,
-        "file_path": str(file_path),
+        "cloudinary_url": cloudinary_url,
+        "cloudinary_public_id": cloudinary_public_id,
+        "file_path": None,  # No longer using filesystem
         "file_size": file_size,
         "mime_type": file.content_type,
         "original_filename": file.filename,
-        "url": None,
+        "url": cloudinary_url,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -171,6 +189,8 @@ async def create_portfolio_link(
         "description": description,
         "is_default": is_default,
         "url": url,
+        "cloudinary_url": None,
+        "cloudinary_public_id": None,
         "file_path": None,
         "file_size": None,
         "mime_type": None,
@@ -212,7 +232,7 @@ async def list_documents(
     result = []
     for doc in documents:
         download_url = None
-        if doc.get("file_path"):
+        if doc.get("cloudinary_url") or doc.get("file_path"):
             download_url = f"/api/documents/{doc['id']}/download"
         
         result.append(DocumentResponse(
@@ -250,9 +270,6 @@ async def list_portfolio_links(
 ):
     """List all portfolio links for the current user"""
     return await list_documents(document_type="portfolio_link", current_user=current_user, db=db)
-
-
-
 
 
 # ============================================
@@ -633,7 +650,6 @@ async def generate_cover_letter_with_ai(
     db = Depends(get_db)
 ):
     """Generate a cover letter using AI based on CV and job description"""
-    import os
     user_id = current_user["user_id"]
     
     # Get user info
@@ -655,7 +671,7 @@ async def generate_cover_letter_with_ai(
     # Build prompt
     tone_instructions = {
         "professional": "un ton professionnel et confiant",
-        "enthusiastic": "un ton enthousiaste et dynamique", 
+        "enthusiastic": "un ton enthousiaste et dynamique",
         "formal": "un ton formel et respectueux"
     }
     
@@ -683,7 +699,7 @@ Instructions:
 5. Personnalise pour l'entreprise {entreprise}
 
 Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
-
+    
     # Select AI provider
     api_key = None
     provider = None
@@ -734,7 +750,7 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
                     messages=[{"role": "user", "content": prompt}]
                 )
                 content = response.choices[0].message.content
-                
+        
         elif provider == "google":
             try:
                 from emergentintegrations.llm.chat import LlmChat, UserMessage
@@ -746,7 +762,7 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
                 client = genai.Client(api_key=api_key)
                 response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
                 content = response.text
-                
+        
         elif provider == "groq":
             from groq import Groq
             client = Groq(api_key=api_key)
@@ -782,7 +798,7 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             "generated_by": "ai",
             "created_at": letter["created_at"]
         }
-        
+    
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -815,7 +831,7 @@ async def get_document(
         )
     
     download_url = None
-    if document.get("file_path"):
+    if document.get("cloudinary_url") or document.get("file_path"):
         download_url = f"/api/documents/{document_id}/download"
     
     return DocumentResponse(
@@ -841,7 +857,7 @@ async def download_document(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Download a document file"""
+    """Download a document file - redirects to Cloudinary URL or serves from filesystem"""
     user_id = current_user["user_id"]
     
     document = await db.documents.find_one(
@@ -855,23 +871,23 @@ async def download_document(
             detail="Document non trouvé"
         )
     
-    if not document.get("file_path"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ce document n'a pas de fichier associé"
-        )
+    # If document has Cloudinary URL, redirect to it
+    if document.get("cloudinary_url"):
+        return RedirectResponse(url=document["cloudinary_url"], status_code=302)
     
-    file_path = Path(document["file_path"])
-    if not file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Fichier non trouvé sur le serveur"
-        )
+    # Legacy: check for file_path (old documents before Cloudinary)
+    if document.get("file_path"):
+        file_path = Path(document["file_path"])
+        if file_path.exists():
+            return FileResponse(
+                path=file_path,
+                filename=document.get("original_filename", file_path.name),
+                media_type=document.get("mime_type", "application/octet-stream")
+            )
     
-    return FileResponse(
-        path=file_path,
-        filename=document.get("original_filename", file_path.name),
-        media_type=document.get("mime_type", "application/octet-stream")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Fichier non trouvé. Le document doit être ré-uploadé."
     )
 
 
@@ -919,7 +935,7 @@ async def delete_document(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Delete a document"""
+    """Delete a document (from Cloudinary and database)"""
     user_id = current_user["user_id"]
     
     document = await db.documents.find_one(
@@ -932,13 +948,28 @@ async def delete_document(
             detail="Document non trouvé"
         )
     
-    # Delete file if exists
+    # Delete from Cloudinary if exists
+    if document.get("cloudinary_public_id"):
+        try:
+            # Determine resource type based on mime_type
+            resource_type = "image" if document.get("mime_type", "").startswith("image/") else "raw"
+            cloudinary.uploader.destroy(
+                document["cloudinary_public_id"],
+                resource_type=resource_type
+            )
+        except Exception as e:
+            # Log but don't fail if Cloudinary delete fails
+            print(f"Warning: Failed to delete from Cloudinary: {e}")
+    
+    # Legacy: Delete local file if exists
     if document.get("file_path"):
         file_path = Path(document["file_path"])
         if file_path.exists():
-            file_path.unlink()
+            try:
+                file_path.unlink()
+            except Exception:
+                pass
     
     await db.documents.delete_one({"id": document_id})
     
     return {"message": "Document supprimé"}
-
