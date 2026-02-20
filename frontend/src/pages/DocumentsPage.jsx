@@ -1053,7 +1053,7 @@ function DocumentViewerModal({ open, onClose, document: doc, t }) {
         URL.revokeObjectURL(activeUrl);
       }
     };
-  }, [open, doc?.id, t]);
+  }, [open, doc, t]);
 
   if (!doc) return null;
 
