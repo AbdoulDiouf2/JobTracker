@@ -286,10 +286,10 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDownload = async (document) => {
+  const handleDownload = async (doc) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents/${document.id}/download`, {
+      const response = await axios.get(`${API_URL}/api/documents/${doc.id}/download`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
@@ -297,10 +297,11 @@ export default function DocumentsPage() {
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', document.original_filename || `${document.name}.pdf`);
+      link.setAttribute('download', doc.original_filename || `${doc.name}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error downloading:', error);
       toast.error(t.error);
@@ -1017,7 +1018,20 @@ function DocumentViewerModal({ open, onClose, document: doc, t }) {
           headers: { Authorization: `Bearer ${token}` },
           responseType: 'blob'
         });
-        const fileType = response.headers['content-type'];
+        
+        // Use document's saved mime_type as priority, fallback to response header, or guess by extension
+        let fileType = doc.mime_type || response.headers['content-type'];
+        
+        // If it's a known previewable type but the mime type is generic, force it
+        const lowerName = (doc.original_filename || doc.name || '').toLowerCase();
+        if (lowerName.endsWith('.pdf')) {
+          fileType = 'application/pdf';
+        } else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
+          fileType = 'image/jpeg';
+        } else if (lowerName.endsWith('.png')) {
+          fileType = 'image/png';
+        }
+        
         const blob = new Blob([response.data], { type: fileType });
         const url = URL.createObjectURL(blob);
         activeUrl = url;
@@ -1039,7 +1053,7 @@ function DocumentViewerModal({ open, onClose, document: doc, t }) {
         URL.revokeObjectURL(activeUrl);
       }
     };
-  }, [open, doc, t]);
+  }, [open, doc?.id, t]);
 
   if (!doc) return null;
 
@@ -1106,10 +1120,10 @@ function DocumentViewerModal({ open, onClose, document: doc, t }) {
                     variant="outline" 
                     className="border-gold/20 text-gold hover:bg-gold/10"
                     onClick={() => {
-                        const link = document.createElement('a');
+                        const link = window.document.createElement('a');
                         link.href = contentUrl;
                         link.setAttribute('download', doc.original_filename || `${doc.name}`);
-                        document.body.appendChild(link);
+                        window.document.body.appendChild(link);
                         link.click();
                         link.remove();
                     }}
