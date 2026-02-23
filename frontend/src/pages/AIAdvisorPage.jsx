@@ -44,6 +44,11 @@ export default function AIAdvisorPage() {
   // CV Analysis State
   const [analyzing, setAnalyzing] = useState(false);
   const [cvAnalysis, setCvAnalysis] = useState(null);
+  const [cvHistory, setCvHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [existingCVs, setExistingCVs] = useState([]);
+  const [selectedCvId, setSelectedCvId] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const cvInputRef = useRef(null);
   
   const messagesEndRef = useRef(null);
