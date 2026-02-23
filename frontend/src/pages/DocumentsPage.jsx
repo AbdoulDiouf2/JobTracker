@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, Upload, Link as LinkIcon, Trash2, Download, Edit2, 
   Plus, Star, StarOff, File, ExternalLink, Github, Linkedin, Globe,
-  FolderOpen, FileCheck, Copy, Check, X, Loader2, Eye
+  FolderOpen, FileCheck, Copy, Check, X, Loader2, Eye, Wand2, Mail, Sparkles
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
@@ -33,6 +33,7 @@ import {
 import { Skeleton } from '../components/ui/skeleton';
 import { toast } from 'sonner';
 import axios from 'axios';
+import CoverLetterGeneratorModal from '../components/CoverLetterGeneratorModal';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
