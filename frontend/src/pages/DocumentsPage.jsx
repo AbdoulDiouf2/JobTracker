@@ -508,6 +508,15 @@ export default function DocumentsPage() {
               <FileCheck size={16} className="mr-2" />
               {t.coverLettersTab}
             </TabsTrigger>
+            <TabsTrigger value="generated" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
+              <Mail size={16} className="mr-2" />
+              {t.generatedTab}
+              {generatedLetters.length > 0 && (
+                <span className="ml-2 bg-gold/20 text-gold text-xs px-1.5 py-0.5 rounded-full">
+                  {generatedLetters.length}
+                </span>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="portfolio" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
               <LinkIcon size={16} className="mr-2" />
               {t.portfolioTab}
