@@ -610,7 +610,13 @@ export default function DocumentsPage() {
             </Button>
           </div>
           
-          {portfolioLinks.length === 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <LinkCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : portfolioLinks.length === 0 ? (
             <div className="glass-card rounded-xl p-12 text-center border border-slate-800">
               <LinkIcon size={48} className="mx-auto text-slate-600 mb-4" />
               <p className="text-slate-400">{t.noLinks}</p>
