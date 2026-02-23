@@ -622,6 +622,8 @@ async def import_csv(
 @router.post("/analyze-cv", response_model=CVAnalysisResult)
 async def analyze_cv(
     file: UploadFile = File(...),
+    model_provider: Optional[str] = Form(None),
+    model_name: Optional[str] = Form(None),
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -634,37 +636,60 @@ async def analyze_cv(
         {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1}
     )
     
-    # Determine which AI provider to use
+    # Determine which AI provider to use based on selected model or fallback
     api_key = None
     provider = None
+    model = None
     
-    # Check user's personal keys first
-    if user and user.get("openai_key"):
-        api_key = user["openai_key"]
-        provider = "openai"
-    elif user and user.get("google_ai_key"):
-        api_key = user["google_ai_key"]
-        provider = "google"
-    elif user and user.get("groq_key"):
-        api_key = user["groq_key"]
-        provider = "groq"
+    # If model is explicitly selected from frontend, use that
+    if model_provider and model_name:
+        provider = model_provider.lower()
+        model = model_name
+        
+        # Get the appropriate API key for the selected provider
+        if provider == "openai":
+            api_key = (user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+        elif provider == "gemini" or provider == "google":
+            provider = "google"
+            api_key = (user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+        elif provider == "groq":
+            api_key = (user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
     
-    # Fallback to environment keys
+    # Fallback: auto-detect based on available keys
     if not api_key:
-        emergent_key = os.environ.get("EMERGENT_LLM_KEY")
-        if emergent_key and USE_EMERGENT:
-            api_key = emergent_key
-            provider = "emergent"
-        else:
-            openai_key = os.environ.get("OPENAI_API_KEY")
-            if openai_key:
-                api_key = openai_key
-                provider = "openai"
+        # Check user's personal keys first
+        if user and user.get("openai_key"):
+            api_key = user["openai_key"]
+            provider = "openai"
+            model = "gpt-4o"
+        elif user and user.get("google_ai_key"):
+            api_key = user["google_ai_key"]
+            provider = "google"
+            model = "gemini-2.0-flash"
+        elif user and user.get("groq_key"):
+            api_key = user["groq_key"]
+            provider = "groq"
+            model = "llama-3.3-70b-versatile"
+        
+        # Fallback to environment keys
+        if not api_key:
+            emergent_key = os.environ.get("EMERGENT_LLM_KEY")
+            if emergent_key:
+                api_key = emergent_key
+                provider = provider or "openai"
+                model = model or "gpt-4o"
             else:
-                google_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-                if google_key:
-                    api_key = google_key
-                    provider = "google"
+                openai_key = os.environ.get("OPENAI_API_KEY")
+                if openai_key:
+                    api_key = openai_key
+                    provider = "openai"
+                    model = "gpt-4o"
+                else:
+                    google_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+                    if google_key:
+                        api_key = google_key
+                        provider = "google"
+                        model = "gemini-2.0-flash"
     
     if not api_key:
         raise HTTPException(
