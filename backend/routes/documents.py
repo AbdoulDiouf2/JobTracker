@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import os
 import uuid
 from pathlib import Path
+import io
 
 from models import (
     DocumentType, DocumentCreate, DocumentUpdate, DocumentResponse,
@@ -23,6 +24,13 @@ from utils.auth import get_current_user
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+
+# PDF generation
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import cm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_JUSTIFY, TA_LEFT
 
 cloudinary.config(
     cloud_name=os.environ.get("CLOUDINARY_CLOUD_NAME"),
