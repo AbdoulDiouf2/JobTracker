@@ -47,6 +47,89 @@ def get_db():
     pass
 
 
+def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_name: str) -> io.BytesIO:
+    """Generate a PDF from cover letter content"""
+    buffer = io.BytesIO()
+    
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=2*cm,
+        leftMargin=2*cm,
+        topMargin=2*cm,
+        bottomMargin=2*cm
+    )
+    
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=14,
+        spaceAfter=20,
+        textColor='#1a1a2e'
+    )
+    
+    body_style = ParagraphStyle(
+        'CustomBody',
+        parent=styles['Normal'],
+        fontSize=11,
+        leading=16,
+        alignment=TA_JUSTIFY,
+        spaceAfter=12
+    )
+    
+    meta_style = ParagraphStyle(
+        'Meta',
+        parent=styles['Normal'],
+        fontSize=9,
+        textColor='#666666',
+        spaceAfter=20
+    )
+    
+    story = []
+    
+    # Title
+    story.append(Paragraph(f"Lettre de Motivation - {poste}", title_style))
+    story.append(Paragraph(f"Candidature chez {entreprise} • {user_name}", meta_style))
+    story.append(Spacer(1, 0.5*cm))
+    
+    # Content - split by paragraphs
+    paragraphs = content.split('\n\n')
+    for para in paragraphs:
+        if para.strip():
+            # Replace single newlines with <br/>
+            para = para.replace('\n', '<br/>')
+            story.append(Paragraph(para, body_style))
+    
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
+
+async def upload_cover_letter_to_cloudinary(pdf_buffer: io.BytesIO, user_id: str, letter_id: str, filename: str) -> dict:
+    """Upload generated cover letter PDF to Cloudinary"""
+    try:
+        upload_result = cloudinary.uploader.upload(
+            pdf_buffer,
+            public_id=f"jobtracker/{user_id}/cover_letters/{letter_id}",
+            resource_type="raw",
+            format="pdf",
+            use_filename=True,
+            unique_filename=False,
+            overwrite=True,
+            tags=[user_id, "cover_letter"]
+        )
+        return {
+            "url": upload_result.get("secure_url"),
+            "public_id": upload_result.get("public_id")
+        }
+    except Exception as e:
+        print(f"Error uploading to Cloudinary: {e}")
+        return None
+
+
 # Configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB
 ALLOWED_MIME_TYPES = [
