@@ -365,9 +365,7 @@ async def import_data(
 
 # ============== AI Helper Functions ==============
 
-async def analyze_cv_with_emergent(api_key: str, user_id: str, cv_text: str, apps_context: str) -> dict:
-    """Analyze CV using Emergent integrations"""
-    system_message = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
+CV_ANALYSIS_SYSTEM_MESSAGE = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
 
 Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans texte avant ou après):
 {
@@ -386,7 +384,10 @@ Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans tex
 
 Sois précis et constructif. Le score doit refléter la qualité globale du CV."""
 
-    user_prompt = f"""Analyse ce CV en détail:
+
+def build_cv_analysis_prompt(cv_text: str, apps_context: str) -> str:
+    """Build the user prompt for CV analysis"""
+    return f"""Analyse ce CV en détail:
 
 --- CONTENU DU CV ---
 {cv_text[:4000]}
@@ -396,11 +397,16 @@ Sois précis et constructif. Le score doit refléter la qualité globale du CV."
 
 Retourne l'analyse au format JSON demandé."""
 
+
+async def analyze_cv_with_emergent(api_key: str, user_id: str, cv_text: str, apps_context: str, provider: str = "openai", model: str = "gpt-4o") -> str:
+    """Analyze CV using Emergent integrations with dynamic provider selection"""
+    user_prompt = build_cv_analysis_prompt(cv_text, apps_context)
+    
     chat = LlmChat(
         api_key=api_key,
         session_id=f"cv-analysis-{user_id}-{uuid.uuid4().hex[:8]}",
-        system_message=system_message
-    ).with_model("openai", "gpt-4o")
+        system_message=CV_ANALYSIS_SYSTEM_MESSAGE
+    ).with_model(provider, model)
     
     response = await chat.send_message(UserMessage(text=user_prompt))
     return response
@@ -408,40 +414,44 @@ Retourne l'analyse au format JSON demandé."""
 
 async def analyze_cv_with_openai(api_key: str, cv_text: str, apps_context: str) -> str:
     """Analyze CV using standard OpenAI SDK"""
-    system_message = """Tu es un expert en recrutement et analyse de CV. Tu dois analyser le CV fourni et donner une évaluation complète.
-
-Tu dois retourner ta réponse UNIQUEMENT au format JSON valide suivant (sans texte avant ou après):
-{
-    "score": <nombre entre 0 et 100>,
-    "summary": "<résumé du profil en 2-3 phrases>",
-    "skills": ["compétence1", "compétence2", ...],
-    "experience_years": <nombre d'années d'expérience estimé ou null>,
-    "strengths": ["point fort 1", "point fort 2", ...],
-    "improvements": ["amélioration 1", "amélioration 2", ...],
-    "matching_jobs": [
-        {"title": "Titre du poste", "match_score": <0-100>, "reason": "Raison du match"},
-        ...
-    ],
-    "recommendations": "<conseils détaillés pour améliorer le CV et la recherche d'emploi>"
-}
-
-Sois précis et constructif. Le score doit refléter la qualité globale du CV."""
-
-    user_prompt = f"""Analyse ce CV en détail:
-
---- CONTENU DU CV ---
-{cv_text[:4000]}
-
---- CANDIDATURES RÉCENTES DU CANDIDAT ---
-{apps_context}
-
-Retourne l'analyse au format JSON demandé."""
-
+    from openai import OpenAI
+    
+    user_prompt = build_cv_analysis_prompt(cv_text, apps_context)
+    
     client = OpenAI(api_key=api_key)
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=[
-            {"role": "system", "content": system_message},
+            {"role": "system", "content": CV_ANALYSIS_SYSTEM_MESSAGE},
+            {"role": "user", "content": user_prompt}
+        ]
+    )
+    return response.choices[0].message.content
+
+
+async def analyze_cv_with_google(api_key: str, cv_text: str, apps_context: str) -> str:
+    """Analyze CV using Google Gemini"""
+    from google import genai
+    
+    user_prompt = build_cv_analysis_prompt(cv_text, apps_context)
+    full_prompt = f"{CV_ANALYSIS_SYSTEM_MESSAGE}\n\n{user_prompt}"
+    
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(model="gemini-2.0-flash", contents=full_prompt)
+    return response.text
+
+
+async def analyze_cv_with_groq(api_key: str, cv_text: str, apps_context: str) -> str:
+    """Analyze CV using Groq"""
+    from groq import Groq
+    
+    user_prompt = build_cv_analysis_prompt(cv_text, apps_context)
+    
+    client = Groq(api_key=api_key)
+    response = client.chat.completions.create(
+        model="llama-3.1-70b-versatile",
+        messages=[
+            {"role": "system", "content": CV_ANALYSIS_SYSTEM_MESSAGE},
             {"role": "user", "content": user_prompt}
         ]
     )
