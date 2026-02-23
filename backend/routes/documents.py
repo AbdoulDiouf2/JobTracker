@@ -887,18 +887,38 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             )
             content = response.choices[0].message.content
         
-        # Save generated letter
+        # Generate PDF and upload to Cloudinary
         letter_id = str(uuid.uuid4())
+        cloudinary_data = None
+        
+        try:
+            pdf_buffer = generate_cover_letter_pdf(
+                content=content,
+                entreprise=entreprise,
+                poste=poste,
+                user_name=user.get("full_name", "Candidat")
+            )
+            filename = f"LM_AI_{entreprise}_{poste}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            cloudinary_data = await upload_cover_letter_to_cloudinary(
+                pdf_buffer, user_id, letter_id, filename
+            )
+        except Exception as pdf_err:
+            print(f"Error generating PDF: {pdf_err}")
+        
+        # Save generated letter
         letter = {
             "id": letter_id,
             "user_id": user_id,
             "application_id": application_id,
             "template_id": None,
+            "template_name": None,
             "entreprise": entreprise,
             "poste": poste,
             "content": content,
             "generated_by": "ai",
             "tone": tone,
+            "cloudinary_url": cloudinary_data.get("url") if cloudinary_data else None,
+            "cloudinary_public_id": cloudinary_data.get("public_id") if cloudinary_data else None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         
@@ -911,6 +931,7 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             "poste": poste,
             "tone": tone,
             "generated_by": "ai",
+            "download_url": cloudinary_data.get("url") if cloudinary_data else None,
             "created_at": letter["created_at"]
         }
     
