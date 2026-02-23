@@ -441,15 +441,18 @@ async def analyze_cv_with_google(api_key: str, cv_text: str, apps_context: str) 
     return response.text
 
 
-async def analyze_cv_with_groq(api_key: str, cv_text: str, apps_context: str) -> str:
+async def analyze_cv_with_groq(api_key: str, cv_text: str, apps_context: str, model: str = None) -> str:
     """Analyze CV using Groq"""
     from groq import Groq
     
     user_prompt = build_cv_analysis_prompt(cv_text, apps_context)
     
+    # Use specified model or default
+    groq_model = model or "llama-3.3-70b-versatile"
+    
     client = Groq(api_key=api_key)
     response = client.chat.completions.create(
-        model="llama-3.1-70b-versatile",
+        model=groq_model,
         messages=[
             {"role": "system", "content": CV_ANALYSIS_SYSTEM_MESSAGE},
             {"role": "user", "content": user_prompt}
