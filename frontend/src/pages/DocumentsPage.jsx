@@ -205,11 +205,27 @@ export default function DocumentsPage() {
     }
   }, []);
 
+  const fetchGeneratedLetters = useCallback(async () => {
+    try {
+      setLoadingLetters(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/documents/cover-letters`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setGeneratedLetters(response.data);
+    } catch (error) {
+      console.error('Error fetching generated letters:', error);
+    } finally {
+      setLoadingLetters(false);
+    }
+  }, []);
+
   // Fetch documents on mount
   useEffect(() => {
     fetchDocuments();
     fetchTemplates();
-  }, [fetchDocuments, fetchTemplates]);
+    fetchGeneratedLetters();
+  }, [fetchDocuments, fetchTemplates, fetchGeneratedLetters]);
 
   const handleUpload = async (formData) => {
     try {
