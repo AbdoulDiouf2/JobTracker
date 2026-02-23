@@ -516,10 +516,11 @@ async def generate_cover_letter_from_template(
     poste: str,
     application_id: Optional[str] = None,
     extra_vars: Optional[dict] = None,
+    save_as_pdf: bool = True,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Generate a cover letter from a template with variable substitution"""
+    """Generate a cover letter from a template with variable substitution and save as PDF to Cloudinary"""
     user_id = current_user["user_id"]
     
     template = await db.cover_letter_templates.find_one(
@@ -550,17 +551,38 @@ async def generate_cover_letter_from_template(
     for var, value in variables.items():
         content = content.replace(f"{{{var}}}", str(value))
     
-    # Save generated letter
+    # Generate PDF and upload to Cloudinary
     letter_id = str(uuid.uuid4())
+    cloudinary_data = None
+    
+    if save_as_pdf:
+        try:
+            pdf_buffer = generate_cover_letter_pdf(
+                content=content,
+                entreprise=entreprise,
+                poste=poste,
+                user_name=user.get("full_name", "Candidat")
+            )
+            filename = f"LM_{entreprise}_{poste}_{datetime.now().strftime('%Y%m%d')}.pdf"
+            cloudinary_data = await upload_cover_letter_to_cloudinary(
+                pdf_buffer, user_id, letter_id, filename
+            )
+        except Exception as e:
+            print(f"Error generating PDF: {e}")
+    
+    # Save generated letter
     letter = {
         "id": letter_id,
         "user_id": user_id,
         "application_id": application_id,
         "template_id": template_id,
+        "template_name": template.get("name"),
         "entreprise": entreprise,
         "poste": poste,
         "content": content,
         "generated_by": "template",
+        "cloudinary_url": cloudinary_data.get("url") if cloudinary_data else None,
+        "cloudinary_public_id": cloudinary_data.get("public_id") if cloudinary_data else None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -571,6 +593,8 @@ async def generate_cover_letter_from_template(
         "content": content,
         "entreprise": entreprise,
         "poste": poste,
+        "template_name": template.get("name"),
+        "download_url": cloudinary_data.get("url") if cloudinary_data else None,
         "created_at": letter["created_at"]
     }
 
