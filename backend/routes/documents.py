@@ -615,6 +615,63 @@ async def list_generated_cover_letters(
     return letters
 
 
+@router.get("/cover-letters/{letter_id}")
+async def get_generated_cover_letter(
+    letter_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Get a specific generated cover letter"""
+    user_id = current_user["user_id"]
+    
+    letter = await db.generated_cover_letters.find_one(
+        {"id": letter_id, "user_id": user_id},
+        {"_id": 0}
+    )
+    
+    if not letter:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lettre non trouvée"
+        )
+    
+    return letter
+
+
+@router.delete("/cover-letters/{letter_id}")
+async def delete_generated_cover_letter(
+    letter_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Delete a generated cover letter (from Cloudinary and database)"""
+    user_id = current_user["user_id"]
+    
+    letter = await db.generated_cover_letters.find_one(
+        {"id": letter_id, "user_id": user_id}
+    )
+    
+    if not letter:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Lettre non trouvée"
+        )
+    
+    # Delete from Cloudinary if exists
+    if letter.get("cloudinary_public_id"):
+        try:
+            cloudinary.uploader.destroy(
+                letter["cloudinary_public_id"],
+                resource_type="raw"
+            )
+        except Exception as e:
+            print(f"Warning: Failed to delete from Cloudinary: {e}")
+    
+    await db.generated_cover_letters.delete_one({"id": letter_id})
+    
+    return {"message": "Lettre supprimée"}
+
+
 # ============================================
 # APPLICATION-DOCUMENT LINKING
 # ============================================
