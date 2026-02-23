@@ -755,22 +755,39 @@ async def analyze_cv(
         
         apps_context = "\n".join([f"- {a['poste']} chez {a['entreprise']}" for a in applications]) if applications else "Aucune candidature"
         
-        # Call AI based on provider
+        # Call AI based on provider and model
         response = ""
-        if provider == "emergent":
-            response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", "gpt-4o")
-        elif provider == "openai":
-            if USE_EMERGENT:
-                response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", "gpt-4o")
+        model_used = model or "unknown"
+        
+        # Use Emergent integrations if available for supported providers
+        use_emergent = USE_EMERGENT and api_key == os.environ.get("EMERGENT_LLM_KEY")
+        
+        if provider == "openai":
+            emergent_model = model or "gpt-4o"
+            if use_emergent or (user and user.get("openai_key") == api_key):
+                # Can use Emergent for user keys too if available
+                try:
+                    response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", emergent_model)
+                    model_used = emergent_model
+                except Exception:
+                    response = await analyze_cv_with_openai(api_key, cv_text, apps_context)
+                    model_used = "gpt-4o"
             else:
                 response = await analyze_cv_with_openai(api_key, cv_text, apps_context)
-        elif provider == "google":
-            if USE_EMERGENT:
-                response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", "gemini-2.0-flash")
+                model_used = "gpt-4o"
+                
+        elif provider == "google" or provider == "gemini":
+            emergent_model = model or "gemini-2.0-flash"
+            if use_emergent:
+                response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", emergent_model)
+                model_used = emergent_model
             else:
                 response = await analyze_cv_with_google(api_key, cv_text, apps_context)
+                model_used = "gemini-2.0-flash"
+                
         elif provider == "groq":
-            response = await analyze_cv_with_groq(api_key, cv_text, apps_context)
+            response = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
+            model_used = model or "llama-3.3-70b-versatile"
         
         # Parse JSON response
         try:
@@ -789,6 +806,7 @@ async def analyze_cv(
                 "user_id": user_id,
                 "filename": file.filename,
                 "provider": provider,
+                "model": model_used,
                 "analysis": result,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
