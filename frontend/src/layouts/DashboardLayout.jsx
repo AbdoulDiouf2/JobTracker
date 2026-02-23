@@ -179,9 +179,9 @@ export default function DashboardLayout() {
   useSwipeGesture({
     onSwipeRight: handleSwipeRight,
     onSwipeLeft: handleSwipeLeft,
-    minSwipeDistance: 50,
-    maxSwipeTime: 500,
-    edgeWidth: 40, // 40px from left edge to trigger open
+    minSwipeDistance: 40, // Réduire la distance minimale pour plus de réactivité
+    maxSwipeTime: 600,
+    edgeWidth: 100, // 100px depuis le bord gauche pour ouvrir le menu
     edgeOnly: !sidebarOpen, // Only require edge swipe when sidebar is closed
   });
 
