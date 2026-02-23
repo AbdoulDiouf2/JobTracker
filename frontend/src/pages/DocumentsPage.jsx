@@ -674,6 +674,14 @@ export default function DocumentsPage() {
                   <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
                     <Button 
                       size="sm" 
+                      onClick={() => handleUseTemplate(template.id)}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <Wand2 size={14} className="mr-1" />
+                      {t.use}
+                    </Button>
+                    <Button 
+                      size="sm" 
                       variant="ghost" 
                       onClick={() => { setEditingTemplate(template); setTemplateModalOpen(true); }}
                       className="text-slate-400 hover:text-white"
@@ -685,6 +693,118 @@ export default function DocumentsPage() {
                       size="sm" 
                       variant="ghost" 
                       onClick={() => handleDeleteTemplate(template.id)}
+                      className="text-slate-400 hover:text-red-400 ml-auto"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Generated Letters Tab */}
+        <TabsContent value="generated" className="mt-6">
+          <div className="flex justify-end mb-4">
+            <Button 
+              onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }} 
+              className="bg-gold hover:bg-gold/90 text-[#020817]"
+            >
+              <Sparkles size={16} className="mr-2" />
+              {t.generateLetter}
+            </Button>
+          </div>
+          
+          {loadingLetters ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[1, 2, 3].map((i) => (
+                <GeneratedLetterSkeleton key={i} />
+              ))}
+            </div>
+          ) : generatedLetters.length === 0 ? (
+            <div className="glass-card rounded-xl p-12 text-center border border-slate-800">
+              <Mail size={48} className="mx-auto text-slate-600 mb-4" />
+              <p className="text-slate-400">{t.noGeneratedLetters}</p>
+              <p className="text-sm text-slate-500 mt-2">{t.noGeneratedLettersDesc}</p>
+              <Button 
+                onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }}
+                className="mt-4 bg-gold hover:bg-gold/90 text-[#020817]"
+              >
+                <Sparkles size={16} className="mr-2" />
+                {t.generateLetter}
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {generatedLetters.map((letter) => (
+                <motion.div
+                  key={letter.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="glass-card rounded-xl p-4 border border-slate-800 hover:border-gold/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${letter.generated_by === 'ai' ? 'bg-purple-500/20' : 'bg-green-500/20'}`}>
+                        {letter.generated_by === 'ai' ? (
+                          <Sparkles size={24} className="text-purple-400" />
+                        ) : (
+                          <FileCheck size={24} className="text-green-400" />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-white">{letter.poste}</h3>
+                        <p className="text-sm text-slate-400">{t.forCompany}: {letter.entreprise}</p>
+                      </div>
+                    </div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      letter.generated_by === 'ai' 
+                        ? 'bg-purple-500/20 text-purple-400' 
+                        : 'bg-green-500/20 text-green-400'
+                    }`}>
+                      {letter.generated_by === 'ai' ? t.aiGenerated : t.templateGenerated}
+                    </span>
+                  </div>
+                  
+                  <p className="text-sm text-slate-400 mb-3 line-clamp-3 font-mono bg-slate-900/50 p-2 rounded">
+                    {letter.content.substring(0, 150)}...
+                  </p>
+                  
+                  <div className="text-xs text-slate-500 mb-3 flex items-center gap-3">
+                    <span>{t.created}: {new Date(letter.created_at).toLocaleDateString()}</span>
+                    {letter.template_name && (
+                      <span className="text-green-400">• {letter.template_name}</span>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
+                    {letter.cloudinary_url && (
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => window.open(letter.cloudinary_url, '_blank')}
+                        className="text-gold hover:text-gold/80"
+                      >
+                        <Download size={14} className="mr-1" />
+                        {t.downloadPdf}
+                      </Button>
+                    )}
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => {
+                        navigator.clipboard.writeText(letter.content);
+                        toast.success(t.copied);
+                      }}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <Copy size={14} className="mr-1" />
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => handleDeleteGeneratedLetter(letter.id)}
                       className="text-slate-400 hover:text-red-400 ml-auto"
                     >
                       <Trash2 size={14} />
