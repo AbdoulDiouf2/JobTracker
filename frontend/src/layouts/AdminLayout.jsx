@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Users, BarChart3, Settings, LogOut, Menu, 
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
 
 const AdminSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
