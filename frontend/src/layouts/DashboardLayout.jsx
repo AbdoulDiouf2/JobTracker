@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
@@ -12,6 +12,7 @@ import NotificationBell from '../components/NotificationBell';
 import RefreshButton from '../components/RefreshButton';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { useReminders } from '../hooks/useReminders';
+import { useSwipeGesture } from '../hooks/useSwipeGesture';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
