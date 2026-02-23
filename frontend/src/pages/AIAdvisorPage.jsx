@@ -77,8 +77,11 @@ export default function AIAdvisorPage() {
       modelUsed: 'Modèle utilisé',
       // CV Analysis Translations
       cvTitle: 'Analyse de CV',
-      cvDesc: 'Uploadez votre CV pour une analyse IA complète',
-      uploadCv: 'Uploader votre CV',
+      cvDesc: 'Analysez votre CV avec l\'IA',
+      uploadCv: 'Uploader un nouveau CV',
+      selectExistingCv: 'Ou choisir un CV existant',
+      selectCvPlaceholder: 'Sélectionner un CV...',
+      noCvAvailable: 'Aucun CV disponible',
       cvFormats: 'Formats: PDF, DOCX, TXT',
       analyzing: 'Analyse en cours...',
       score: 'Score global',
@@ -88,7 +91,16 @@ export default function AIAdvisorPage() {
       improvements: 'Améliorations suggérées',
       matchingJobs: 'Postes recommandés',
       recommendations: 'Recommandations',
-      experience: 'Années d\'expérience'
+      experience: 'Années d\'expérience',
+      analyzeSelected: 'Analyser ce CV',
+      history: 'Historique des analyses',
+      viewHistory: 'Voir l\'historique',
+      hideHistory: 'Masquer l\'historique',
+      noHistory: 'Aucune analyse précédente',
+      viewAnalysis: 'Voir l\'analyse',
+      deleteAnalysis: 'Supprimer',
+      analyzedOn: 'Analysé le',
+      usedModel: 'Modèle utilisé'
     },
     en: {
       title: 'AI Assistant',
