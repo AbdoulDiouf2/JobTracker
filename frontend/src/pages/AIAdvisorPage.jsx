@@ -2,12 +2,14 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Send, Bot, User, Loader2, Sparkles, MessageSquare, Trash2, Settings2, ChevronDown,
-  Upload, Award, Target, TrendingUp, CheckCircle, AlertCircle, Briefcase, Lightbulb, FileUp
+  Upload, Award, Target, TrendingUp, CheckCircle, AlertCircle, Briefcase, Lightbulb, FileUp,
+  History, FileText, Clock, Eye, ChevronRight
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Progress } from '../components/ui/progress';
+import { Skeleton } from '../components/ui/skeleton';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +18,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 import axios from 'axios';
 import Markdown from 'react-markdown';
 
