@@ -625,15 +625,52 @@ async def analyze_cv(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Analyze CV with AI and provide detailed feedback"""
-    # Get API key based on mode
-    if USE_EMERGENT:
-        api_key = os.environ.get("EMERGENT_LLM_KEY")
-    else:
-        api_key = os.environ.get("OPENAI_API_KEY")
+    """Analyze CV with AI and provide detailed feedback - supports multiple AI providers"""
+    user_id = current_user["user_id"]
+    
+    # Get user info including AI keys
+    user = await db.users.find_one(
+        {"id": user_id}, 
+        {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1}
+    )
+    
+    # Determine which AI provider to use
+    api_key = None
+    provider = None
+    
+    # Check user's personal keys first
+    if user and user.get("openai_key"):
+        api_key = user["openai_key"]
+        provider = "openai"
+    elif user and user.get("google_ai_key"):
+        api_key = user["google_ai_key"]
+        provider = "google"
+    elif user and user.get("groq_key"):
+        api_key = user["groq_key"]
+        provider = "groq"
+    
+    # Fallback to environment keys
+    if not api_key:
+        emergent_key = os.environ.get("EMERGENT_LLM_KEY")
+        if emergent_key and USE_EMERGENT:
+            api_key = emergent_key
+            provider = "emergent"
+        else:
+            openai_key = os.environ.get("OPENAI_API_KEY")
+            if openai_key:
+                api_key = openai_key
+                provider = "openai"
+            else:
+                google_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+                if google_key:
+                    api_key = google_key
+                    provider = "google"
     
     if not api_key:
-        raise HTTPException(status_code=500, detail="AI service not configured. Set OPENAI_API_KEY in .env")
+        raise HTTPException(
+            status_code=500, 
+            detail="Service IA non configuré. Ajoutez une clé API dans Paramètres ou contactez l'administrateur."
+        )
     
     # Check file type
     allowed_types = ['.pdf', '.docx', '.doc', '.txt']
@@ -687,17 +724,28 @@ async def analyze_cv(
         
         # Get user's applications for matching
         applications = await db.applications.find(
-            {"user_id": current_user["user_id"]},
+            {"user_id": user_id},
             {"_id": 0, "entreprise": 1, "poste": 1, "type_poste": 1}
         ).limit(10).to_list(10)
         
         apps_context = "\n".join([f"- {a['poste']} chez {a['entreprise']}" for a in applications]) if applications else "Aucune candidature"
         
-        # Call AI based on mode
-        if USE_EMERGENT:
-            response = await analyze_cv_with_emergent(api_key, current_user["user_id"], cv_text, apps_context)
-        else:
-            response = await analyze_cv_with_openai(api_key, cv_text, apps_context)
+        # Call AI based on provider
+        response = ""
+        if provider == "emergent":
+            response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", "gpt-4o")
+        elif provider == "openai":
+            if USE_EMERGENT:
+                response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", "gpt-4o")
+            else:
+                response = await analyze_cv_with_openai(api_key, cv_text, apps_context)
+        elif provider == "google":
+            if USE_EMERGENT:
+                response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", "gemini-2.0-flash")
+            else:
+                response = await analyze_cv_with_google(api_key, cv_text, apps_context)
+        elif provider == "groq":
+            response = await analyze_cv_with_groq(api_key, cv_text, apps_context)
         
         # Parse JSON response
         try:
@@ -713,8 +761,9 @@ async def analyze_cv(
             
             # Save analysis to DB
             await db.cv_analyses.insert_one({
-                "user_id": current_user["user_id"],
+                "user_id": user_id,
                 "filename": file.filename,
+                "provider": provider,
                 "analysis": result,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
