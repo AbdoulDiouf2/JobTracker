@@ -179,6 +179,58 @@ export default function AIAdvisorPage() {
     fetchModels();
   }, []);
 
+  // Fetch existing CVs and history when CV tab is active
+  useEffect(() => {
+    if (activeTab === 'cv') {
+      fetchExistingCVs();
+      fetchCVHistory();
+    }
+  }, [activeTab]);
+
+  const fetchExistingCVs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/documents/cv`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setExistingCVs(response.data || []);
+    } catch (error) {
+      console.error('Error fetching CVs:', error);
+    }
+  };
+
+  const fetchCVHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API_URL}/api/import/cv-history`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setCvHistory(response.data || []);
+    } catch (error) {
+      console.error('Error fetching CV history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleDeleteAnalysis = async (analysisId) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/import/cv-history/${analysisId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchCVHistory();
+    } catch (error) {
+      console.error('Error deleting analysis:', error);
+    }
+  };
+
+  const handleViewHistoryAnalysis = (analysis) => {
+    setCvAnalysis(analysis.analysis);
+    setShowHistory(false);
+  };
+
   useEffect(() => {
     // Reset messages when switching tabs
     if (activeTab !== 'cv') {
