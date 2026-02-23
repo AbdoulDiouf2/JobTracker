@@ -951,6 +951,18 @@ export default function DocumentsPage() {
         document={viewingDocument}
         t={t}
       />
+
+      {/* Cover Letter Generator Modal */}
+      <CoverLetterGeneratorModal
+        open={generatorModalOpen}
+        onClose={() => {
+          setGeneratorModalOpen(false);
+          setSelectedTemplateForGenerator(null);
+          fetchGeneratedLetters(); // Refresh after closing
+        }}
+        preselectedTemplateId={selectedTemplateForGenerator}
+        language={language}
+      />
     </div>
   );
 }
