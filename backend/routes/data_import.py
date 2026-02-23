@@ -5,7 +5,7 @@ Supporte deux modes:
 - Mode Local: utilise les SDKs standards (openai, google-generativeai)
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
