@@ -525,34 +525,172 @@ export default function AIAdvisorPage() {
           >
             {/* Upload Section */}
             <div className="glass-card rounded-xl border border-slate-800 p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-gold/20 flex items-center justify-center">
-                  <Sparkles className="text-gold" size={24} />
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-gold/20 flex items-center justify-center">
+                    <Sparkles className="text-gold" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-semibold text-white">{t.cvTitle}</h2>
+                    <p className="text-slate-400 text-sm">{t.cvDesc}</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold text-white">{t.cvTitle}</h2>
-                  <p className="text-slate-400 text-sm">{t.cvDesc}</p>
-                </div>
+                {/* History Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="border-slate-700 text-slate-300 hover:text-white"
+                >
+                  <History size={16} className="mr-2" />
+                  {showHistory ? t.hideHistory : t.viewHistory}
+                  {cvHistory.length > 0 && (
+                    <span className="ml-2 bg-gold/20 text-gold text-xs px-1.5 py-0.5 rounded-full">
+                      {cvHistory.length}
+                    </span>
+                  )}
+                </Button>
               </div>
 
-              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-gold/50 transition-colors">
-                <input
-                  ref={cvInputRef}
-                  type="file"
-                  accept=".pdf,.docx,.doc,.txt"
-                  onChange={handleCVUpload}
-                  className="hidden"
-                  id="cv-file"
-                />
-                <label htmlFor="cv-file" className="cursor-pointer">
-                  <FileUp size={48} className="mx-auto text-gold/50 mb-4" />
-                  <p className="text-white font-medium mb-2">{t.uploadCv}</p>
-                  <p className="text-slate-500 text-sm">{t.cvFormats}</p>
-                </label>
+              {/* History Panel */}
+              <AnimatePresence>
+                {showHistory && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mb-6 overflow-hidden"
+                  >
+                    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                      <h3 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
+                        <Clock size={16} className="text-gold" />
+                        {t.history}
+                      </h3>
+                      {loadingHistory ? (
+                        <div className="space-y-3">
+                          {[1, 2].map(i => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <Skeleton className="w-8 h-8 rounded bg-slate-700" />
+                                <div>
+                                  <Skeleton className="h-4 w-32 mb-1 bg-slate-700" />
+                                  <Skeleton className="h-3 w-24 bg-slate-700" />
+                                </div>
+                              </div>
+                              <Skeleton className="h-8 w-20 bg-slate-700 rounded" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : cvHistory.length === 0 ? (
+                        <p className="text-slate-400 text-sm text-center py-4">{t.noHistory}</p>
+                      ) : (
+                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                          {cvHistory.map((analysis, idx) => (
+                            <div 
+                              key={analysis.id || idx} 
+                              className="flex items-center justify-between p-3 bg-slate-800 rounded-lg hover:bg-slate-750 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 flex-1 min-w-0">
+                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-sm font-bold ${
+                                  (analysis.analysis?.score || 0) >= 70 ? 'bg-green-500/20 text-green-400' :
+                                  (analysis.analysis?.score || 0) >= 50 ? 'bg-yellow-500/20 text-yellow-400' :
+                                  'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {analysis.analysis?.score || '?'}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-white text-sm font-medium truncate">
+                                    {analysis.filename || 'CV analysé'}
+                                  </p>
+                                  <p className="text-slate-400 text-xs">
+                                    {t.analyzedOn}: {new Date(analysis.created_at).toLocaleDateString()}
+                                    {analysis.model && ` • ${analysis.model}`}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 ml-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleViewHistoryAnalysis(analysis)}
+                                  className="text-gold hover:text-gold/80"
+                                >
+                                  <Eye size={14} className="mr-1" />
+                                  {t.viewAnalysis}
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost" 
+                                  onClick={() => handleDeleteAnalysis(analysis.id)}
+                                  className="text-slate-400 hover:text-red-400"
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Two options: Upload new or select existing */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Option 1: Upload new CV */}
+                <div className="border-2 border-dashed border-slate-700 rounded-xl p-6 text-center hover:border-gold/50 transition-colors">
+                  <input
+                    ref={cvInputRef}
+                    type="file"
+                    accept=".pdf,.docx,.doc,.txt"
+                    onChange={handleCVUpload}
+                    className="hidden"
+                    id="cv-file"
+                    disabled={analyzing}
+                  />
+                  <label htmlFor="cv-file" className={`cursor-pointer ${analyzing ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <FileUp size={40} className="mx-auto text-gold/50 mb-3" />
+                    <p className="text-white font-medium mb-1">{t.uploadCv}</p>
+                    <p className="text-slate-500 text-xs">{t.cvFormats}</p>
+                  </label>
+                </div>
+
+                {/* Option 2: Select existing CV */}
+                <div className="border-2 border-slate-700 rounded-xl p-6 hover:border-gold/50 transition-colors">
+                  <FileText size={40} className="mx-auto text-blue-400/50 mb-3" />
+                  <p className="text-white font-medium mb-3 text-center">{t.selectExistingCv}</p>
+                  
+                  <Select value={selectedCvId} onValueChange={setSelectedCvId} disabled={analyzing}>
+                    <SelectTrigger className="bg-slate-800 border-slate-700 mb-3">
+                      <SelectValue placeholder={t.selectCvPlaceholder} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      {existingCVs.length === 0 ? (
+                        <SelectItem value="none" disabled>{t.noCvAvailable}</SelectItem>
+                      ) : (
+                        existingCVs.map(cv => (
+                          <SelectItem key={cv.id} value={cv.id}>
+                            {cv.name} {cv.label && `(${cv.label})`} {cv.is_default && '⭐'}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  
+                  <Button 
+                    onClick={handleAnalyzeExistingCV}
+                    disabled={!selectedCvId || analyzing}
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Sparkles size={16} className="mr-2" />
+                    {t.analyzeSelected}
+                  </Button>
+                </div>
               </div>
 
               {analyzing && (
-                <div className="mt-4 flex items-center justify-center gap-3 text-gold py-8">
+                <div className="mt-6 flex items-center justify-center gap-3 text-gold py-8">
                   <Loader2 className="animate-spin" size={24} />
                   <span className="text-lg">{t.analyzing}</span>
                 </div>
