@@ -334,6 +334,7 @@ export default function AIAdvisorPage() {
       });
 
       setCvAnalysis(response.data);
+      fetchCVHistory(); // Refresh history after new analysis
     } catch (error) {
       console.error('CV Analysis error:', error);
       setCvAnalysis({
@@ -348,6 +349,44 @@ export default function AIAdvisorPage() {
     } finally {
       setAnalyzing(false);
       if (cvInputRef.current) cvInputRef.current.value = '';
+    }
+  };
+
+  const handleAnalyzeExistingCV = async () => {
+    if (!selectedCvId) return;
+
+    setAnalyzing(true);
+    setCvAnalysis(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const params = new URLSearchParams();
+      if (selectedModel) {
+        params.append('model_provider', selectedModel.provider);
+        params.append('model_name', selectedModel.model_id);
+      }
+
+      const response = await axios.post(
+        `${API_URL}/api/import/analyze-existing-cv/${selectedCvId}?${params.toString()}`,
+        null,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setCvAnalysis(response.data);
+      fetchCVHistory(); // Refresh history after new analysis
+    } catch (error) {
+      console.error('CV Analysis error:', error);
+      setCvAnalysis({
+        score: 0,
+        summary: error.response?.data?.detail || 'Erreur lors de l\'analyse',
+        skills: [],
+        strengths: [],
+        improvements: [],
+        matching_jobs: [],
+        recommendations: ''
+      });
+    } finally {
+      setAnalyzing(false);
     }
   };
 
