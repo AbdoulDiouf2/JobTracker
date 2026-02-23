@@ -927,12 +927,12 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             try:
                 from emergentintegrations.llm.chat import LlmChat, UserMessage
                 chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
-                chat = chat.with_model("gemini", "gemini-2.0-flash")
+                chat = chat.with_model("gemini", "gemini-1.5-flash")
                 content = await chat.send_message(UserMessage(text=prompt))
             except ImportError:
                 from google import genai
                 client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+                response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
                 content = response.text
         
         elif provider == "groq":

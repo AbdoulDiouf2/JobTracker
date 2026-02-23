@@ -437,7 +437,7 @@ async def analyze_cv_with_google(api_key: str, cv_text: str, apps_context: str) 
     full_prompt = f"{CV_ANALYSIS_SYSTEM_MESSAGE}\n\n{user_prompt}"
     
     client = genai.Client(api_key=api_key)
-    response = client.models.generate_content(model="gemini-2.0-flash", contents=full_prompt)
+    response = client.models.generate_content(model="gemini-1.5-flash", contents=full_prompt)
     return response.text
 
 
@@ -668,7 +668,7 @@ async def analyze_cv(
         elif user and user.get("google_ai_key"):
             api_key = user["google_ai_key"]
             provider = "google"
-            model = "gemini-2.0-flash"
+            model = "gemini-1.5-flash"
         elif user and user.get("groq_key"):
             api_key = user["groq_key"]
             provider = "groq"
@@ -692,7 +692,7 @@ async def analyze_cv(
                     if google_key:
                         api_key = google_key
                         provider = "google"
-                        model = "gemini-2.0-flash"
+                        model = "gemini-1.5-flash"
     
     if not api_key:
         raise HTTPException(
@@ -780,13 +780,13 @@ async def analyze_cv(
                 model_used = "gpt-4o"
                 
         elif provider == "google" or provider == "gemini":
-            emergent_model = model or "gemini-2.0-flash"
+            emergent_model = model or "gemini-1.5-flash"
             if use_emergent:
                 response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", emergent_model)
                 model_used = emergent_model
             else:
                 response = await analyze_cv_with_google(api_key, cv_text, apps_context)
-                model_used = "gemini-2.0-flash"
+                model_used = "gemini-1.5-flash"
                 
         elif provider == "groq":
             response = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
@@ -935,7 +935,7 @@ async def analyze_existing_cv(
         elif user and user.get("google_ai_key"):
             api_key = user["google_ai_key"]
             provider = "google"
-            model = "gemini-2.0-flash"
+            model = "gemini-1.5-flash"
         else:
             emergent_key = os.environ.get("EMERGENT_LLM_KEY")
             if emergent_key:
@@ -1019,10 +1019,10 @@ async def analyze_existing_cv(
             model_used = model or "gpt-4o"
         elif provider == "google":
             if USE_EMERGENT:
-                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", model or "gemini-2.0-flash")
+                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", model or "gemini-1.5-flash")
             else:
                 response_text = await analyze_cv_with_google(api_key, cv_text, apps_context)
-            model_used = model or "gemini-2.0-flash"
+            model_used = model or "gemini-1.5-flash"
         elif provider == "groq":
             response_text = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
             model_used = model or "llama-3.3-70b-versatile"

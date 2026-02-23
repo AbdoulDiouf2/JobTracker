@@ -58,7 +58,7 @@ AI_MODELS = {
         {"model_id": "gpt-4-turbo", "display_name": "GPT-4 Turbo", "description": "GPT-4 optimisé pour la vitesse"},
     ],
     "google": [
-        {"model_id": "gemini-2.0-flash", "display_name": "Gemini 2.0 Flash", "description": "Modèle rapide de Google"},
+        {"model_id": "gemini-1.5-flash", "display_name": "Gemini 2.0 Flash", "description": "Modèle rapide de Google"},
         {"model_id": "gemini-1.5-pro", "display_name": "Gemini 1.5 Pro", "description": "Modèle avancé avec grand contexte"},
         {"model_id": "gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "description": "Version optimisée"},
     ],
@@ -509,7 +509,7 @@ async def extract_job_from_page(
         if provider == "openai":
             model = "gpt-4o-mini"
         elif provider == "google":
-            model = "gemini-2.0-flash"
+            model = "gemini-1.5-flash"
         elif provider == "groq":
             model = "llama-3.1-8b-instant"
         else:
