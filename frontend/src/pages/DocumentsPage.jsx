@@ -41,7 +41,9 @@ export default function DocumentsPage() {
   const { language } = useLanguage();
   const [documents, setDocuments] = useState([]);
   const [templates, setTemplates] = useState([]);
+  const [generatedLetters, setGeneratedLetters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingLetters, setLoadingLetters] = useState(true);
   const [activeTab, setActiveTab] = useState('cv');
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
@@ -50,6 +52,8 @@ export default function DocumentsPage() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [generatorModalOpen, setGeneratorModalOpen] = useState(false);
+  const [selectedTemplateForGenerator, setSelectedTemplateForGenerator] = useState(null);
   const fileInputRef = useRef(null);
 
   const t = {
@@ -57,7 +61,8 @@ export default function DocumentsPage() {
       title: 'Mes Documents',
       subtitle: 'Gérez vos CV, lettres de motivation et liens portfolio',
       cvTab: 'CV',
-      coverLettersTab: 'Lettres de motivation',
+      coverLettersTab: 'Templates',
+      generatedTab: 'Lettres générées',
       portfolioTab: 'Portfolio & Liens',
       uploadCV: 'Uploader un CV',
       addLink: 'Ajouter un lien',
