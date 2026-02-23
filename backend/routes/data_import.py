@@ -855,3 +855,223 @@ async def get_cv_history(
     ).sort("created_at", -1).limit(10).to_list(10)
     
     return analyses
+
+
+# Delete CV analysis from history
+@router.delete("/cv-history/{analysis_id}")
+async def delete_cv_analysis(
+    analysis_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Delete a CV analysis from history"""
+    result = await db.cv_analyses.delete_one({
+        "user_id": current_user["user_id"],
+        "$or": [{"id": analysis_id}, {"_id": analysis_id}]
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Analyse non trouvée")
+    
+    return {"message": "Analyse supprimée"}
+
+
+# Analyze existing CV from documents
+@router.post("/analyze-existing-cv/{document_id}", response_model=CVAnalysisResult)
+async def analyze_existing_cv(
+    document_id: str,
+    model_provider: Optional[str] = None,
+    model_name: Optional[str] = None,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Analyze a CV that's already uploaded in Documents"""
+    import httpx
+    
+    user_id = current_user["user_id"]
+    
+    # Get the document from DB
+    document = await db.documents.find_one(
+        {"id": document_id, "user_id": user_id, "document_type": "cv"},
+        {"_id": 0}
+    )
+    
+    if not document:
+        raise HTTPException(status_code=404, detail="Document CV non trouvé")
+    
+    # Get user info including AI keys
+    user = await db.users.find_one(
+        {"id": user_id}, 
+        {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1}
+    )
+    
+    # Determine which AI provider to use
+    api_key = None
+    provider = None
+    model = None
+    
+    if model_provider and model_name:
+        provider = model_provider.lower()
+        model = model_name
+        
+        if provider == "openai":
+            api_key = (user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+        elif provider == "gemini" or provider == "google":
+            provider = "google"
+            api_key = (user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY")
+        elif provider == "groq":
+            api_key = (user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
+    
+    # Fallback
+    if not api_key:
+        if user and user.get("groq_key"):
+            api_key = user["groq_key"]
+            provider = "groq"
+            model = "llama-3.3-70b-versatile"
+        elif user and user.get("openai_key"):
+            api_key = user["openai_key"]
+            provider = "openai"
+            model = "gpt-4o"
+        elif user and user.get("google_ai_key"):
+            api_key = user["google_ai_key"]
+            provider = "google"
+            model = "gemini-2.0-flash"
+        else:
+            emergent_key = os.environ.get("EMERGENT_LLM_KEY")
+            if emergent_key:
+                api_key = emergent_key
+                provider = "openai"
+                model = "gpt-4o"
+    
+    if not api_key:
+        raise HTTPException(status_code=500, detail="Service IA non configuré")
+    
+    # Download file from Cloudinary
+    file_url = document.get("cloudinary_url") or document.get("url")
+    if not file_url:
+        raise HTTPException(status_code=400, detail="URL du document non disponible")
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(file_url)
+            content = response.content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Impossible de télécharger le CV: {str(e)}")
+    
+    # Extract text based on file type
+    file_ext = '.' + document.get("name", "").split('.')[-1].lower() if '.' in document.get("name", "") else '.pdf'
+    cv_text = ""
+    
+    if file_ext == '.txt':
+        cv_text = content.decode('utf-8')
+    elif file_ext == '.pdf':
+        if not PDF_SUPPORT:
+            raise HTTPException(status_code=500, detail="Support PDF non disponible")
+        try:
+            pdf_reader = PdfReader(io.BytesIO(content))
+            text_parts = []
+            for page in pdf_reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text_parts.append(page_text)
+            cv_text = "\n".join(text_parts)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Erreur lecture PDF: {str(e)}")
+    elif file_ext in ['.docx', '.doc']:
+        if not DOCX_SUPPORT:
+            raise HTTPException(status_code=500, detail="Support DOCX non disponible")
+        try:
+            doc = DocxDocument(io.BytesIO(content))
+            text_parts = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text)
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        if cell.text.strip():
+                            text_parts.append(cell.text)
+            cv_text = "\n".join(text_parts)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Erreur lecture DOCX: {str(e)}")
+    
+    if not cv_text or len(cv_text.strip()) < 50:
+        raise HTTPException(status_code=400, detail="Impossible d'extraire le texte du CV")
+    
+    # Get applications context
+    applications = await db.applications.find(
+        {"user_id": user_id},
+        {"_id": 0, "entreprise": 1, "poste": 1}
+    ).limit(10).to_list(10)
+    
+    apps_context = "\n".join([f"- {a['poste']} chez {a['entreprise']}" for a in applications]) if applications else "Aucune candidature"
+    
+    # Call AI
+    response_text = ""
+    model_used = model or "unknown"
+    
+    try:
+        if provider == "openai":
+            if USE_EMERGENT:
+                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "openai", model or "gpt-4o")
+            else:
+                response_text = await analyze_cv_with_openai(api_key, cv_text, apps_context)
+            model_used = model or "gpt-4o"
+        elif provider == "google":
+            if USE_EMERGENT:
+                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", model or "gemini-2.0-flash")
+            else:
+                response_text = await analyze_cv_with_google(api_key, cv_text, apps_context)
+            model_used = model or "gemini-2.0-flash"
+        elif provider == "groq":
+            response_text = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
+            model_used = model or "llama-3.3-70b-versatile"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erreur d'analyse IA: {str(e)}")
+    
+    # Parse response
+    try:
+        clean_response = response_text.strip()
+        if clean_response.startswith('```'):
+            clean_response = clean_response.split('```')[1]
+            if clean_response.startswith('json'):
+                clean_response = clean_response[4:]
+        clean_response = clean_response.strip()
+        
+        result = json.loads(clean_response)
+        
+        # Save analysis
+        analysis_id = str(uuid.uuid4())
+        await db.cv_analyses.insert_one({
+            "id": analysis_id,
+            "user_id": user_id,
+            "document_id": document_id,
+            "filename": document.get("name"),
+            "provider": provider,
+            "model": model_used,
+            "analysis": result,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        
+        return CVAnalysisResult(
+            score=result.get('score', 50),
+            summary=result.get('summary', ''),
+            skills=result.get('skills', []),
+            experience_years=result.get('experience_years'),
+            strengths=result.get('strengths', []),
+            improvements=result.get('improvements', []),
+            matching_jobs=result.get('matching_jobs', []),
+            recommendations=result.get('recommendations', '')
+        )
+        
+    except json.JSONDecodeError:
+        return CVAnalysisResult(
+            score=50,
+            summary="Analyse effectuée",
+            skills=[],
+            experience_years=None,
+            strengths=["CV analysé"],
+            improvements=["Réessayez pour une analyse détaillée"],
+            matching_jobs=[],
+            recommendations=response_text[:500] if response_text else ""
+        )
