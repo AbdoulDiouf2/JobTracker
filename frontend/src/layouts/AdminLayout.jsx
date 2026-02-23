@@ -115,6 +115,31 @@ export default function AdminLayout() {
   const { isAuthenticated, isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Swipe gesture handlers for mobile
+  const handleSwipeRight = useCallback(() => {
+    // Only open sidebar on mobile (when it's not already open)
+    if (window.innerWidth < 1024 && !sidebarOpen) {
+      setSidebarOpen(true);
+    }
+  }, [sidebarOpen]);
+
+  const handleSwipeLeft = useCallback(() => {
+    // Close sidebar on swipe left
+    if (window.innerWidth < 1024 && sidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [sidebarOpen]);
+
+  // Enable swipe gestures - swipe from left edge to open, swipe anywhere to close
+  useSwipeGesture({
+    onSwipeRight: handleSwipeRight,
+    onSwipeLeft: handleSwipeLeft,
+    minSwipeDistance: 50,
+    maxSwipeTime: 500,
+    edgeWidth: 40, // 40px from left edge to trigger open
+    edgeOnly: !sidebarOpen, // Only require edge swipe when sidebar is closed
+  });
+
   // Redirect if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
