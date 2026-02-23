@@ -125,8 +125,11 @@ export default function AIAdvisorPage() {
       modelUsed: 'Model used',
       // CV Analysis Translations
       cvTitle: 'CV Analysis',
-      cvDesc: 'Upload your CV for a complete AI analysis',
-      uploadCv: 'Upload your CV',
+      cvDesc: 'Analyze your CV with AI',
+      uploadCv: 'Upload a new CV',
+      selectExistingCv: 'Or choose an existing CV',
+      selectCvPlaceholder: 'Select a CV...',
+      noCvAvailable: 'No CV available',
       cvFormats: 'Formats: PDF, DOCX, TXT',
       analyzing: 'Analyzing...',
       score: 'Overall score',
@@ -136,7 +139,16 @@ export default function AIAdvisorPage() {
       improvements: 'Suggested improvements',
       matchingJobs: 'Recommended jobs',
       recommendations: 'Recommendations',
-      experience: 'Years of experience'
+      experience: 'Years of experience',
+      analyzeSelected: 'Analyze this CV',
+      history: 'Analysis history',
+      viewHistory: 'View history',
+      hideHistory: 'Hide history',
+      noHistory: 'No previous analysis',
+      viewAnalysis: 'View analysis',
+      deleteAnalysis: 'Delete',
+      analyzedOn: 'Analyzed on',
+      usedModel: 'Model used'
     }
   }[language];
 
