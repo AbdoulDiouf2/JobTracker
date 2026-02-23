@@ -316,6 +316,27 @@ export default function DocumentsPage() {
     }
   };
 
+  const handleDeleteGeneratedLetter = async (letterId) => {
+    if (!window.confirm(t.confirmDelete)) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/documents/cover-letters/${letterId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      toast.success(t.deleteSuccess);
+      fetchGeneratedLetters();
+    } catch (error) {
+      console.error('Error deleting letter:', error);
+      toast.error(error.response?.data?.detail || t.error);
+    }
+  };
+
+  const handleUseTemplate = (templateId) => {
+    setSelectedTemplateForGenerator(templateId);
+    setGeneratorModalOpen(true);
+  };
+
   const handleSetDefault = async (documentId) => {
     try {
       const token = localStorage.getItem('token');
