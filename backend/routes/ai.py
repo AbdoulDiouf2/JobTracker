@@ -195,31 +195,46 @@ Dernières candidatures:
 
 
 def select_api_key(user_keys: dict, provider: Optional[str] = None) -> tuple:
-    """Select the best available API key and provider"""
-    # Priority: user-specified provider > user's keys > environment keys
-    
+    """Select the best available API key and provider.
+    Priority order: groq > openai > google (groq is free and fast)
+    """
     env_keys = {
         "openai": os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
         "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
         "groq": os.environ.get("GROQ_API_KEY")
     }
-    
-    if provider and provider in user_keys:
+
+    if provider:
         key = user_keys.get(provider) or env_keys.get(provider)
         if key:
             return key, provider
-    
-    # Try user's keys first
-    for p in ["openai", "google", "groq"]:
+
+    # Priority: groq first (free & fast), then openai, then google
+    for p in ["groq", "openai", "google"]:
         if user_keys.get(p):
             return user_keys[p], p
-    
+
     # Fallback to environment keys
-    for p in ["openai", "google", "groq"]:
+    for p in ["groq", "openai", "google"]:
         if env_keys.get(p):
             return env_keys[p], p
-    
+
     return None, None
+
+
+def get_all_api_keys_ordered(user_keys: dict) -> list:
+    """Return all available (key, provider) pairs in priority order for fallback"""
+    env_keys = {
+        "openai": os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
+        "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
+        "groq": os.environ.get("GROQ_API_KEY")
+    }
+    result = []
+    for p in ["groq", "openai", "google"]:
+        key = user_keys.get(p) or env_keys.get(p)
+        if key and (p, key) not in [(r[1], r[0]) for r in result]:
+            result.append((key, p))
+    return result
 
 
 # ============== AI Call Functions ==============
@@ -495,26 +510,36 @@ async def extract_job_from_page(
     user_id = current_user["user_id"]
     user_keys = await get_user_api_keys(user_id, db)
     
-    api_key, provider = select_api_key(user_keys, request.model_provider)
-    
-    if not api_key:
+    # Build ordered list of providers for fallback (groq first)
+    providers_to_try = []
+    if request.model_provider:
+        key = user_keys.get(request.model_provider) or (
+            os.environ.get("GROQ_API_KEY") if request.model_provider == "groq" else
+            (os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")) if request.model_provider == "openai" else
+            (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"))
+        )
+        if key:
+            providers_to_try = [(key, request.model_provider)]
+    if not providers_to_try:
+        providers_to_try = get_all_api_keys_ordered(user_keys)
+
+    if not providers_to_try:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Aucune clé API configurée. Configurez une clé dans les paramètres."
+            detail="Aucune clé API configurée. Configurez une clé Groq (gratuite) dans les paramètres."
         )
-    
-    # Select model (prefer fast models for extraction)
-    model = request.model_name
-    if not model:
-        if provider == "openai":
-            model = "gpt-4o-mini"
-        elif provider == "google":
-            model = "gemini-1.5-flash"
-        elif provider == "groq":
-            model = "llama-3.1-8b-instant"
-        else:
-            model = AI_MODELS[provider][0]["model_id"]
-    
+
+    def get_model_for_provider(p):
+        if request.model_name:
+            return request.model_name
+        if p == "openai":
+            return "gpt-4o-mini"
+        elif p == "google":
+            return "gemini-1.5-flash"
+        elif p == "groq":
+            return "llama-3.3-70b-versatile"
+        return AI_MODELS[p][0]["model_id"]
+
     # Detect platform from URL
     url = request.page_url.lower()
     moyen = "other"
@@ -567,50 +592,52 @@ Contenu de la page:
 
 Extrais les informations de cette offre d'emploi."""
 
-    try:
-        response = await call_ai(api_key, provider, model, system_message, user_message)
-        print(f"DEBUG: Raw AI Response: {response}")
-        
-        # Parse JSON response
-        # Clean response (remove markdown code blocks if present)
-        cleaned = response.strip()
-        if cleaned.startswith("```"):
-            cleaned = re.sub(r'^```(?:json)?\n?', '', cleaned)
-            cleaned = re.sub(r'\n?```$', '', cleaned)
-        
+    last_error = None
+    for api_key, provider in providers_to_try:
+        model = get_model_for_provider(provider)
         try:
-            data = json.loads(cleaned)
-        except json.JSONDecodeError:
-            # Try to extract JSON from response
-            json_match = re.search(r'\{[\s\S]*\}', cleaned)
-            if json_match:
-                data = json.loads(json_match.group())
-            else:
-                data = {}
-        
-        return JobExtractionResponse(
-            entreprise=data.get("entreprise"),
-            poste=data.get("poste"),
-            type_poste=data.get("type_poste"),
-            lieu=data.get("lieu"),
-            salaire_min=data.get("salaire_min"),
-            salaire_max=data.get("salaire_max"),
-            description_poste=data.get("description_poste"),
-            competences=data.get("competences") or [],
-            experience_requise=data.get("experience_requise"),
-            date_publication=data.get("date_publication"),
-            contact_email=data.get("contact_email"),
-            contact_name=data.get("contact_name"),
-            moyen=moyen,
-            lien=request.page_url,
-            confidence_score=data.get("confidence_score", 0.5)
-        )
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur d'extraction IA: {str(e)}"
-        )
+            print(f"INFO: Trying provider={provider} model={model}")
+            response = await call_ai(api_key, provider, model, system_message, user_message)
+
+            # Parse JSON response (remove markdown code blocks if present)
+            cleaned = response.strip()
+            if cleaned.startswith("```"):
+                cleaned = re.sub(r'^```(?:json)?\n?', '', cleaned)
+                cleaned = re.sub(r'\n?```$', '', cleaned)
+
+            try:
+                data = json.loads(cleaned)
+            except json.JSONDecodeError:
+                json_match = re.search(r'\{[\s\S]*\}', cleaned)
+                data = json.loads(json_match.group()) if json_match else {}
+
+            return JobExtractionResponse(
+                entreprise=data.get("entreprise"),
+                poste=data.get("poste"),
+                type_poste=data.get("type_poste"),
+                lieu=data.get("lieu"),
+                salaire_min=data.get("salaire_min"),
+                salaire_max=data.get("salaire_max"),
+                description_poste=data.get("description_poste"),
+                competences=data.get("competences") or [],
+                experience_requise=data.get("experience_requise"),
+                date_publication=data.get("date_publication"),
+                contact_email=data.get("contact_email"),
+                contact_name=data.get("contact_name"),
+                moyen=moyen,
+                lien=request.page_url,
+                confidence_score=data.get("confidence_score", 0.5)
+            )
+
+        except Exception as e:
+            print(f"WARNING: Provider {provider} failed: {e}. Trying next...")
+            last_error = e
+            continue
+
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail=f"Tous les providers IA ont échoué. Dernière erreur: {str(last_error)}"
+    )
 
 
 # Get chat history

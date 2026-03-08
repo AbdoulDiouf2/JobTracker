@@ -189,15 +189,58 @@ function scrapeJobData() {
 
 
 function getPlatformName(url) {
-  if (url.includes("linkedin")) return "LinkedIn";
-  if (url.includes("indeed")) return "Indeed";
-  if (url.includes("welcometothejungle")) return "Welcome to the Jungle";
-  if (url.includes("apec")) return "Apec";
+  const u = url.toLowerCase();
+  if (u.includes("linkedin")) return "LinkedIn";
+  if (u.includes("indeed")) return "Indeed";
+  if (u.includes("welcometothejungle")) return "Welcome to the Jungle";
+  if (u.includes("apec")) return "Apec";
+  if (u.includes("francetravail") || u.includes("pole-emploi")) return "France Travail";
+  if (u.includes("glassdoor")) return "Glassdoor";
+  if (u.includes("monster")) return "Monster";
+  if (u.includes("cadremploi")) return "Cadremploi";
+  if (u.includes("hellowork")) return "HelloWork";
+  if (u.includes("jobteaser")) return "JobTeaser";
+  if (u.includes("meteojob")) return "Meteojob";
+  if (u.includes("lever.co")) return "Lever";
+  if (u.includes("greenhouse.io")) return "Greenhouse";
+  if (u.includes("workday")) return "Workday";
+  if (u.includes("smartrecruiters")) return "SmartRecruiters";
+  if (u.includes("welcomekit")) return "WelcomeKit";
+  if (u.includes("regionsjob")) return "RégionsJob";
+  if (u.includes("keljob")) return "Keljob";
+  if (u.includes("manpower")) return "Manpower";
+  if (u.includes("adecco")) return "Adecco";
+  if (u.includes("randstad")) return "Randstad";
+  if (u.includes("michaelpage")) return "Michael Page";
+  if (u.includes("hays")) return "Hays";
+  if (u.includes("talent.io")) return "Talent.io";
+  if (u.includes("malt.fr")) return "Malt";
+  if (u.includes("comet.co")) return "Comet";
+  if (u.includes("wizbii")) return "Wizbii";
+  if (u.includes("wellfound") || u.includes("angel.co")) return "Wellfound";
+  if (u.includes("ycombinator")) return "Y Combinator";
+  if (u.includes("weworkremotely")) return "We Work Remotely";
+  if (u.includes("remoteok")) return "RemoteOK";
+  if (u.includes("stepstone")) return "StepStone";
+  if (u.includes("xing.com")) return "XING";
+  if (u.includes("jooble")) return "Jooble";
+  if (u.includes("jobijoba")) return "Jobijoba";
+  if (u.includes("jobrapido")) return "Jobrapido";
+  if (u.includes("ashbyhq")) return "Ashby";
+  if (u.includes("workable")) return "Workable";
+  if (u.includes("bamboohr")) return "BambooHR";
+  if (u.includes("jobvite")) return "Jobvite";
+  if (u.includes("taleo")) return "Taleo";
+  if (u.includes("icims")) return "iCIMS";
+  if (u.includes("breezy")) return "Breezy HR";
+  if (u.includes("recruitee")) return "Recruitee";
+  if (u.includes("rekrute")) return "Rekrute";
+  if (u.includes("fonction-publique.gouv")) return "Fonction Publique";
   return "Autre";
 }
 
 // Écoute les messages du popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.action === "scrape") {
     const data = scrapeJobData();
     sendResponse(data);

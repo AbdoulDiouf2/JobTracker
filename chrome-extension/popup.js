@@ -254,7 +254,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   // MAIN FUNCTIONALITY
   // ============================================
 
-  // AI Extraction button
+  // Known API URLs already covered by manifest host_permissions
+  const KNOWN_API_HOSTS = ['job-tracker-steel-eight.vercel.app'];
+
+  // Request optional <all_urls> permission if the API URL is not a known host
+  async function ensureApiPermission(apiUrl) {
+    try {
+      const host = new URL(apiUrl).hostname;
+      if (KNOWN_API_HOSTS.some(h => host.endsWith(h))) return true;
+      // Custom URL: request optional permission
+      return await chrome.permissions.request({ origins: [`${new URL(apiUrl).origin}/*`] });
+    } catch {
+      return false;
+    }
+  }
+
+  // Retry helper: retries a fetch on network errors (not on HTTP errors)
+  async function fetchWithRetry(url, options, maxRetries = 2, delayMs = 1000) {
+    let lastError;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fetch(url, options);
+      } catch (err) {
+        lastError = err;
+        if (attempt < maxRetries) {
+          loadingDiv.textContent = `Erreur réseau, nouvelle tentative (${attempt + 1}/${maxRetries})...`;
+          await new Promise(r => setTimeout(r, delayMs));
+        }
+      }
+    }
+    throw lastError;
+  }
+
   // AI/Scraping Extraction button
   extractBtn.addEventListener('click', async () => {
     loadingDiv.classList.remove('hidden');
@@ -292,7 +323,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (response.title) titleInput.value = response.title;
             if (response.company) companyInput.value = response.company;
             if (response.location) locationInput.value = response.location;
-            if (response.description) descriptionInput.value = response.description.substring(0, 500) + '...';
+            if (response.description) {
+              const raw = response.description;
+              if (raw.length > 500) {
+                const cut = raw.lastIndexOf(' ', 500);
+                descriptionInput.value = raw.substring(0, cut > 0 ? cut : 500) + '…';
+              } else {
+                descriptionInput.value = raw;
+              }
+            }
             
             // Try to guess URL type if not already set
             if (!typeSelect.value && response.description) {
@@ -345,8 +384,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
+      // Ensure permission for custom API URL if needed
+      const hasPermission = await ensureApiPermission(config.jt_apiUrl);
+      if (!hasPermission) {
+        showMessage("Permission refusée pour l'URL de l'API. Vérifiez la configuration.", "error");
+        return;
+      }
+
       // Call AI extraction endpoint
-      const response = await fetch(`${config.jt_apiUrl}/api/ai/extract-job`, {
+      loadingDiv.textContent = 'Extraction IA en cours...';
+      const response = await fetchWithRetry(`${config.jt_apiUrl}/api/ai/extract-job`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -377,7 +424,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (data.lieu) locationInput.value = data.lieu;
       if (data.type_poste) typeSelect.value = data.type_poste;
       if (data.salaire_min) salaryMinInput.value = data.salaire_min;
-      if (data.salary_max) salaryMaxInput.value = data.salary_max;
       if (data.salaire_max) salaryMaxInput.value = data.salaire_max;
       if (data.description_poste) descriptionInput.value = data.description_poste;
       if (data.experience_requise) experienceInput.value = data.experience_requise;
@@ -439,7 +485,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadingDiv.classList.remove('hidden');
       loadingDiv.textContent = 'Enregistrement...';
 
-      const response = await fetch(`${config.jt_apiUrl}/api/applications`, {
+      await ensureApiPermission(config.jt_apiUrl);
+      const response = await fetchWithRetry(`${config.jt_apiUrl}/api/applications`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -474,12 +521,54 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   function detectPlatform(url) {
-    const lowerUrl = url.toLowerCase();
-    if (lowerUrl.includes('linkedin')) return 'linkedin';
-    if (lowerUrl.includes('indeed')) return 'indeed';
-    if (lowerUrl.includes('welcometothejungle')) return 'welcome_to_jungle';
-    if (lowerUrl.includes('apec')) return 'apec';
-    if (lowerUrl.includes('pole-emploi') || lowerUrl.includes('francetravail')) return 'pole_emploi';
+    const u = url.toLowerCase();
+    if (u.includes('linkedin')) return 'linkedin';
+    if (u.includes('indeed')) return 'indeed';
+    if (u.includes('welcometothejungle')) return 'welcome_to_jungle';
+    if (u.includes('apec')) return 'apec';
+    if (u.includes('pole-emploi') || u.includes('francetravail')) return 'pole_emploi';
+    if (u.includes('glassdoor')) return 'glassdoor';
+    if (u.includes('monster')) return 'monster';
+    if (u.includes('cadremploi')) return 'cadremploi';
+    if (u.includes('hellowork')) return 'hellowork';
+    if (u.includes('jobteaser')) return 'jobteaser';
+    if (u.includes('meteojob')) return 'meteojob';
+    if (u.includes('lever.co')) return 'lever';
+    if (u.includes('greenhouse.io')) return 'greenhouse';
+    if (u.includes('workday')) return 'workday';
+    if (u.includes('smartrecruiters')) return 'smartrecruiters';
+    if (u.includes('welcomekit')) return 'welcomekit';
+    if (u.includes('regionsjob')) return 'regionsjob';
+    if (u.includes('keljob')) return 'keljob';
+    if (u.includes('manpower')) return 'manpower';
+    if (u.includes('adecco')) return 'adecco';
+    if (u.includes('randstad')) return 'randstad';
+    if (u.includes('michaelpage')) return 'michaelpage';
+    if (u.includes('hays')) return 'hays';
+    if (u.includes('talent.io')) return 'talent_io';
+    if (u.includes('malt.fr')) return 'malt';
+    if (u.includes('comet.co')) return 'comet';
+    if (u.includes('wizbii')) return 'wizbii';
+    if (u.includes('wellfound') || u.includes('angel.co')) return 'wellfound';
+    if (u.includes('ycombinator')) return 'ycombinator';
+    if (u.includes('weworkremotely')) return 'weworkremotely';
+    if (u.includes('remoteok')) return 'remoteok';
+    if (u.includes('stepstone')) return 'stepstone';
+    if (u.includes('xing.com')) return 'xing';
+    if (u.includes('jooble')) return 'jooble';
+    if (u.includes('jobijoba')) return 'jobijoba';
+    if (u.includes('meteojob')) return 'meteojob';
+    if (u.includes('jobrapido')) return 'jobrapido';
+    if (u.includes('ashbyhq')) return 'ashby';
+    if (u.includes('workable')) return 'workable';
+    if (u.includes('bamboohr')) return 'bamboohr';
+    if (u.includes('jobvite')) return 'jobvite';
+    if (u.includes('taleo')) return 'taleo';
+    if (u.includes('icims')) return 'icims';
+    if (u.includes('breezy')) return 'breezy';
+    if (u.includes('recruitee')) return 'recruitee';
+    if (u.includes('rekrute')) return 'rekrute';
+    if (u.includes('fonction-publique.gouv')) return 'fonction_publique';
     return 'other';
   }
 
