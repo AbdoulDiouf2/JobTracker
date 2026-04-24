@@ -56,7 +56,7 @@ export default function RegisterPage() {
     setServerError('');
     const result = await registerUser(data.email, data.password, data.fullName);
     if (result.success) {
-      navigate('/dashboard');
+      navigate('/onboarding');
     } else {
       setServerError(result.error);
     }

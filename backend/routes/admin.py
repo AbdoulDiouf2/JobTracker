@@ -269,8 +269,12 @@ async def get_users(
             is_active=user.get("is_active", True),
             has_google_ai_key=bool(user.get("google_ai_key")),
             has_openai_key=bool(user.get("openai_key")),
+            has_groq_key=bool(user.get("groq_key")),
             applications_count=apps_count,
-            interviews_count=interviews_count
+            interviews_count=interviews_count,
+            onboarding_completed=user.get("onboarding_completed", True),
+            welcome_shown=user.get("welcome_shown", True),
+            onboarding_steps=user.get("onboarding_steps")
         ))
     
     return {
@@ -317,8 +321,12 @@ async def get_user_detail(
             is_active=user.get("is_active", True),
             has_google_ai_key=bool(user.get("google_ai_key")),
             has_openai_key=bool(user.get("openai_key")),
+            has_groq_key=bool(user.get("groq_key")),
             applications_count=apps_count,
-            interviews_count=interviews_count
+            interviews_count=interviews_count,
+            onboarding_completed=user.get("onboarding_completed", True),
+            welcome_shown=user.get("welcome_shown", True),
+            onboarding_steps=user.get("onboarding_steps")
         ),
         "stats": {
             "applications_by_status": {item["_id"]: item["count"] for item in apps_by_status}
@@ -443,6 +451,7 @@ async def create_user(
     hashed_password = pwd_context.hash(user_data.password)
     
     # Créer l'utilisateur
+    from models import OnboardingSteps as _OnboardingSteps
     new_user = {
         "id": str(uuid.uuid4()),
         "email": user_data.email.lower(),
@@ -454,11 +463,14 @@ async def create_user(
         "last_login": None,
         "google_ai_key": None,
         "openai_key": None,
-        "groq_key": None
+        "groq_key": None,
+        "onboarding_completed": True,
+        "welcome_shown": True,
+        "onboarding_steps": _OnboardingSteps().model_dump()
     }
-    
+
     await db.users.insert_one(new_user)
-    
+
     return UserAdminResponse(
         id=new_user["id"],
         email=new_user["email"],
@@ -469,9 +481,49 @@ async def create_user(
         is_active=True,
         has_google_ai_key=False,
         has_openai_key=False,
+        has_groq_key=False,
         applications_count=0,
-        interviews_count=0
+        interviews_count=0,
+        onboarding_completed=True,
+        welcome_shown=True,
+        onboarding_steps=new_user["onboarding_steps"]
     )
+
+
+# ============================================
+# ONBOARDING FUNNEL STATS
+# ============================================
+
+@router.get("/onboarding-stats")
+async def get_onboarding_stats(
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Statistiques du funnel d'onboarding"""
+    # Utilisateurs créés avec onboarding_completed explicite (nouveaux users)
+    total_new = await db.users.count_documents({"onboarding_completed": {"$exists": True}})
+    completed = await db.users.count_documents({"onboarding_completed": True})
+    not_completed = await db.users.count_documents({"onboarding_completed": False})
+
+    # Drop-off par étape
+    step_keys = ["goal", "profile", "extension", "first_application"]
+    step_stats = {}
+    for step in step_keys:
+        done = await db.users.count_documents({
+            f"onboarding_steps.{step}.completed": True
+        })
+        skipped = await db.users.count_documents({
+            f"onboarding_steps.{step}.skipped": True
+        })
+        step_stats[step] = {"completed": done, "skipped": skipped}
+
+    return {
+        "total_with_onboarding_field": total_new,
+        "completed_wizard": completed,
+        "not_completed": not_completed,
+        "completion_rate": round(completed / total_new * 100, 1) if total_new > 0 else 0,
+        "steps": step_stats
+    }
 
 
 # ============================================

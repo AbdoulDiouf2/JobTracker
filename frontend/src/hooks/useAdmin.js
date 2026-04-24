@@ -134,6 +134,18 @@ export const useAdmin = () => {
     }
   }, [headers]);
 
+  // Onboarding Funnel Stats
+  const [onboardingStats, setOnboardingStats] = useState(null);
+
+  const fetchOnboardingStats = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/admin/onboarding-stats`, { headers });
+      setOnboardingStats(response.data);
+    } catch (err) {
+      console.error('Erreur onboarding stats:', err);
+    }
+  }, [headers]);
+
   // Export Stats
   const exportStats = useCallback(async () => {
     try {
@@ -153,6 +165,8 @@ export const useAdmin = () => {
     fetchUserGrowth,
     activityStats,
     fetchActivityStats,
+    onboardingStats,
+    fetchOnboardingStats,
     users,
     usersPagination,
     fetchUsers,

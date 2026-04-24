@@ -3,7 +3,7 @@ JobTracker SaaS - Modèles Pydantic
 """
 
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from enum import Enum
 import uuid
@@ -154,6 +154,30 @@ class InterviewStatus(str, Enum):
 
 
 # ============================================
+# ONBOARDING MODELS
+# ============================================
+
+class OnboardingStepData(BaseModel):
+    completed: bool = False
+    skipped: bool = False
+    data: Optional[dict] = None
+    completed_at: Optional[datetime] = None
+
+
+class OnboardingSteps(BaseModel):
+    goal: OnboardingStepData = Field(default_factory=OnboardingStepData)
+    profile: OnboardingStepData = Field(default_factory=OnboardingStepData)
+    extension: OnboardingStepData = Field(default_factory=OnboardingStepData)
+    first_application: OnboardingStepData = Field(default_factory=OnboardingStepData)
+
+
+class OnboardingStepUpdate(BaseModel):
+    step: Literal["goal", "profile", "extension", "first_application"]
+    skipped: bool = False
+    data: Optional[dict] = None
+
+
+# ============================================
 # USER MODELS
 # ============================================
 
@@ -180,7 +204,7 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     model_config = ConfigDict(extra="ignore")
-    
+
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     hashed_password: str
     role: UserRole = UserRole.STANDARD
@@ -190,6 +214,9 @@ class User(UserBase):
     google_ai_key: Optional[str] = None
     openai_key: Optional[str] = None
     groq_key: Optional[str] = None
+    onboarding_completed: bool = False
+    onboarding_steps: OnboardingSteps = Field(default_factory=OnboardingSteps)
+    welcome_shown: bool = False
 
 
 class UserResponse(UserBase):
@@ -201,12 +228,15 @@ class UserResponse(UserBase):
     has_google_ai_key: bool = False
     has_openai_key: bool = False
     has_groq_key: bool = False
+    onboarding_completed: bool = True
+    welcome_shown: bool = True
 
 
 class UserAdminResponse(UserResponse):
     """Extended user response for admin panel"""
     applications_count: int = 0
     interviews_count: int = 0
+    onboarding_steps: Optional[dict] = None
 
 
 # ============================================

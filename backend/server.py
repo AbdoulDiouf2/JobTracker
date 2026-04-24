@@ -38,6 +38,8 @@ from routes.documents import get_db as documents_get_db
 from routes.calendar import get_db as calendar_get_db
 from routes.reminders import router as reminders_router
 from routes.reminders import get_db as reminders_get_db
+from routes.onboarding import router as onboarding_router
+from routes.onboarding import get_db as onboarding_get_db
 from utils.auth import get_current_user, security
 from utils.scheduler import setup_scheduler, shutdown_scheduler
 
@@ -152,6 +154,7 @@ api_router.include_router(tracking_router)
 api_router.include_router(documents_router)
 api_router.include_router(calendar_router)
 api_router.include_router(reminders_router)
+api_router.include_router(onboarding_router)
 
 # Include main router
 app.include_router(api_router)
@@ -170,6 +173,7 @@ app.dependency_overrides[tracking_get_db] = override_get_db
 app.dependency_overrides[documents_get_db] = override_get_db
 app.dependency_overrides[calendar_get_db] = override_get_db
 app.dependency_overrides[reminders_get_db] = override_get_db
+app.dependency_overrides[onboarding_get_db] = override_get_db
 
 # Session Middleware (Required for OAuth)
 from starlette.middleware.sessions import SessionMiddleware

@@ -1,7 +1,7 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { LanguageProvider } from "./i18n";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RefreshProvider } from "./contexts/RefreshContext";
 import { ThemeProvider } from "next-themes";
 import { Toaster, toast } from "@/components/ui/sonner";
@@ -27,6 +27,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 
 import SupportPage from "./pages/SupportPage";
+import OnboardingPage from "./pages/OnboardingPage";
 
 // Admin Pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -35,6 +36,13 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout from "./layouts/AdminLayout";
+
+function OnboardingGuard({ children }) {
+  const { user, isAuthenticated } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (user?.onboarding_completed) return <Navigate to="/dashboard" />;
+  return children;
+}
 
 // Router component that handles session_id detection
 function AppRouter() {
@@ -57,6 +65,11 @@ function AppRouter() {
       <Route path="/privacy" element={<PrivacyPolicyPage />} />
       <Route path="/terms" element={<TermsOfServicePage />} />
       <Route path="/support" element={<SupportPage />} />
+      <Route path="/onboarding" element={
+        <OnboardingGuard>
+          <OnboardingPage />
+        </OnboardingGuard>
+      } />
       
       {/* Protected Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>

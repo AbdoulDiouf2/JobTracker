@@ -8,7 +8,7 @@ import httpx
 import uuid
 
 from models import (
-    UserCreate, UserLogin, UserUpdate, User, UserResponse, Token, UserRole
+    UserCreate, UserLogin, UserUpdate, User, UserResponse, Token, UserRole, OnboardingSteps
 )
 from utils.auth import (
     verify_password, get_password_hash, create_access_token, 
@@ -45,9 +45,12 @@ async def register(user_data: UserCreate, db = Depends(get_db)):
     
     user_dict = user.model_dump()
     user_dict['created_at'] = user_dict['created_at'].isoformat()
-    
+    user_dict['onboarding_completed'] = False
+    user_dict['welcome_shown'] = False
+    user_dict['onboarding_steps'] = OnboardingSteps().model_dump()
+
     await db.users.insert_one(user_dict)
-    
+
     return UserResponse(
         id=user.id,
         email=user.email,
@@ -56,7 +59,9 @@ async def register(user_data: UserCreate, db = Depends(get_db)):
         is_active=user.is_active,
         has_google_ai_key=False,
         has_openai_key=False,
-        has_groq_key=False
+        has_groq_key=False,
+        onboarding_completed=False,
+        welcome_shown=False
     )
 
 
@@ -122,7 +127,9 @@ async def get_me(
         is_active=user.get("is_active", True),
         has_google_ai_key=bool(user.get("google_ai_key")),
         has_openai_key=bool(user.get("openai_key")),
-        has_groq_key=bool(user.get("groq_key"))
+        has_groq_key=bool(user.get("groq_key")),
+        onboarding_completed=user.get("onboarding_completed", True),
+        welcome_shown=user.get("welcome_shown", True)
     )
 
 
@@ -158,7 +165,9 @@ async def update_profile(
         is_active=user.get("is_active", True),
         has_google_ai_key=bool(user.get("google_ai_key")),
         has_openai_key=bool(user.get("openai_key")),
-        has_groq_key=bool(user.get("groq_key"))
+        has_groq_key=bool(user.get("groq_key")),
+        onboarding_completed=user.get("onboarding_completed", True),
+        welcome_shown=user.get("welcome_shown", True)
     )
 
 
@@ -407,7 +416,10 @@ async def google_callback(request: Request, db = Depends(get_db)):
             "auth_provider": "google",
             "google_ai_key": None,
             "openai_key": None,
-            "groq_key": None
+            "groq_key": None,
+            "onboarding_completed": False,
+            "welcome_shown": False,
+            "onboarding_steps": OnboardingSteps().model_dump()
         }
         
         await db.users.insert_one(new_user)

@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Users, Briefcase, Calendar, TrendingUp, 
-  UserPlus, Activity, ArrowUpRight, ArrowDownRight
+import {
+  Users, Briefcase, Calendar, TrendingUp,
+  UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward
 } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { 
@@ -91,22 +91,32 @@ const StatCard = ({ icon: Icon, label, value, subValue, trend, color = "gold" })
   </motion.div>
 );
 
+const STEP_LABELS = {
+  goal: 'Objectif mensuel',
+  profile: 'Profil / Poste',
+  extension: 'Extension Chrome',
+  first_application: 'Première candidature'
+};
+
 export default function AdminDashboardPage() {
-  const { 
-    dashboardStats, 
-    fetchDashboardStats, 
-    userGrowth, 
+  const {
+    dashboardStats,
+    fetchDashboardStats,
+    userGrowth,
     fetchUserGrowth,
     activityStats,
     fetchActivityStats,
-    loading 
+    onboardingStats,
+    fetchOnboardingStats,
+    loading
   } = useAdmin();
 
   useEffect(() => {
     fetchDashboardStats();
     fetchUserGrowth(30);
     fetchActivityStats(30);
-  }, [fetchDashboardStats, fetchUserGrowth, fetchActivityStats]);
+    fetchOnboardingStats();
+  }, [fetchDashboardStats, fetchUserGrowth, fetchActivityStats, fetchOnboardingStats]);
 
   return (
     <div className="space-y-8" data-testid="admin-dashboard-page">
@@ -271,6 +281,82 @@ export default function AdminDashboardPage() {
               <p className="text-4xl font-bold text-purple-400">{dashboardStats?.total_interviews || 0}</p>
               <p className="text-slate-400 text-sm mt-1">Entretiens planifiés</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding Funnel */}
+      {onboardingStats && (
+        <div className="glass-card rounded-xl p-6 border border-slate-800" data-testid="admin-onboarding-funnel">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-heading text-xl font-semibold text-white flex items-center gap-2">
+              <TrendingUp size={20} className="text-gold" />
+              Funnel d'onboarding
+            </h2>
+            <div className="flex items-center gap-4 text-sm">
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-gold inline-block" />
+                {onboardingStats.completed_wizard} terminé(s)
+              </span>
+              <span className="flex items-center gap-1.5 text-slate-400">
+                <span className="w-2 h-2 rounded-full bg-slate-600 inline-block" />
+                {onboardingStats.not_completed} en cours
+              </span>
+              <span className="text-gold font-semibold">{onboardingStats.completion_rate}% completion</span>
+            </div>
+          </div>
+
+          {/* Completion bar */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+              <span>Taux de complétion du wizard</span>
+              <span>{onboardingStats.completed_wizard} / {onboardingStats.total_with_onboarding_field}</span>
+            </div>
+            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gold rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${onboardingStats.completion_rate}%` }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+              />
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Object.entries(onboardingStats.steps || {}).map(([step, data], i) => {
+              const total = onboardingStats.total_with_onboarding_field || 1;
+              const completedPct = Math.round((data.completed / total) * 100);
+              const skippedPct = Math.round((data.skipped / total) * 100);
+              return (
+                <div key={step} className="p-4 bg-slate-900/40 rounded-xl">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-mono text-slate-500">0{i + 1}</span>
+                    <p className="text-sm font-medium text-slate-200">{STEP_LABELS[step]}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1 text-green-400 text-sm">
+                      <CheckCircle2 size={14} />
+                      <span className="font-semibold">{data.completed}</span>
+                      <span className="text-slate-500 text-xs">({completedPct}%)</span>
+                    </div>
+                    {data.skipped > 0 && (
+                      <div className="flex items-center gap-1 text-slate-500 text-sm">
+                        <SkipForward size={12} />
+                        <span>{data.skipped}</span>
+                        <span className="text-xs">({skippedPct}%)</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2 h-1 bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-green-500 rounded-full transition-all"
+                      style={{ width: `${completedPct}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { 
-  Search, Users, Shield, ShieldCheck, ShieldX, Eye, 
+import {
+  Search, Users, Shield, ShieldCheck, ShieldX, Eye,
   Edit2, Trash2, RefreshCw, ChevronLeft, ChevronRight,
-  Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus
+  Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus,
+  CheckCircle2, Clock, SkipForward
 } from 'lucide-react';
 import { useAdmin } from '../../hooks/useAdmin';
 import { Button } from '../../components/ui/button';
@@ -98,7 +99,7 @@ const UserCard = ({ user, onView, onEdit, onDelete, onReactivate }) => {
         </span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-4">
+      <div className="grid grid-cols-2 gap-3 mb-3">
         <div className="flex items-center gap-2 text-sm text-slate-400">
           <Briefcase size={14} />
           <span>{user.applications_count} candidatures</span>
@@ -108,6 +109,21 @@ const UserCard = ({ user, onView, onEdit, onDelete, onReactivate }) => {
           <span>{user.interviews_count} entretiens</span>
         </div>
       </div>
+
+      {/* Onboarding badge */}
+      {user.onboarding_completed !== undefined && (
+        <div className="mb-3">
+          {user.onboarding_completed ? (
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 border border-green-500/20">
+              <CheckCircle2 size={11} /> Onboarding terminé
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              <Clock size={11} /> Onboarding en cours
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-xs text-slate-500 mb-4">
         <span>Inscrit le {format(new Date(user.created_at), 'dd MMM yyyy', { locale: fr })}</span>
@@ -255,6 +271,46 @@ const UserDetailModal = ({ user, isOpen, onClose, stats }) => {
                     {status}: {count}
                   </span>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Onboarding Steps */}
+          {user.onboarding_steps && (
+            <div className="p-4 bg-slate-900/30 rounded-xl">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-slate-400 text-sm">Progression onboarding</p>
+                {user.onboarding_completed ? (
+                  <span className="text-xs text-green-400 flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Terminé
+                  </span>
+                ) : (
+                  <span className="text-xs text-amber-400 flex items-center gap-1">
+                    <Clock size={12} /> En cours
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'goal', label: 'Objectif mensuel' },
+                  { key: 'profile', label: 'Profil / Poste' },
+                  { key: 'extension', label: 'Extension Chrome' },
+                  { key: 'first_application', label: 'Première candidature' }
+                ].map(({ key, label }) => {
+                  const step = user.onboarding_steps[key];
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-xs">
+                      {step?.completed ? (
+                        <CheckCircle2 size={13} className="text-green-400 shrink-0" />
+                      ) : step?.skipped ? (
+                        <SkipForward size={13} className="text-slate-500 shrink-0" />
+                      ) : (
+                        <div className="w-3 h-3 rounded-full border border-slate-600 shrink-0" />
+                      )}
+                      <span className={step?.completed ? 'text-slate-300' : 'text-slate-500'}>{label}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
