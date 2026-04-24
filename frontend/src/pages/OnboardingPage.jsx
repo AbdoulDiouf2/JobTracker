@@ -139,10 +139,18 @@ function GoalSlider({ value, onChange, min, max, step }) {
 }
 
 /* ─── Step 1: Objectif mensuel ─── */
-function Step1({ onNext }) {
+function Step1({ onNext, firstName }) {
   const MIN = 5, MAX = 50, STEP = 5;
   const presets = [5, 10, 20, 30, 50];
   const [val, setVal] = useState(10);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  const stagger = (i) => ({ delay: 0.08 * i });
 
   return (
     <motion.div
@@ -152,50 +160,121 @@ function Step1({ onNext }) {
       exit={{ opacity: 0, x: -60 }}
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div style={{ marginBottom: '8px' }}>
-        <span style={{ fontSize: '13px', color: css.muted, fontWeight: '500' }}>🎯 Objectif</span>
-      </div>
-      <h1 style={{ fontSize: '28px', fontWeight: '800', lineHeight: '1.25', marginBottom: '10px' }}>
-        Quel est votre objectif<br />de candidatures ?
-      </h1>
-      <p style={{ color: css.muted, fontSize: '15px', lineHeight: '1.6', marginBottom: '36px' }}>
-        Définissez une cible pour rester motivé et mesurer votre progression.
-      </p>
-
-      <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-        <div style={{
-          fontSize: '64px', fontWeight: '800', fontFamily: 'monospace',
-          lineHeight: '1', letterSpacing: '-2px',
-          background: 'linear-gradient(135deg,#c4a052,#f0c070,#c4a052)',
-          WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-        }}>
-          {val}
+      {/* Accueil personnalisé */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.05 }}
+        style={{ marginBottom: '28px' }}
+      >
+        <div style={{ fontSize: '13px', color: css.gold, fontWeight: '600', marginBottom: '10px', letterSpacing: '0.04em' }}>
+          Bienvenue sur JobTracker
         </div>
-        <div style={{ color: css.muted, fontSize: '14px', marginTop: '6px', fontWeight: '500' }}>
-          candidatures / mois
-        </div>
-      </div>
+        <h1 style={{ fontSize: '30px', fontWeight: '800', lineHeight: '1.2', marginBottom: '12px' }}>
+          {firstName ? `Bonjour, ${firstName} !` : 'Bienvenue !'}
+        </h1>
+        <p style={{ color: css.muted, fontSize: '15px', lineHeight: '1.7' }}>
+          En quelques étapes, on va personnaliser votre espace pour que vous soyez opérationnel dès aujourd'hui.
+        </p>
+      </motion.div>
 
-      <div style={{ marginBottom: '8px' }}>
-        <GoalSlider value={val} onChange={setVal} min={MIN} max={MAX} step={STEP} />
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', padding: '0 2px' }}>
-          {presets.map(p => (
-            <span key={p} style={{
-              fontSize: '11px', fontWeight: '600',
-              color: val === p ? css.gold : 'rgba(148,163,184,0.5)',
-              transition: 'color 0.2s',
-            }}>{p}</span>
-          ))}
-        </div>
-      </div>
+      {/* Séparateur */}
+      <motion.div
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ duration: 0.4, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+        style={{ height: '1px', background: 'rgba(196,160,82,0.2)', marginBottom: '28px', transformOrigin: 'left' }}
+      />
 
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', margin: '20px 0 36px' }}>
-        {[5, 20, 50].map(p => (
-          <Pill key={p} label={String(p)} active={val === p} onClick={() => setVal(p)} />
-        ))}
-      </div>
+      {/* Question objectif */}
+      <AnimatePresence>
+        {ready && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(0) }}
+              style={{ marginBottom: '8px' }}
+            >
+              <span style={{ fontSize: '13px', color: css.muted, fontWeight: '500' }}>Étape 1 · Objectif</span>
+            </motion.div>
 
-      <GoldButton onClick={() => onNext({ monthly_goal: val })}>Continuer →</GoldButton>
+            <motion.h2
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(1) }}
+              style={{ fontSize: '22px', fontWeight: '700', lineHeight: '1.3', marginBottom: '8px' }}
+            >
+              Combien de candidatures<br />par mois visez-vous ?
+            </motion.h2>
+
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(2) }}
+              style={{ color: css.muted, fontSize: '14px', lineHeight: '1.6', marginBottom: '28px' }}
+            >
+              Définissez une cible pour rester motivé et mesurer votre progression.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, ...stagger(3) }}
+              style={{ textAlign: 'center', marginBottom: '24px' }}
+            >
+              <div style={{
+                fontSize: '72px', fontWeight: '800', fontFamily: 'monospace',
+                lineHeight: '1', letterSpacing: '-2px',
+                background: 'linear-gradient(135deg,#c4a052,#f0c070,#c4a052)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}>
+                {val}
+              </div>
+              <div style={{ color: css.muted, fontSize: '14px', marginTop: '6px', fontWeight: '500' }}>
+                candidatures / mois
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(4) }}
+              style={{ marginBottom: '8px' }}
+            >
+              <GoalSlider value={val} onChange={setVal} min={MIN} max={MAX} step={STEP} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', padding: '0 2px' }}>
+                {presets.map(p => (
+                  <span key={p} style={{
+                    fontSize: '11px', fontWeight: '600',
+                    color: val === p ? css.gold : 'rgba(148,163,184,0.5)',
+                    transition: 'color 0.2s',
+                  }}>{p}</span>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(5) }}
+              style={{ display: 'flex', gap: '10px', justifyContent: 'center', margin: '20px 0 32px' }}
+            >
+              {[5, 20, 50].map(p => (
+                <Pill key={p} label={String(p)} active={val === p} onClick={() => setVal(p)} />
+              ))}
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ...stagger(6) }}
+            >
+              <GoldButton onClick={() => onNext({ monthly_goal: val })}>Continuer →</GoldButton>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
@@ -693,7 +772,7 @@ export default function OnboardingPage() {
 
           <AnimatePresence mode="wait">
             {step === 1 && (
-              <Step1 key="s1" dir={dir} onNext={(data) => goNext('goal', data)} />
+              <Step1 key="s1" dir={dir} onNext={(data) => goNext('goal', data)} firstName={user?.full_name?.trim().split(/\s+/)[0]} />
             )}
             {step === 2 && (
               <Step2 key="s2" dir={dir} onNext={(data) => goNext('profile', data)} />
