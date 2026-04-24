@@ -163,7 +163,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 };
 
 export default function DashboardLayout() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Process interview reminders automatically
@@ -196,6 +196,10 @@ export default function DashboardLayout() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user?.onboarding_completed === false) {
+    return <Navigate to="/onboarding" replace />;
   }
 
   return (

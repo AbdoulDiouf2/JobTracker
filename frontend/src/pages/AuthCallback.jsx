@@ -35,8 +35,13 @@ export default function AuthCallback() {
         const result = await handleGoogleCallback(sessionId);
         
         if (result.success) {
-          // Clear the hash and redirect to dashboard
-          navigate('/dashboard', { replace: true });
+          // Redirect to onboarding if not yet completed, otherwise dashboard
+          const user = result.user;
+          if (user && user.onboarding_completed === false) {
+            navigate('/onboarding', { replace: true });
+          } else {
+            navigate('/dashboard', { replace: true });
+          }
         } else {
           console.error('Google auth failed:', result.error);
           navigate('/login', { 

@@ -12,6 +12,9 @@ import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
 import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../contexts/AuthContext';
+import { useOnboarding } from '../hooks/useOnboarding';
+import WelcomeModal from '../components/WelcomeModal';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Legend
@@ -477,6 +480,20 @@ export default function DashboardPage() {
   const { applications, fetchApplications, loading: applicationsLoading } = useApplications();
   const { language } = useLanguage();
   const { refreshKey } = useRefresh();
+  const { user } = useAuth();
+  const { markWelcomeShown } = useOnboarding();
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (user?.onboarding_completed && !user?.welcome_shown) {
+      setShowWelcome(true);
+    }
+  }, [user?.onboarding_completed, user?.welcome_shown]);
+
+  const handleCloseWelcome = async () => {
+    setShowWelcome(false);
+    await markWelcomeShown();
+  };
 
   const t = {
     fr: {
@@ -517,6 +534,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8" data-testid="dashboard-page">
+      {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>

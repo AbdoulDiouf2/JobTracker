@@ -529,9 +529,17 @@ const labelStyle = {
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const { completeStep, completeWizard } = useOnboarding();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    const steps = user?.onboarding_steps || {};
+    const order = ['goal', 'profile', 'extension', 'first_application'];
+    for (let i = 0; i < order.length; i++) {
+      const s = steps[order[i]];
+      if (!s?.completed && !s?.skipped) return i + 1;
+    }
+    return 1;
+  });
   const [dir, setDir] = useState('fwd');
   const [showModal, setShowModal] = useState(false);
   const [showSaveLeave, setShowSaveLeave] = useState(false);

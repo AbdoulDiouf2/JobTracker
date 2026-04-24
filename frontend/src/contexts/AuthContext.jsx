@@ -98,10 +98,8 @@ export const AuthProvider = ({ children }) => {
       
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
-      
-      // Note: is_new_user n'est pas renvoyé par /me, on assume false ou géré par le backend
-      // Si on a besoin de savoir si c'est un nouveau user, on pourrait le passer dans l'URL aussi
-      return { success: true };
+
+      return { success: true, user: userData };
     } catch (err) {
       console.error(err);
       const message = err.response?.data?.detail || 'Erreur de connexion Google';
