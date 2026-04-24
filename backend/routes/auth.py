@@ -20,6 +20,33 @@ from datetime import timedelta, datetime, timezone
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
+def _build_user_response(user: dict) -> UserResponse:
+    """Construit un UserResponse depuis un document MongoDB."""
+    steps = user.get("onboarding_steps") or {}
+    goal_data = (steps.get("goal") or {}).get("data") or {}
+    profile_data = (steps.get("profile") or {}).get("data") or {}
+    return UserResponse(
+        id=user["id"],
+        email=user["email"],
+        full_name=user["full_name"],
+        role=user.get("role", "standard"),
+        created_at=user["created_at"],
+        last_login=user.get("last_login"),
+        is_active=user.get("is_active", True),
+        has_google_ai_key=bool(user.get("google_ai_key")),
+        has_openai_key=bool(user.get("openai_key")),
+        has_groq_key=bool(user.get("groq_key")),
+        extension_connected=bool(user.get("extension_connected")),
+        onboarding_completed=user.get("onboarding_completed", True),
+        welcome_shown=user.get("welcome_shown", True),
+        monthly_goal=goal_data.get("monthly_goal"),
+        job_title=profile_data.get("job_title"),
+        experience_level=profile_data.get("experience_level"),
+        sector=profile_data.get("sector"),
+        contract_types=profile_data.get("contract_types"),
+    )
+
+
 def get_db():
     """Dependency injection pour la DB - sera override dans server.py"""
     pass
@@ -60,6 +87,7 @@ async def register(user_data: UserCreate, db = Depends(get_db)):
         has_google_ai_key=False,
         has_openai_key=False,
         has_groq_key=False,
+        extension_connected=False,
         onboarding_completed=False,
         welcome_shown=False
     )
@@ -117,20 +145,7 @@ async def get_me(
             detail="Utilisateur non trouvé"
         )
     
-    return UserResponse(
-        id=user["id"],
-        email=user["email"],
-        full_name=user["full_name"],
-        role=user.get("role", "standard"),
-        created_at=user["created_at"] if isinstance(user["created_at"], str) else user["created_at"],
-        last_login=user.get("last_login"),
-        is_active=user.get("is_active", True),
-        has_google_ai_key=bool(user.get("google_ai_key")),
-        has_openai_key=bool(user.get("openai_key")),
-        has_groq_key=bool(user.get("groq_key")),
-        onboarding_completed=user.get("onboarding_completed", True),
-        welcome_shown=user.get("welcome_shown", True)
-    )
+    return _build_user_response(user)
 
 
 @router.put("/update-profile", response_model=UserResponse)
@@ -154,21 +169,7 @@ async def update_profile(
     )
     
     user = await db.users.find_one({"id": current_user["user_id"]})
-    
-    return UserResponse(
-        id=user["id"],
-        email=user["email"],
-        full_name=user["full_name"],
-        role=user.get("role", "standard"),
-        created_at=user["created_at"],
-        last_login=user.get("last_login"),
-        is_active=user.get("is_active", True),
-        has_google_ai_key=bool(user.get("google_ai_key")),
-        has_openai_key=bool(user.get("openai_key")),
-        has_groq_key=bool(user.get("groq_key")),
-        onboarding_completed=user.get("onboarding_completed", True),
-        welcome_shown=user.get("welcome_shown", True)
-    )
+    return _build_user_response(user)
 
 
 @router.put("/update-api-keys")

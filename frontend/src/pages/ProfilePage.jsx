@@ -6,7 +6,7 @@ import { fr } from 'date-fns/locale';
 import {
   User, Mail, Calendar, Shield, Key, CheckCircle2, XCircle,
   Clock, Briefcase, CalendarCheck, TrendingUp, Settings,
-  Chrome, LogOut, Edit2, Loader2, Check, Star
+  Chrome, LogOut, Edit2, Loader2, Check, Star, Target, Layers
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
@@ -237,51 +237,63 @@ export default function ProfilePage() {
         </div>
       </Section>
 
-      {/* Onboarding */}
-      {user?.onboarding_completed !== undefined && (
-        <Section title="Onboarding" icon={CheckCircle2}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              {user.onboarding_completed ? (
-                <span className="inline-flex items-center gap-1.5 text-sm text-green-400 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 font-medium">
-                  <CheckCircle2 size={14} /> Wizard complété
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-sm text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 font-medium">
-                  <Clock size={14} /> En cours ({onboardingDoneCount}/4)
-                </span>
-              )}
-            </div>
-            {!user.onboarding_completed && (
-              <Link to="/onboarding">
-                <Button size="sm" className="bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20 text-xs">
-                  Reprendre →
-                </Button>
-              </Link>
+      {/* Profil recherché — affiché seulement si des données existent */}
+      {(user?.job_title || user?.monthly_goal || user?.experience_level || user?.sector || user?.contract_types?.length) && (
+        <Section title="Profil recherché" icon={Layers}>
+          <div className="space-y-3">
+            {user?.job_title && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
+                <span className="text-slate-500 text-sm">Poste visé</span>
+                <span className="text-slate-200 text-sm font-medium">{user.job_title}</span>
+              </div>
+            )}
+            {user?.experience_level && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
+                <span className="text-slate-500 text-sm">Expérience</span>
+                <span className="text-slate-200 text-sm font-medium">{user.experience_level}</span>
+              </div>
+            )}
+            {user?.sector && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
+                <span className="text-slate-500 text-sm">Secteur</span>
+                <span className="text-slate-200 text-sm font-medium">{user.sector}</span>
+              </div>
+            )}
+            {user?.contract_types?.length > 0 && (
+              <div className="flex items-center justify-between py-2 border-b border-slate-800/50">
+                <span className="text-slate-500 text-sm">Contrats</span>
+                <div className="flex flex-wrap gap-1.5 justify-end">
+                  {user.contract_types.map(c => (
+                    <span key={c} className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full">{c}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {user?.monthly_goal && (
+              <div className="flex items-center justify-between py-2">
+                <span className="text-slate-500 text-sm">Objectif mensuel</span>
+                <span className="text-gold font-bold text-sm">{user.monthly_goal} candidatures</span>
+              </div>
             )}
           </div>
+          <Link to="/dashboard/settings" className="text-xs text-slate-500 hover:text-gold mt-3 block">
+            Modifier dans les paramètres →
+          </Link>
+        </Section>
+      )}
 
-          <div className="space-y-2">
-            {ONBOARDING_STEPS.map(({ key, label }) => {
-              const step = onboardingSteps[key];
-              const done = step?.completed;
-              const skipped = step?.skipped;
-              return (
-                <div key={key} className="flex items-center gap-3 text-sm">
-                  {done ? (
-                    <CheckCircle2 size={16} className="text-green-400 shrink-0" />
-                  ) : skipped ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-dashed border-slate-600 shrink-0" />
-                  ) : (
-                    <div className="w-4 h-4 rounded-full border-2 border-slate-700 shrink-0" />
-                  )}
-                  <span className={done ? 'text-slate-200' : skipped ? 'text-slate-500 line-through' : 'text-slate-500'}>
-                    {label}
-                  </span>
-                  {skipped && <span className="text-xs text-slate-600 ml-auto">passé</span>}
-                </div>
-              );
-            })}
+      {/* Onboarding — uniquement si wizard en cours */}
+      {user?.onboarding_completed === false && (
+        <Section title="Onboarding en cours" icon={Clock}>
+          <div className="flex items-center justify-between">
+            <span className="inline-flex items-center gap-1.5 text-sm text-amber-400 bg-amber-500/10 px-3 py-1.5 rounded-full border border-amber-500/20 font-medium">
+              <Clock size={14} /> {onboardingDoneCount}/4 étapes complétées
+            </span>
+            <Link to="/onboarding">
+              <Button size="sm" className="bg-gold/10 text-gold border border-gold/20 hover:bg-gold/20 text-xs">
+                Reprendre →
+              </Button>
+            </Link>
           </div>
         </Section>
       )}
@@ -291,7 +303,14 @@ export default function ProfilePage() {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-slate-300 text-sm font-medium mb-1">JobTracker Clipper</p>
-            <p className="text-slate-500 text-xs">Capturez des offres d'emploi en 1 clic</p>
+            {user?.extension_connected ? (
+              <span className="inline-flex items-center gap-1.5 text-xs text-green-400 bg-green-500/10 px-2.5 py-1 rounded-full border border-green-500/20 mt-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                Connectée
+              </span>
+            ) : (
+              <p className="text-slate-500 text-xs">Non connectée — capturez des offres en 1 clic</p>
+            )}
           </div>
           <a
             href="https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl"
@@ -300,13 +319,15 @@ export default function ProfilePage() {
           >
             <Button variant="outline" size="sm" className="border-slate-700 text-slate-300 hover:text-white gap-2">
               <Chrome size={14} />
-              Ouvrir le store
+              {user?.extension_connected ? 'Voir le store' : 'Installer'}
             </Button>
           </a>
         </div>
-        <p className="text-slate-500 text-xs mt-3">
-          Pour connecter l'extension, générez un code depuis <Link to="/dashboard/settings" className="text-gold hover:underline">les paramètres</Link>.
-        </p>
+        {!user?.extension_connected && (
+          <p className="text-slate-500 text-xs mt-3">
+            Pour connecter l'extension, générez un code depuis <Link to="/dashboard/settings" className="text-gold hover:underline">les paramètres</Link>.
+          </p>
+        )}
       </Section>
 
       {/* Actions */}

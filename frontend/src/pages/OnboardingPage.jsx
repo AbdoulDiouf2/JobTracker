@@ -380,7 +380,7 @@ function Step2({ onNext, dir }) {
 }
 
 /* ─── Step 3: Extension Chrome ─── */
-function Step3({ onNext, onSkip, dir }) {
+function Step3({ onNext, onSkip, dir, extensionConnected }) {
   return (
     <motion.div
       key="s3"
@@ -393,18 +393,21 @@ function Step3({ onNext, onSkip, dir }) {
         <span style={{ fontSize: '13px', color: css.muted, fontWeight: '500' }}>🧩 Extension</span>
       </div>
       <h1 style={{ fontSize: '28px', fontWeight: '800', lineHeight: '1.25', marginBottom: '10px' }}>
-        Installez l'extension Chrome
+        {extensionConnected ? 'Extension déjà connectée !' : 'Installez l\'extension Chrome'}
       </h1>
       <p style={{ color: css.muted, fontSize: '15px', lineHeight: '1.6', marginBottom: '28px' }}>
-        Capturez une offre d'emploi en 1 clic depuis n'importe quel site.
+        {extensionConnected
+          ? 'Votre extension JobTracker est déjà connectée et prête à capturer des offres.'
+          : 'Capturez une offre d\'emploi en 1 clic depuis n\'importe quel site.'}
       </p>
 
       <div style={{
-        background: 'rgba(15,23,42,0.85)', border: '1px solid rgba(255,255,255,0.08)',
+        background: extensionConnected ? 'rgba(34,197,94,0.06)' : 'rgba(15,23,42,0.85)',
+        border: extensionConnected ? '1px solid rgba(34,197,94,0.25)' : '1px solid rgba(255,255,255,0.08)',
         backdropFilter: 'blur(20px)', borderRadius: '20px', padding: '32px 24px',
         textAlign: 'center', marginBottom: '16px',
       }}>
-        <div style={{ display: 'inline-block', marginBottom: '16px', filter: 'drop-shadow(0 4px 20px rgba(66,133,244,0.3))' }}>
+        <div style={{ display: 'inline-block', marginBottom: '16px', filter: `drop-shadow(0 4px 20px ${extensionConnected ? 'rgba(34,197,94,0.3)' : 'rgba(66,133,244,0.3)'})` }}>
           <svg width="72" height="72" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
             <path d="M128 28 A100 100 0 0 1 214.6 178 L171.3 153 A50 50 0 0 0 128 78 Z" fill="#EA4335" />
             <path d="M214.6 178 A100 100 0 0 1 41.4 178 L84.7 153 A50 50 0 0 0 171.3 153 Z" fill="#FBBC04" />
@@ -413,42 +416,66 @@ function Step3({ onNext, onSkip, dir }) {
             <circle cx="128" cy="128" r="46" fill="#4285F4" />
           </svg>
         </div>
-        <div style={{ fontWeight: '700', fontSize: '17px', marginBottom: '6px' }}>JobTracker for Chrome</div>
-        <div style={{ color: css.muted, fontSize: '13px', marginBottom: '20px' }}>Disponible sur le Chrome Web Store</div>
-        <div style={{ display: 'inline-block', width: '100%', maxWidth: '240px' }}>
-          <GoldButton
-            outline
-            onClick={() => window.open('https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl', '_blank')}
-            style={{ padding: '11px 24px', fontSize: '14px' }}
-          >
-            Installer l'extension
-          </GoldButton>
+
+        {extensionConnected ? (
+          <div>
+            <div style={{
+              display: 'inline-flex', alignItems: 'center', gap: '6px',
+              background: 'rgba(34,197,94,0.12)', border: '1px solid rgba(34,197,94,0.25)',
+              borderRadius: '20px', padding: '6px 14px', marginBottom: '12px',
+            }}>
+              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: css.success }} />
+              <span style={{ fontSize: '13px', color: css.success, fontWeight: '600' }}>Connectée</span>
+            </div>
+            <div style={{ fontWeight: '700', fontSize: '17px', marginBottom: '6px' }}>JobTracker for Chrome</div>
+            <div style={{ color: css.muted, fontSize: '13px' }}>Prête à capturer vos offres d'emploi</div>
+          </div>
+        ) : (
+          <div>
+            <div style={{ fontWeight: '700', fontSize: '17px', marginBottom: '6px' }}>JobTracker for Chrome</div>
+            <div style={{ color: css.muted, fontSize: '13px', marginBottom: '20px' }}>Disponible sur le Chrome Web Store</div>
+            <div style={{ display: 'inline-block', width: '100%', maxWidth: '240px' }}>
+              <GoldButton
+                outline
+                onClick={() => window.open('https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl', '_blank')}
+                style={{ padding: '11px 24px', fontSize: '14px' }}
+              >
+                Installer l'extension
+              </GoldButton>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {!extensionConnected && (
+        <div style={{
+          background: 'rgba(196,160,82,0.06)', border: '1px solid rgba(196,160,82,0.12)',
+          borderRadius: '12px', padding: '14px 16px', marginBottom: '24px',
+          display: 'flex', gap: '10px', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: '18px' }}>⚡</span>
+          <p style={{ fontSize: '13px', color: css.muted, lineHeight: '1.5' }}>
+            Repérez une offre sur LinkedIn, Indeed ou autre ? Cliquez sur l'extension pour l'ajouter instantanément à votre tracker.
+          </p>
         </div>
-      </div>
+      )}
 
-      <div style={{
-        background: 'rgba(196,160,82,0.06)', border: '1px solid rgba(196,160,82,0.12)',
-        borderRadius: '12px', padding: '14px 16px', marginBottom: '24px',
-        display: 'flex', gap: '10px', alignItems: 'center',
-      }}>
-        <span style={{ fontSize: '18px' }}>⚡</span>
-        <p style={{ fontSize: '13px', color: css.muted, lineHeight: '1.5' }}>
-          Repérez une offre sur LinkedIn, Indeed ou autre ? Cliquez sur l'extension pour l'ajouter instantanément à votre tracker.
-        </p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-        <GoldButton
-          onClick={() => onNext({ installed: true })}
-          style={{
-            background: 'linear-gradient(135deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1))',
-            color: css.success, border: '1.5px solid rgba(34,197,94,0.3)',
-          }}
-        >
-          ✓ J'ai installé
-        </GoldButton>
-        <GhostButton onClick={onSkip}>Passer</GhostButton>
-      </div>
+      {extensionConnected ? (
+        <GoldButton onClick={() => onNext({ installed: true })}>Continuer →</GoldButton>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <GoldButton
+            onClick={() => onNext({ installed: true })}
+            style={{
+              background: 'linear-gradient(135deg,rgba(34,197,94,0.2),rgba(34,197,94,0.1))',
+              color: css.success, border: '1.5px solid rgba(34,197,94,0.3)',
+            }}
+          >
+            ✓ J'ai installé
+          </GoldButton>
+          <GhostButton onClick={onSkip}>Passer</GhostButton>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -783,6 +810,7 @@ export default function OnboardingPage() {
                 dir={dir}
                 onNext={(data) => goNext('extension', data)}
                 onSkip={() => goNext('extension', {}, true)}
+                extensionConnected={user?.extension_connected}
               />
             )}
             {step === 4 && (

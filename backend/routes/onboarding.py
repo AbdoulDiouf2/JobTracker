@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 
 from models import OnboardingStepUpdate, UserResponse
 from utils.auth import get_current_user
+from routes.auth import _build_user_response
 
 router = APIRouter(prefix="/onboarding", tags=["Onboarding"])
 
@@ -50,20 +51,7 @@ async def complete_onboarding(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Utilisateur non trouvé")
 
-    return UserResponse(
-        id=user["id"],
-        email=user["email"],
-        full_name=user["full_name"],
-        role=user.get("role", "standard"),
-        created_at=user["created_at"],
-        last_login=user.get("last_login"),
-        is_active=user.get("is_active", True),
-        has_google_ai_key=bool(user.get("google_ai_key")),
-        has_openai_key=bool(user.get("openai_key")),
-        has_groq_key=bool(user.get("groq_key")),
-        onboarding_completed=True,
-        welcome_shown=user.get("welcome_shown", False)
-    )
+    return _build_user_response(user)
 
 
 @router.post("/welcome")

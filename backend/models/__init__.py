@@ -228,8 +228,15 @@ class UserResponse(UserBase):
     has_google_ai_key: bool = False
     has_openai_key: bool = False
     has_groq_key: bool = False
+    extension_connected: bool = False
     onboarding_completed: bool = True
     welcome_shown: bool = True
+    # Données renseignées lors de l'onboarding
+    monthly_goal: Optional[int] = None
+    job_title: Optional[str] = None
+    experience_level: Optional[str] = None
+    sector: Optional[str] = None
+    contract_types: Optional[list] = None
 
 
 class UserAdminResponse(UserResponse):
