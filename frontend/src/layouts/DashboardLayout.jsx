@@ -125,12 +125,20 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* User & Logout - Fixed at bottom */}
         <div className="flex-shrink-0 p-4 border-t border-slate-800 bg-[#0a0f1a]">
-          <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center">
+          <Link
+            to="/dashboard/profile"
+            onClick={onClose}
+            className={`flex items-center gap-3 px-4 py-3 mb-2 rounded-xl transition-all duration-200 group
+              ${location.pathname === '/dashboard/profile'
+                ? 'bg-gold/10 border border-gold/20'
+                : 'hover:bg-slate-800/50'
+              }`}
+          >
+            <div className="w-10 h-10 rounded-full bg-navy flex items-center justify-center shrink-0">
               <User size={20} className="text-gold" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium truncate">
+              <p className={`font-medium truncate transition-colors ${location.pathname === '/dashboard/profile' ? 'text-gold' : 'text-white group-hover:text-white'}`}>
                 {user?.full_name ? (() => {
                   const parts = user.full_name.trim().split(/\s+/);
                   if (parts.length <= 2) return user.full_name;
@@ -139,7 +147,8 @@ const Sidebar = ({ isOpen, onClose }) => {
               </p>
               <p className="text-slate-500 text-sm truncate">{user?.email}</p>
             </div>
-          </div>
+            <ChevronRight size={14} className={`shrink-0 transition-colors ${location.pathname === '/dashboard/profile' ? 'text-gold' : 'text-slate-600 group-hover:text-slate-400'}`} />
+          </Link>
           <button
             onClick={logout}
             className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors"

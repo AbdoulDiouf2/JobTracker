@@ -28,6 +28,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 
 import SupportPage from "./pages/SupportPage";
 import OnboardingPage from "./pages/OnboardingPage";
+import ProfilePage from "./pages/ProfilePage";
 
 // Admin Pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -81,6 +82,7 @@ function AppRouter() {
         <Route path="documents" element={<DocumentsPage />} />
         <Route path="import-export" element={<ImportExportPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
 
       {/* Admin Routes */}
