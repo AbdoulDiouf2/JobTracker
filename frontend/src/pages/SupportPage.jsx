@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -44,6 +44,10 @@ export default function SupportPage() {
       emailUs: 'Email us at'
     }
   }[language];
+
+  const goToFaq = useCallback(() => {
+    window.location.href = '/#faq';
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -180,19 +184,19 @@ export default function SupportPage() {
                 <h3 className="font-semibold mb-4 text-slate-200">{t.faqTitle}</h3>
                 <ul className="space-y-4">
                   <li>
-                    <a href="/#faq" className="text-sm text-slate-400 hover:text-gold transition-colors block">
+                    <button onClick={goToFaq} className="text-sm text-slate-400 hover:text-gold transition-colors block text-left w-full">
                       {language === 'fr' ? 'Comment réinitialiser mon mot de passe ?' : 'How to reset my password?'}
-                    </a>
+                    </button>
                   </li>
                   <li>
-                    <a href="/#faq" className="text-sm text-slate-400 hover:text-gold transition-colors block">
+                    <button onClick={goToFaq} className="text-sm text-slate-400 hover:text-gold transition-colors block text-left w-full">
                       {language === 'fr' ? 'Le service est-il gratuit ?' : 'Is the service free?'}
-                    </a>
+                    </button>
                   </li>
                   <li>
-                    <a href="/#faq" className="text-sm text-slate-400 hover:text-gold transition-colors block">
+                    <button onClick={goToFaq} className="text-sm text-slate-400 hover:text-gold transition-colors block text-left w-full">
                       {language === 'fr' ? 'Comment supprimer mon compte ?' : 'How to delete my account?'}
-                    </a>
+                    </button>
                   </li>
                 </ul>
               </div>

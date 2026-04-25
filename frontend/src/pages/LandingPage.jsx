@@ -25,6 +25,13 @@ const Navigation = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    if (window.location.hash) {
+      const el = document.querySelector(window.location.hash);
+      if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 100);
+    }
+  }, []);
+
   const navLinks = [
     { label: language === 'fr' ? 'Fonctionnalités' : 'Features', href: '#features' },
     { label: language === 'fr' ? 'Comment ça marche' : 'How it works', href: '#how-it-works' },
