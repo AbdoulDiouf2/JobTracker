@@ -49,7 +49,7 @@ export default function SupportPage() {
     e.preventDefault();
     setStatus('submitting');
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}/api/contact/`, formData);
+      await axios.post(`${process.env.REACT_APP_BACKEND_URL || 'http://localhost:8001'}/api/contact/`, formData);
       setStatus('success');
       setFormData({ name: '', email: '', message: '' });
     } catch {
