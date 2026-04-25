@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -283,7 +283,7 @@ const ApplicationTableRow = ({ app, onEdit, onDelete, onToggleFavorite, onStatus
 };
 
 // Application Detail Modal
-const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, onRefresh, t }) => {
+const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, onRefresh, onCreateInterview, t }) => {
   const { language } = useLanguage();
   const [showTimeline, setShowTimeline] = useState(false);
   const [showFollowupModal, setShowFollowupModal] = useState(false);
@@ -401,42 +401,50 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
             )}
 
             {/* Quick Actions */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <Button 
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <Button
                 onClick={() => setShowTimeline(!showTimeline)}
-                variant="outline" 
+                variant="outline"
                 className="border-slate-700"
                 size="sm"
               >
                 <Clock size={16} className="mr-2" />
                 Historique
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowFollowupModal(true)}
-                variant="outline" 
+                variant="outline"
                 className="border-slate-700"
                 size="sm"
               >
                 <Mail size={16} className="mr-2" />
                 Relance
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowCoverLetterModal(true)}
-                variant="outline" 
+                variant="outline"
                 className="border-slate-700"
                 size="sm"
               >
                 <FileText size={16} className="mr-2" />
                 Lettre IA
               </Button>
-              <Button 
+              <Button
                 onClick={() => setShowMatchingModal(true)}
-                variant="outline" 
+                variant="outline"
                 className="border-slate-700"
                 size="sm"
               >
                 <Target size={16} className="mr-2" />
                 Score
+              </Button>
+              <Button
+                onClick={() => onCreateInterview && onCreateInterview(app)}
+                className="col-span-2 sm:col-span-2 bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30"
+                size="sm"
+              >
+                <Calendar size={16} className="mr-2" />
+                {language === 'fr' ? 'Planifier un entretien' : 'Schedule interview'}
               </Button>
             </div>
 
@@ -876,12 +884,13 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
 };
 
 export default function ApplicationsPage() {
-  const { 
-    applications, loading, pagination, 
-    fetchApplications, createApplication, updateApplication, 
-    deleteApplication, toggleFavorite 
+  const {
+    applications, loading, pagination,
+    fetchApplications, createApplication, updateApplication,
+    deleteApplication, toggleFavorite
   } = useApplications();
   const { language } = useLanguage();
+  const navigate = useNavigate();
   const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   
@@ -998,6 +1007,13 @@ export default function ApplicationsPage() {
 
   const handleViewDetails = (app) => {
     setViewingApp(app);
+  };
+
+  const handleCreateInterviewFromApp = (app) => {
+    setViewingApp(null);
+    navigate('/dashboard/interviews', {
+      state: { openModal: true, prefillApp: { id: app.id, entreprise: app.entreprise, poste: app.poste } }
+    });
   };
 
   const handlePageChange = (page) => {
@@ -1317,6 +1333,7 @@ export default function ApplicationsPage() {
         onEdit={handleEdit}
         onStatusChange={handleStatusChange}
         onRefresh={fetchApplications}
+        onCreateInterview={handleCreateInterviewFromApp}
         t={t}
       />
 

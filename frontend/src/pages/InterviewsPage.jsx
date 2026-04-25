@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { 
@@ -731,7 +732,7 @@ const DayInterviewsModal = ({ date, interviews, isOpen, onClose, onInterviewClic
 };
 
 // Interview Form Modal
-const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, applications, loading, t }) => {
+const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefillApp, applications, loading, t }) => {
   const { register, handleSubmit, reset, setValue, watch } = useForm();
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -767,10 +768,16 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, appli
         format_entretien: 'video',
         date_entretien: new Date().toISOString().slice(0, 16)
       });
-      setSelectedApp(null);
-      setSearchQuery('');
+      if (prefillApp) {
+        setSelectedApp(prefillApp);
+        setSearchQuery(`${prefillApp.entreprise} - ${prefillApp.poste}`);
+        setValue('candidature_id', prefillApp.id);
+      } else {
+        setSelectedApp(null);
+        setSearchQuery('');
+      }
     }
-  }, [editingInterview, setValue, reset, applications]);
+  }, [editingInterview, prefillApp, setValue, reset, applications]);
 
   const handleSelectApplication = (app) => {
     setSelectedApp(app);
@@ -975,9 +982,11 @@ export default function InterviewsPage() {
   const { language } = useLanguage();
   const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
-  
+  const location = useLocation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingInterview, setEditingInterview] = useState(null);
+  const [prefillApp, setPrefillApp] = useState(null);
   const [viewingInterview, setViewingInterview] = useState(null);
   const [filter, setFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
@@ -1042,6 +1051,15 @@ export default function InterviewsPage() {
     fetchInterviews(filter !== 'all' ? { status: filter } : {});
     fetchApplications({ per_page: 100 });
   }, [fetchInterviews, fetchApplications, filter, refreshKey]);
+
+  useEffect(() => {
+    if (location.state?.openModal) {
+      setPrefillApp(location.state.prefillApp || null);
+      setEditingInterview(null);
+      setIsModalOpen(true);
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
@@ -1272,9 +1290,10 @@ export default function InterviewsPage() {
       {/* Form Modal */}
       <InterviewFormModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingInterview(null); }}
+        onClose={() => { setIsModalOpen(false); setEditingInterview(null); setPrefillApp(null); }}
         onSubmit={handleSubmit}
         editingInterview={editingInterview}
+        prefillApp={prefillApp}
         applications={applications}
         loading={submitting}
         t={t}
