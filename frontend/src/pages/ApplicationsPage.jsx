@@ -13,6 +13,8 @@ import {
   Clock, Mail, Target, Bell, RefreshCw, FileText, Sparkles, Copy, Check
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
+import { useQueryClient } from '@tanstack/react-query';
+import { api } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -899,11 +901,26 @@ export default function ApplicationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('card');
 
+  const queryClient = useQueryClient();
+  const currentParams = { page: currentPage, search: searchQuery || undefined, ...filters };
+
   const {
     applications, loading, pagination,
     createApplication, updateApplication,
     deleteApplication, toggleFavorite
-  } = useApplications({ page: currentPage, search: searchQuery || undefined, ...filters });
+  } = useApplications(currentParams);
+
+  // Prefetch la page suivante dès que la page courante est chargée
+  useEffect(() => {
+    if (pagination.total_pages > currentPage) {
+      const nextParams = { ...currentParams, page: currentPage + 1 };
+      queryClient.prefetchQuery({
+        queryKey: ['applications', nextParams],
+        queryFn: () => api.get('/api/applications', { params: nextParams }).then(r => r.data),
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+  }, [currentPage, pagination.total_pages, searchQuery, JSON.stringify(filters)]);
 
   const t = {
     fr: {

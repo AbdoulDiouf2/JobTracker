@@ -31,7 +31,7 @@ RCCM : SN.DKR.2025.A.31734`
 Cité Cora FALL Villa N°56
 Zac Mbao, Sénégal
 
-**Email :** contact@maadec.com
+**Email :** abdoulam.diouf@maadec.com
 **Téléphone :** +33 7 49 05 18 79`
         },
         {
@@ -100,7 +100,7 @@ RCCM: SN.DKR.2025.A.31734`
 Cité Cora FALL Villa N°56
 Zac Mbao, Senegal
 
-**Email:** contact@maadec.com
+**Email:** abdoulam.diouf@maadec.com
 **Phone:** +33 7 49 05 18 79`
         },
         {

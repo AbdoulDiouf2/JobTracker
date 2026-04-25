@@ -35,7 +35,7 @@ Forme juridique : Entreprise Individuelle
 NINEA : 012390978
 RCCM : SN.DKR.2025.A.31734
 Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal
-Email : contact@maadec.com
+Email : abdoulam.diouf@maadec.com
 Téléphone : +33 7 49 05 18 79`
         },
         {
@@ -202,7 +202,7 @@ Conformément aux dispositions applicables, l'utilisateur peut recourir à une p
           content: `Pour toute question relative aux présentes CGU :
 
 **MAADEC - MAAD Engineering & Consulting**
-Email : contact@maadec.com
+Email : abdoulam.diouf@maadec.com
 Téléphone : +33 7 49 05 18 79
 Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal`
         }
@@ -236,7 +236,7 @@ Legal form: Sole Proprietorship
 NINEA: 012390978
 RCCM: SN.DKR.2025.A.31734
 Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal
-Email: contact@maadec.com
+Email: abdoulam.diouf@maadec.com
 Phone: +33 7 49 05 18 79`
         },
         {
@@ -403,7 +403,7 @@ In accordance with applicable provisions, the user may resort to a mediation pro
           content: `For any questions regarding these ToS:
 
 **MAADEC - MAAD Engineering & Consulting**
-Email: contact@maadec.com
+Email: abdoulam.diouf@maadec.com
 Phone: +33 7 49 05 18 79
 Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal`
         }

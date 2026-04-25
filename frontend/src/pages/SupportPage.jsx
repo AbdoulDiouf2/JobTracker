@@ -167,8 +167,8 @@ export default function SupportPage() {
               <div className="glass-card rounded-xl p-6 border border-slate-800">
                 <h3 className="font-semibold mb-4 text-slate-200">{t.directContact}</h3>
                 <p className="text-slate-400 text-sm mb-2">{t.emailUs}</p>
-                <a href="mailto:contact@jobtracker.app" className="text-gold hover:underline font-medium flex items-center gap-2">
-                  contact@jobtracker.app
+                <a href="mailto:abdoulam.diouf@maadec.com" className="text-gold hover:underline font-medium flex items-center gap-2">
+                  abdoulam.diouf@maadec.com
                   <ExternalLink size={14} />
                 </a>
               </div>

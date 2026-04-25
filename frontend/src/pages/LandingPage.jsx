@@ -1121,7 +1121,7 @@ const PricingSection = () => {
                   </Button>
                 </a>
               ) : plan.isContact ? (
-                <a href="mailto:contact@jobtracker.app" className="block">
+                <a href="mailto:abdoulam.diouf@maadec.com" className="block">
                   <Button variant="outline" className="w-full border-slate-700 text-white hover:bg-slate-800 py-5">
                     {plan.cta}
                   </Button>
@@ -1422,8 +1422,8 @@ const Footer = () => {
             <p className="text-slate-400 text-sm mb-4">
               {language === 'fr' ? 'Une question ? Écrivez-nous.' : 'Questions? Write to us.'}
             </p>
-            <a href="mailto:contact@jobtracker.app" className="text-gold hover:text-gold-light text-sm flex items-center gap-2">
-              contact@jobtracker.app <ExternalLink size={14} />
+            <a href="mailto:abdoulam.diouf@maadec.com" className="text-gold hover:text-gold-light text-sm flex items-center gap-2">
+              abdoulam.diouf@maadec.com <ExternalLink size={14} />
             </a>
           </div>
         </div>

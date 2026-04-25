@@ -19,7 +19,7 @@ export default function PrivacyPolicyPage() {
           content: `**MAADEC - MAAD Engineering & Consulting**
 Dirigeant : Abdoul Ahad Mbacké DIOUF
 Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal
-Email : contact@maadec.com
+Email : abdoulam.diouf@maadec.com
 Téléphone : +33 7 49 05 18 79`
         },
         {
@@ -117,7 +117,7 @@ En cas de transfert hors de l'Union Européenne, nous nous assurons que des gara
 • **Droit d'opposition** : vous opposer au traitement de vos données
 • **Droit de limitation** : limiter le traitement de vos données
 
-Pour exercer ces droits, contactez-nous à : **contact@maadec.com**
+Pour exercer ces droits, contactez-nous à : **abdoulam.diouf@maadec.com**
 
 Vous pouvez également introduire une réclamation auprès de l'autorité de protection des données compétente.`
         },
@@ -145,7 +145,7 @@ La date de dernière mise à jour est indiquée en haut de cette page.`
           content: `Pour toute question concernant cette politique de confidentialité ou vos données personnelles :
 
 **MAADEC - MAAD Engineering & Consulting**
-Email : contact@maadec.com
+Email : abdoulam.diouf@maadec.com
 Téléphone : +33 7 49 05 18 79
 Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal`
         }
@@ -163,7 +163,7 @@ Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal`
           content: `**MAADEC - MAAD Engineering & Consulting**
 Director: Abdoul Ahad Mbacké DIOUF
 Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal
-Email: contact@maadec.com
+Email: abdoulam.diouf@maadec.com
 Phone: +33 7 49 05 18 79`
         },
         {
@@ -261,7 +261,7 @@ In case of transfer outside the European Union, we ensure that appropriate safeg
 • **Right to object**: object to the processing of your data
 • **Right to restriction**: limit the processing of your data
 
-To exercise these rights, contact us at: **contact@maadec.com**
+To exercise these rights, contact us at: **abdoulam.diouf@maadec.com**
 
 You may also lodge a complaint with the competent data protection authority.`
         },
@@ -289,7 +289,7 @@ The last update date is indicated at the top of this page.`
           content: `For any questions regarding this privacy policy or your personal data:
 
 **MAADEC - MAAD Engineering & Consulting**
-Email: contact@maadec.com
+Email: abdoulam.diouf@maadec.com
 Phone: +33 7 49 05 18 79
 Address: Cité Cora FALL Villa N°56, Zac Mbao, Senegal`
         }
