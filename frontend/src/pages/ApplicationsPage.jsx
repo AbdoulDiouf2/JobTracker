@@ -910,6 +910,8 @@ export default function ApplicationsPage() {
     deleteApplication, toggleFavorite
   } = useApplications(currentParams);
 
+  const filtersKey = JSON.stringify(filters);
+
   // Prefetch la page suivante dès que la page courante est chargée
   useEffect(() => {
     if (pagination.total_pages > currentPage) {
@@ -920,7 +922,8 @@ export default function ApplicationsPage() {
         staleTime: 5 * 60 * 1000,
       });
     }
-  }, [currentPage, pagination.total_pages, searchQuery, JSON.stringify(filters)]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, pagination.total_pages, searchQuery, filtersKey]);
 
   const t = {
     fr: {
