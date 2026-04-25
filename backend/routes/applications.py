@@ -4,7 +4,7 @@ JobTracker SaaS - Routes des candidatures
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import re
 
 from models import (
@@ -35,6 +35,7 @@ async def list_applications(
     is_favorite: Optional[bool] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
+    needs_followup: Optional[bool] = None,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -70,7 +71,15 @@ async def list_applications(
             filter_query["date_candidature"]["$lte"] = date_to
         else:
             filter_query["date_candidature"] = {"$lte": date_to}
-    
+
+    if needs_followup:
+        now = datetime.now(timezone.utc)
+        followup_max_date = (now - timedelta(days=14)).isoformat()
+        followup_min_date = (now - timedelta(days=45)).isoformat()
+        filter_query["reponse"] = "pending"
+        filter_query["followup_count"] = {"$lt": 2}
+        filter_query["date_candidature"] = {"$lt": followup_max_date, "$gt": followup_min_date}
+
     # Compter le total
     total = await db.applications.count_documents(filter_query)
     

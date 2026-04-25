@@ -545,7 +545,7 @@ export default function DashboardPage() {
             })}
           </p>
         </div>
-        <Link to="/dashboard/applications">
+        <Link to="/dashboard/applications?open_modal=true">
           <Button className="bg-gold hover:bg-gold-light text-[#020817]">
             <Plus size={18} className="mr-2" />
             {t.newApplication}

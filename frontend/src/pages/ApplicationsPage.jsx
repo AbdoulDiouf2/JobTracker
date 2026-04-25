@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -884,11 +885,14 @@ export default function ApplicationsPage() {
   const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [isModalOpen, setIsModalOpen] = useState(searchParams.get('open_modal') === 'true');
   const [editingApp, setEditingApp] = useState(null);
   const [viewingApp, setViewingApp] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState(
+    searchParams.get('needs_followup') === 'true' ? { needs_followup: true } : {}
+  );
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('card'); // 'card' or 'table'
 
@@ -1110,6 +1114,20 @@ export default function ApplicationsPage() {
           )}
         </div>
       </div>
+
+      {/* Needs Followup Active Filter Banner */}
+      {filters.needs_followup && (
+        <div className="flex items-center gap-2 mt-4 px-3 py-2 rounded-lg bg-orange-500/10 border border-orange-500/30 text-orange-400 text-sm">
+          <Mail size={14} />
+          <span>{language === 'fr' ? 'Filtre actif : candidatures à relancer (en attente depuis +14 jours)' : 'Active filter: applications needing follow-up (pending for 14+ days)'}</span>
+          <button
+            onClick={() => setFilters({})}
+            className="ml-auto text-orange-400 hover:text-white transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Applications List */}
       {loading ? (

@@ -625,7 +625,7 @@ async def get_dashboard_v2(
             title="Candidatures à relancer",
             description=f"{needs_followup} en attente depuis +14 jours",
             count=needs_followup,
-            action_url="/dashboard/applications?filter=pending"
+            action_url="/dashboard/applications?needs_followup=true"
         ))
     
     # Favoris inactifs
