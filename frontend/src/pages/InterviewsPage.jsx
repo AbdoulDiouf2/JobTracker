@@ -977,10 +977,6 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
 };
 
 export default function InterviewsPage() {
-  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
-    filter !== 'all' ? { status: filter } : {}
-  );
-  const { applications } = useApplications({ per_page: 100 });
   const { language } = useLanguage();
   const queryClient = useQueryClient();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
@@ -991,6 +987,11 @@ export default function InterviewsPage() {
   const [prefillApp, setPrefillApp] = useState(null);
   const [viewingInterview, setViewingInterview] = useState(null);
   const [filter, setFilter] = useState('all');
+
+  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
+    filter !== 'all' ? { status: filter } : {}
+  );
+  const { applications } = useApplications({ per_page: 100 });
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('calendar'); // 'card' or 'calendar' - calendar by default
   const [currentMonth, setCurrentMonth] = useState(new Date());
