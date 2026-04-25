@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     SMTP_PORT: int = int(os.environ.get('SMTP_PORT', '465'))
     SMTP_SECURE: bool = os.environ.get('SMTP_SECURE', 'true').lower() == 'true'
     SMTP_USER: str = os.environ.get('SMTP_USER', '')
-    SMTP_PASSWORD: str = os.environ.get('SMTP_PASSWORD_APP', os.environ.get('SMTP_PASSWORD', ''))
+    SMTP_PASSWORD_APP: str = os.environ.get('SMTP_PASSWORD_APP', '')
     SMTP_FROM_NAME: str = os.environ.get('SMTP_FROM_NAME', 'JobTracker Support')
     SMTP_FROM_EMAIL: str = os.environ.get('SMTP_FROM_EMAIL', '')
     SUPPORT_EMAIL: str = os.environ.get('SUPPORT_EMAIL', 'abdoulam.diouf@maadec.com')

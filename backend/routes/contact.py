@@ -45,12 +45,12 @@ async def send_contact_email(form: ContactForm):
         if settings.SMTP_SECURE:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, context=context) as server:
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD_APP)
                 server.sendmail(settings.SMTP_FROM_EMAIL, settings.SUPPORT_EMAIL, msg.as_string())
         else:
             with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as server:
                 server.starttls()
-                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                server.login(settings.SMTP_USER, settings.SMTP_PASSWORD_APP)
                 server.sendmail(settings.SMTP_FROM_EMAIL, settings.SUPPORT_EMAIL, msg.as_string())
 
         return {"success": True}
