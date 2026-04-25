@@ -40,6 +40,7 @@ from routes.reminders import router as reminders_router
 from routes.reminders import get_db as reminders_get_db
 from routes.onboarding import router as onboarding_router
 from routes.onboarding import get_db as onboarding_get_db
+from routes.contact import router as contact_router
 from utils.auth import get_current_user, security
 from utils.scheduler import setup_scheduler, shutdown_scheduler
 
@@ -155,6 +156,7 @@ api_router.include_router(documents_router)
 api_router.include_router(calendar_router)
 api_router.include_router(reminders_router)
 api_router.include_router(onboarding_router)
+api_router.include_router(contact_router)
 
 # Include main router
 app.include_router(api_router)

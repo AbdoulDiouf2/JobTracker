@@ -5,6 +5,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Mail, ArrowLeft, MessageSquare, Send, CheckCircle, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import axios from 'axios';
 
 export default function SupportPage() {
   const { language } = useLanguage();
@@ -44,14 +45,16 @@ export default function SupportPage() {
     }
   }[language];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setStatus('submitting');
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}/api/contact/`, formData);
       setStatus('success');
       setFormData({ name: '', email: '', message: '' });
-    }, 1500);
+    } catch {
+      setStatus('error');
+    }
   };
 
   return (

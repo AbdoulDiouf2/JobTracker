@@ -10,7 +10,7 @@ export default function PrivacyPolicyPage() {
     fr: {
       title: 'Politique de Confidentialité',
       backToHome: 'Retour à l\'accueil',
-      lastUpdate: 'Dernière mise à jour : Décembre 2025',
+      lastUpdate: 'Dernière mise à jour : Avril 2026',
       intro: 'MAADEC - MAAD Engineering & Consulting s\'engage à protéger la vie privée des utilisateurs de l\'application Job Tracking. Cette politique de confidentialité explique comment nous collectons, utilisons et protégeons vos données personnelles.',
       sections: [
         {
@@ -55,7 +55,7 @@ Téléphone : +33 7 49 05 18 79`
 
 • **Gestion de votre compte utilisateur** : création, authentification, personnalisation
 • **Fonctionnement du service** : suivi de vos candidatures et entretiens
-• **Analyse IA** : conseils personnalisés via nos outils d'intelligence artificielle (Gemini, GPT-4o)
+• **Analyse IA** : conseils personnalisés via nos outils d'intelligence artificielle (Gemini, GPT-4o, Groq)
 • **Amélioration du service** : statistiques d'usage anonymisées
 • **Communication** : notifications et alertes liées à vos candidatures
 • **Sécurité** : protection contre les accès non autorisés`
@@ -66,7 +66,7 @@ Téléphone : +33 7 49 05 18 79`
           content: `Le traitement de vos données personnelles est fondé sur :
 
 • **L'exécution du contrat** : les données sont nécessaires pour vous fournir le service Job Tracking
-• **Votre consentement** : pour certaines fonctionnalités optionnelles (notifications, newsletter)
+• **Votre consentement** : pour certaines fonctionnalités optionnelles (notifications par email)
 • **L'intérêt légitime** : pour l'amélioration de nos services et la sécurité de la plateforme`
         },
         {
@@ -77,7 +77,7 @@ Téléphone : +33 7 49 05 18 79`
 • **Données de compte** : pendant toute la durée d'utilisation du service, puis 3 ans après la dernière connexion
 • **Données de candidatures** : pendant la durée de votre utilisation, supprimées sur demande
 • **Données techniques** : 12 mois maximum
-• **Données de facturation** : 10 ans (obligation légale)
+• **Données de facturation** : 10 ans si applicable (obligation légale en cas de transactions)
 
 Vous pouvez demander la suppression de vos données à tout moment via les paramètres de votre compte ou en nous contactant.`
         },
@@ -86,8 +86,8 @@ Vous pouvez demander la suppression de vos données à tout moment via les param
           icon: Globe,
           content: `Vos données peuvent être partagées avec :
 
-• **Services d'IA** : Google (Gemini) et OpenAI (GPT-4o) pour les fonctionnalités d'analyse et de conseil. Ces services sont soumis à leurs propres politiques de confidentialité.
-• **Hébergeur** : Emergent Labs pour l'hébergement sécurisé de l'application
+• **Services d'IA** : Google (Gemini), OpenAI (GPT-4o) et Groq pour les fonctionnalités d'analyse et de conseil. Ces services sont soumis à leurs propres politiques de confidentialité.
+• **Hébergeur** : Vercel Inc. (San Francisco, États-Unis) pour l'hébergement sécurisé de l'application
 • **Sous-traitants techniques** : uniquement pour assurer le fonctionnement du service
 
 **Nous ne vendons jamais vos données personnelles à des tiers.**
@@ -154,7 +154,7 @@ Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal`
     en: {
       title: 'Privacy Policy',
       backToHome: 'Back to home',
-      lastUpdate: 'Last updated: December 2025',
+      lastUpdate: 'Last updated: April 2026',
       intro: 'MAADEC - MAAD Engineering & Consulting is committed to protecting the privacy of Job Tracking application users. This privacy policy explains how we collect, use, and protect your personal data.',
       sections: [
         {
@@ -199,7 +199,7 @@ Phone: +33 7 49 05 18 79`
 
 • **User account management**: creation, authentication, personalization
 • **Service operation**: tracking your applications and interviews
-• **AI analysis**: personalized advice through our artificial intelligence tools (Gemini, GPT-4o)
+• **AI analysis**: personalized advice through our artificial intelligence tools (Gemini, GPT-4o, Groq)
 • **Service improvement**: anonymized usage statistics
 • **Communication**: notifications and alerts related to your applications
 • **Security**: protection against unauthorized access`
@@ -210,7 +210,7 @@ Phone: +33 7 49 05 18 79`
           content: `The processing of your personal data is based on:
 
 • **Contract execution**: data is necessary to provide you with the Job Tracking service
-• **Your consent**: for certain optional features (notifications, newsletter)
+• **Your consent**: for certain optional features (email notifications)
 • **Legitimate interest**: for improving our services and platform security`
         },
         {
@@ -221,7 +221,7 @@ Phone: +33 7 49 05 18 79`
 • **Account data**: for the duration of service use, then 3 years after the last login
 • **Application data**: for the duration of your use, deleted upon request
 • **Technical data**: 12 months maximum
-• **Billing data**: 10 years (legal obligation)
+• **Billing data**: 10 years if applicable (legal obligation when transactions occur)
 
 You can request deletion of your data at any time through your account settings or by contacting us.`
         },
@@ -230,8 +230,8 @@ You can request deletion of your data at any time through your account settings 
           icon: Globe,
           content: `Your data may be shared with:
 
-• **AI services**: Google (Gemini) and OpenAI (GPT-4o) for analysis and advisory features. These services are subject to their own privacy policies.
-• **Host**: Emergent Labs for secure application hosting
+• **AI services**: Google (Gemini), OpenAI (GPT-4o) and Groq for analysis and advisory features. These services are subject to their own privacy policies.
+• **Host**: Vercel Inc. (San Francisco, United States) for secure application hosting
 • **Technical subcontractors**: only to ensure service operation
 
 **We never sell your personal data to third parties.**

@@ -10,7 +10,7 @@ export default function LegalNoticePage() {
     fr: {
       title: 'Mentions Légales',
       backToHome: 'Retour à l\'accueil',
-      lastUpdate: 'Dernière mise à jour : Décembre 2025',
+      lastUpdate: 'Dernière mise à jour : Avril 2026',
       sections: [
         {
           title: 'Éditeur du site',
@@ -43,8 +43,9 @@ Zac Mbao, Sénégal
           title: 'Hébergement',
           icon: FileText,
           content: `Le site est hébergé par :
-Emergent Labs
-Service de cloud computing
+**Vercel Inc.**
+340 Pine Street, Suite 701, San Francisco, CA 94104, États-Unis
+https://vercel.com
 
 L'hébergeur assure la continuité de service et la sécurité des données conformément aux standards de l'industrie.`
         },
@@ -79,7 +80,7 @@ Les liens hypertextes présents sur le site et dirigeant les utilisateurs vers d
     en: {
       title: 'Legal Notice',
       backToHome: 'Back to home',
-      lastUpdate: 'Last updated: December 2025',
+      lastUpdate: 'Last updated: April 2026',
       sections: [
         {
           title: 'Website Publisher',
@@ -112,8 +113,9 @@ Zac Mbao, Senegal
           title: 'Hosting',
           icon: FileText,
           content: `The website is hosted by:
-Emergent Labs
-Cloud computing service
+**Vercel Inc.**
+340 Pine Street, Suite 701, San Francisco, CA 94104, United States
+https://vercel.com
 
 The host ensures service continuity and data security in accordance with industry standards.`
         },

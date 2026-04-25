@@ -42,6 +42,16 @@ class Settings(BaseSettings):
     BACKEND_URL: str = os.environ.get('BACKEND_URL', 'http://localhost:8001')
     FRONTEND_URL: str = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
 
+    # SMTP
+    SMTP_HOST: str = os.environ.get('SMTP_HOST', 'smtppro.zoho.eu')
+    SMTP_PORT: int = int(os.environ.get('SMTP_PORT', '465'))
+    SMTP_SECURE: bool = os.environ.get('SMTP_SECURE', 'true').lower() == 'true'
+    SMTP_USER: str = os.environ.get('SMTP_USER', '')
+    SMTP_PASSWORD: str = os.environ.get('SMTP_PASSWORD_APP', os.environ.get('SMTP_PASSWORD', ''))
+    SMTP_FROM_NAME: str = os.environ.get('SMTP_FROM_NAME', 'JobTracker Support')
+    SMTP_FROM_EMAIL: str = os.environ.get('SMTP_FROM_EMAIL', '')
+    SUPPORT_EMAIL: str = os.environ.get('SUPPORT_EMAIL', 'abdoulam.diouf@maadec.com')
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'

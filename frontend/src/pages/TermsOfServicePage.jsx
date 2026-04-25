@@ -10,7 +10,7 @@ export default function TermsOfServicePage() {
     fr: {
       title: 'Conditions Générales d\'Utilisation',
       backToHome: 'Retour à l\'accueil',
-      lastUpdate: 'Dernière mise à jour : Décembre 2025',
+      lastUpdate: 'Dernière mise à jour : Avril 2026',
       intro: 'Les présentes Conditions Générales d\'Utilisation (CGU) régissent l\'accès et l\'utilisation de l\'application Job Tracking, éditée par MAADEC - MAAD Engineering & Consulting. En utilisant notre service, vous acceptez ces conditions dans leur intégralité.',
       sections: [
         {
@@ -108,7 +108,7 @@ Il accorde à MAADEC une licence limitée pour traiter ces données dans le cadr
           title: 'Article 7 - Fonctionnalités IA',
           icon: FileText,
           content: `**7.1 Nature des conseils IA**
-Le Service intègre des fonctionnalités d'intelligence artificielle (Google Gemini, OpenAI GPT-4o) pour fournir des conseils et analyses.
+Le Service intègre des fonctionnalités d'intelligence artificielle (Google Gemini, OpenAI GPT-4o, Groq) pour fournir des conseils et analyses.
 
 Ces conseils sont fournis à titre informatif et ne constituent pas des conseils professionnels garantis.
 
@@ -211,7 +211,7 @@ Adresse : Cité Cora FALL Villa N°56, Zac Mbao, Sénégal`
     en: {
       title: 'Terms of Service',
       backToHome: 'Back to home',
-      lastUpdate: 'Last updated: December 2025',
+      lastUpdate: 'Last updated: April 2026',
       intro: 'These Terms of Service (ToS) govern access to and use of the Job Tracking application, published by MAADEC - MAAD Engineering & Consulting. By using our service, you agree to these terms in their entirety.',
       sections: [
         {
@@ -309,7 +309,7 @@ They grant MAADEC a limited license to process this data for the operation of th
           title: 'Article 7 - AI Features',
           icon: FileText,
           content: `**7.1 Nature of AI advice**
-The Service integrates artificial intelligence features (Google Gemini, OpenAI GPT-4o) to provide advice and analysis.
+The Service integrates artificial intelligence features (Google Gemini, OpenAI GPT-4o, Groq) to provide advice and analysis.
 
 This advice is provided for informational purposes and does not constitute guaranteed professional advice.
 
