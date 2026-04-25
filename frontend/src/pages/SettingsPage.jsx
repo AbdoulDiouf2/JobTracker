@@ -17,7 +17,7 @@ export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
-  const { preferences, fetchPreferences, updatePreferences } = useStatistics();
+  const { preferences, updatePreferences } = useStatistics();
   const { 
     isSupported: pushSupported, 
     isSubscribed: pushSubscribed, 
@@ -217,19 +217,15 @@ export default function SettingsPage() {
     fetchNotifSettings();
   }, []);
 
-  // Fetch user goals/preferences
+  // Sync goals from cached preferences
   useEffect(() => {
-    const loadPreferences = async () => {
-      const prefs = await fetchPreferences();
-      if (prefs) {
-        setGoalsData({
-          monthly_goal: prefs.monthly_goal || 40,
-          weekly_goal: prefs.weekly_goal || 10
-        });
-      }
-    };
-    loadPreferences();
-  }, [fetchPreferences]);
+    if (preferences) {
+      setGoalsData({
+        monthly_goal: preferences.monthly_goal || 40,
+        weekly_goal: preferences.weekly_goal || 10
+      });
+    }
+  }, [preferences]);
 
   // Fetch Google Calendar status
   useEffect(() => {

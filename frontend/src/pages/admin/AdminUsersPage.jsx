@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -8,7 +8,8 @@ import {
   Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus,
   CheckCircle2, Clock, SkipForward
 } from 'lucide-react';
-import { useAdmin } from '../../hooks/useAdmin';
+import { useAdminUsers, useAdminMutations } from '../../hooks/useAdmin';
+import { api } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import {
@@ -535,23 +536,12 @@ const CreateUserModal = ({ isOpen, onClose, onCreate, loading }) => {
 };
 
 export default function AdminUsersPage() {
-  const { 
-    users, 
-    usersPagination, 
-    fetchUsers, 
-    fetchUserDetail,
-    updateUser,
-    deleteUser,
-    reactivateUser,
-    createUser,
-    exportStats,
-    loading 
-  } = useAdmin();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [viewingUser, setViewingUser] = useState(null);
   const [viewingUserStats, setViewingUserStats] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
@@ -559,18 +549,26 @@ export default function AdminUsersPage() {
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState('');
 
-  useEffect(() => {
-    const params = {};
-    if (searchQuery) params.search = searchQuery;
-    if (roleFilter !== 'all') params.role = roleFilter;
-    if (statusFilter !== 'all') params.is_active = statusFilter === 'active';
-    
-    fetchUsers(params);
-  }, [fetchUsers, searchQuery, roleFilter, statusFilter]);
+  const usersParams = {
+    page: currentPage,
+    ...(searchQuery && { search: searchQuery }),
+    ...(roleFilter !== 'all' && { role: roleFilter }),
+    ...(statusFilter !== 'all' && { is_active: statusFilter === 'active' }),
+  };
+
+  const { data: usersData, isLoading: loading } = useAdminUsers(usersParams);
+  const users = usersData?.items ?? [];
+  const usersPagination = {
+    page: usersData?.page ?? 1,
+    per_page: usersData?.per_page ?? 20,
+    total: usersData?.total ?? 0,
+    total_pages: usersData?.total_pages ?? 0,
+  };
+  const { updateUser, deleteUser, reactivateUser, createUser, exportStats } = useAdminMutations();
 
   const handleViewUser = async (user) => {
     try {
-      const detail = await fetchUserDetail(user.id);
+      const detail = await api.get(`/api/admin/users/${user.id}`).then(r => r.data);
       setViewingUser(detail.user);
       setViewingUserStats(detail.stats);
     } catch (err) {
@@ -585,9 +583,8 @@ export default function AdminUsersPage() {
   const handleSaveUser = async (data) => {
     setSaving(true);
     try {
-      await updateUser(editingUser.id, data);
+      await updateUser.mutateAsync({ userId: editingUser.id, data });
       setEditingUser(null);
-      fetchUsers();
     } catch (err) {
       console.error('Erreur:', err);
     } finally {
@@ -603,10 +600,8 @@ export default function AdminUsersPage() {
       confirmText: 'Désactiver',
       cancelText: 'Annuler',
     });
-
     if (confirmed) {
-      await deleteUser(user.id);
-      fetchUsers();
+      await deleteUser.mutateAsync(user.id);
     }
   };
 
@@ -618,10 +613,8 @@ export default function AdminUsersPage() {
       confirmText: 'Réactiver',
       cancelText: 'Annuler',
     });
-
     if (confirmed) {
-      await reactivateUser(user.id);
-      fetchUsers();
+      await reactivateUser.mutateAsync(user.id);
     }
   };
 
@@ -629,9 +622,8 @@ export default function AdminUsersPage() {
     setSaving(true);
     setCreateError('');
     try {
-      await createUser(userData);
+      await createUser.mutateAsync(userData);
       setShowCreateModal(false);
-      fetchUsers();
     } catch (err) {
       const errorMessage = err.response?.data?.detail || 'Erreur lors de la création';
       setCreateError(errorMessage);
@@ -657,7 +649,7 @@ export default function AdminUsersPage() {
   };
 
   const handlePageChange = (page) => {
-    fetchUsers({ page, search: searchQuery });
+    setCurrentPage(page);
   };
 
   return (

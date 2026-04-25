@@ -1,133 +1,80 @@
-import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { api } from '../contexts/AuthContext';
 
 export function useDocuments() {
-  const [documents, setDocuments] = useState([]);
-  const [cvs, setCvs] = useState([]);
-  const [templates, setTemplates] = useState([]);
-  const [portfolioLinks, setPortfolioLinks] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const getAuthHeaders = () => ({
-    Authorization: `Bearer ${localStorage.getItem('token')}`
+  const { data: documents = [], isLoading: docsLoading } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => api.get('/api/documents/').then(r => r.data),
   });
 
-  const fetchDocuments = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(`${API_URL}/api/documents/`, {
-        headers: getAuthHeaders()
-      });
-      const docs = response.data;
-      setDocuments(docs);
-      setCvs(docs.filter(d => d.document_type === 'cv'));
-      setPortfolioLinks(docs.filter(d => d.document_type === 'portfolio_link'));
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: templates = [], isLoading: templatesLoading } = useQuery({
+    queryKey: ['documents', 'templates'],
+    queryFn: () => api.get('/api/documents/templates/').then(r => r.data),
+  });
 
-  const fetchTemplates = useCallback(async () => {
-    try {
-      const response = await axios.get(`${API_URL}/api/documents/templates/`, {
-        headers: getAuthHeaders()
-      });
-      setTemplates(response.data);
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-    }
-  }, []);
+  const invalidateDocs = () => queryClient.invalidateQueries({ queryKey: ['documents'] });
 
-  const uploadDocument = async (formData) => {
-    const response = await axios.post(`${API_URL}/api/documents/upload`, formData, {
-      headers: {
-        ...getAuthHeaders(),
-        'Content-Type': 'multipart/form-data'
-      }
-    });
-    await fetchDocuments();
-    return response.data;
-  };
+  const uploadDocument = useMutation({
+    mutationFn: (formData) => api.post('/api/documents/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then(r => r.data),
+    onSuccess: invalidateDocs,
+  });
 
-  const createLink = async (data) => {
-    const response = await axios.post(`${API_URL}/api/documents/link`, null, {
-      headers: getAuthHeaders(),
-      params: data
-    });
-    await fetchDocuments();
-    return response.data;
-  };
+  const createLink = useMutation({
+    mutationFn: (data) => api.post('/api/documents/link', null, { params: data }).then(r => r.data),
+    onSuccess: invalidateDocs,
+  });
 
-  const createTemplate = async (data) => {
-    const response = await axios.post(`${API_URL}/api/documents/templates`, data, {
-      headers: getAuthHeaders()
-    });
-    await fetchTemplates();
-    return response.data;
-  };
+  const createTemplate = useMutation({
+    mutationFn: (data) => api.post('/api/documents/templates', data).then(r => r.data),
+    onSuccess: invalidateDocs,
+  });
 
-  const deleteDocument = async (documentId) => {
-    await axios.delete(`${API_URL}/api/documents/${documentId}`, {
-      headers: getAuthHeaders()
-    });
-    await fetchDocuments();
-  };
+  const updateTemplate = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/api/documents/templates/${id}`, data).then(r => r.data),
+    onSuccess: invalidateDocs,
+  });
 
-  const deleteTemplate = async (templateId) => {
-    await axios.delete(`${API_URL}/api/documents/templates/${templateId}`, {
-      headers: getAuthHeaders()
-    });
-    await fetchTemplates();
-  };
+  const deleteDocument = useMutation({
+    mutationFn: (documentId) => api.delete(`/api/documents/${documentId}`),
+    onSuccess: invalidateDocs,
+  });
+
+  const deleteTemplate = useMutation({
+    mutationFn: (templateId) => api.delete(`/api/documents/templates/${templateId}`),
+    onSuccess: invalidateDocs,
+  });
 
   const generateFromTemplate = async (templateId, entreprise, poste, applicationId = null) => {
-    const response = await axios.post(
-      `${API_URL}/api/documents/templates/${templateId}/generate`,
+    const response = await api.post(
+      `/api/documents/templates/${templateId}/generate`,
       null,
-      {
-        headers: getAuthHeaders(),
-        params: { entreprise, poste, application_id: applicationId }
-      }
+      { params: { entreprise, poste, application_id: applicationId } }
     );
     return response.data;
   };
 
   const linkDocumentToApplication = async (applicationId, documentId) => {
-    const response = await axios.post(
-      `${API_URL}/api/documents/link-to-application`,
-      null,
-      {
-        headers: getAuthHeaders(),
-        params: { application_id: applicationId, document_id: documentId }
-      }
-    );
+    const response = await api.post('/api/documents/link-to-application', null, {
+      params: { application_id: applicationId, document_id: documentId },
+    });
     return response.data;
   };
 
   const getApplicationDocuments = async (applicationId) => {
-    const response = await axios.get(
-      `${API_URL}/api/documents/application/${applicationId}`,
-      { headers: getAuthHeaders() }
-    );
+    const response = await api.get(`/api/documents/application/${applicationId}`);
     return response.data;
   };
 
-  const getDefaultCV = () => {
-    return cvs.find(cv => cv.is_default) || cvs[0] || null;
-  };
+  const cvs = documents.filter(d => d.document_type === 'cv');
+  const portfolioLinks = documents.filter(d => d.document_type === 'portfolio_link');
+  const loading = docsLoading || templatesLoading;
 
-  const getDefaultTemplate = () => {
-    return templates.find(t => t.is_default) || templates[0] || null;
-  };
-
-  useEffect(() => {
-    fetchDocuments();
-    fetchTemplates();
-  }, [fetchDocuments, fetchTemplates]);
+  const getDefaultCV = () => cvs.find(cv => cv.is_default) || cvs[0] || null;
+  const getDefaultTemplate = () => templates.find(t => t.is_default) || templates[0] || null;
 
   return {
     documents,
@@ -135,17 +82,16 @@ export function useDocuments() {
     templates,
     portfolioLinks,
     loading,
-    fetchDocuments,
-    fetchTemplates,
     uploadDocument,
     createLink,
     createTemplate,
+    updateTemplate,
     deleteDocument,
     deleteTemplate,
     generateFromTemplate,
     linkDocumentToApplication,
     getApplicationDocuments,
     getDefaultCV,
-    getDefaultTemplate
+    getDefaultTemplate,
   };
 }

@@ -14,7 +14,6 @@ import {
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
-import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
@@ -884,26 +883,27 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
 };
 
 export default function ApplicationsPage() {
-  const {
-    applications, loading, pagination,
-    fetchApplications, createApplication, updateApplication,
-    deleteApplication, toggleFavorite
-  } = useApplications();
   const { language } = useLanguage();
   const navigate = useNavigate();
-  const { refreshKey } = useRefresh();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
-  
+
   const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(searchParams.get('open_modal') === 'true');
   const [editingApp, setEditingApp] = useState(null);
   const [viewingApp, setViewingApp] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState(
     searchParams.get('needs_followup') === 'true' ? { needs_followup: true } : {}
   );
   const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('card'); // 'card' or 'table'
+  const [viewMode, setViewMode] = useState('card');
+
+  const {
+    applications, loading, pagination,
+    createApplication, updateApplication,
+    deleteApplication, toggleFavorite
+  } = useApplications({ page: currentPage, search: searchQuery || undefined, ...filters });
 
   const t = {
     fr: {
@@ -958,21 +958,18 @@ export default function ApplicationsPage() {
     }
   }[language];
 
-  useEffect(() => {
-    fetchApplications({ search: searchQuery, ...filters });
-  }, [fetchApplications, searchQuery, filters, refreshKey]);
-
   const handleSubmit = async (data) => {
     setSubmitting(true);
-    if (editingApp) {
-      await updateApplication(editingApp.id, data);
-    } else {
-      await createApplication(data);
-    }
+    try {
+      if (editingApp) {
+        await updateApplication.mutateAsync({ id: editingApp.id, data });
+      } else {
+        await createApplication.mutateAsync(data);
+      }
+    } catch (err) { /* cache rollback handled by mutation */ }
     setSubmitting(false);
     setIsModalOpen(false);
     setEditingApp(null);
-    fetchApplications({ search: searchQuery, ...filters });
   };
 
   const handleEdit = (app) => {
@@ -992,14 +989,14 @@ export default function ApplicationsPage() {
     });
     
     if (confirmed) {
-      await deleteApplication(id);
+      await deleteApplication.mutateAsync(id);
     }
   };
 
   const handleStatusChange = async (id, newStatus) => {
-    await updateApplication(id, { reponse: newStatus });
-    fetchApplications({ search: searchQuery, ...filters });
-    // Update viewing app if open
+    try {
+      await updateApplication.mutateAsync({ id, data: { reponse: newStatus } });
+    } catch (err) { /* optimistic rollback done by mutation */ }
     if (viewingApp && viewingApp.id === id) {
       setViewingApp(prev => ({ ...prev, reponse: newStatus }));
     }
@@ -1017,7 +1014,7 @@ export default function ApplicationsPage() {
   };
 
   const handlePageChange = (page) => {
-    fetchApplications({ page, search: searchQuery, ...filters });
+    setCurrentPage(page);
   };
 
   return (
@@ -1238,7 +1235,7 @@ export default function ApplicationsPage() {
                     app={app}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
-                    onToggleFavorite={toggleFavorite}
+                    onToggleFavorite={(id) => toggleFavorite.mutate(id)}
                     onStatusChange={handleStatusChange}
                     onViewDetails={handleViewDetails}
                     t={t}
@@ -1270,7 +1267,7 @@ export default function ApplicationsPage() {
                         app={app}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
-                        onToggleFavorite={toggleFavorite}
+                        onToggleFavorite={(id) => toggleFavorite.mutate(id)}
                         onStatusChange={handleStatusChange}
                         onViewDetails={handleViewDetails}
                         t={t}
@@ -1332,7 +1329,7 @@ export default function ApplicationsPage() {
         onClose={() => setViewingApp(null)}
         onEdit={handleEdit}
         onStatusChange={handleStatusChange}
-        onRefresh={fetchApplications}
+        onRefresh={() => {}}
         onCreateInterview={handleCreateInterviewFromApp}
         t={t}
       />

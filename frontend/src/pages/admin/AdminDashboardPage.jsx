@@ -1,10 +1,9 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Users, Briefcase, Calendar, TrendingUp,
   UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward
 } from 'lucide-react';
-import { useAdmin } from '../../hooks/useAdmin';
+import { useAdminDashboard, useAdminUserGrowth, useAdminActivityStats, useAdminOnboardingStats } from '../../hooks/useAdmin';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Legend 
@@ -99,24 +98,10 @@ const STEP_LABELS = {
 };
 
 export default function AdminDashboardPage() {
-  const {
-    dashboardStats,
-    fetchDashboardStats,
-    userGrowth,
-    fetchUserGrowth,
-    activityStats,
-    fetchActivityStats,
-    onboardingStats,
-    fetchOnboardingStats,
-    loading
-  } = useAdmin();
-
-  useEffect(() => {
-    fetchDashboardStats();
-    fetchUserGrowth(30);
-    fetchActivityStats(30);
-    fetchOnboardingStats();
-  }, [fetchDashboardStats, fetchUserGrowth, fetchActivityStats, fetchOnboardingStats]);
+  const { data: dashboardStats, isLoading: loading } = useAdminDashboard();
+  const { data: userGrowth = [] } = useAdminUserGrowth(30);
+  const { data: activityStats = [] } = useAdminActivityStats(30);
+  const { data: onboardingStats } = useAdminOnboardingStats();
 
   return (
     <div className="space-y-8" data-testid="admin-dashboard-page">

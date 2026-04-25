@@ -1,76 +1,64 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 
-export const useInterviews = () => {
-  const [interviews, setInterviews] = useState([]);
-  const [upcomingInterviews, setUpcomingInterviews] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export const useInterviews = (params = {}) => {
+  const queryClient = useQueryClient();
 
-  const fetchInterviews = useCallback(async (params = {}) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/api/interviews', { params });
-      setInterviews(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur de chargement');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: interviews = [], isLoading: loading, error } = useQuery({
+    queryKey: ['interviews', params],
+    queryFn: () => api.get('/api/interviews', { params }).then(r => r.data),
+  });
 
-  const fetchUpcoming = useCallback(async (limit = 5) => {
-    try {
-      const response = await api.get('/api/interviews/upcoming', { params: { limit } });
-      setUpcomingInterviews(response.data);
-      return response.data;
-    } catch (err) {
-      return [];
-    }
-  }, []);
+  const createInterview = useMutation({
+    mutationFn: (data) => api.post('/api/interviews', data).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
-  const createInterview = async (data) => {
-    try {
-      const response = await api.post('/api/interviews', data);
-      setInterviews(prev => [...prev, response.data]);
-      return { success: true, data: response.data };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
+  const updateInterview = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/api/interviews/${id}`, data).then(r => r.data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['interviews'] });
+      const snapshot = queryClient.getQueriesData({ queryKey: ['interviews'] });
+      queryClient.setQueriesData({ queryKey: ['interviews'] }, (old) => {
+        if (!Array.isArray(old)) return old;
+        return old.map(i => i.id === id ? { ...i, ...data } : i);
+      });
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      context?.snapshot?.forEach(([key, value]) => queryClient.setQueryData(key, value));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
-  const updateInterview = async (id, data) => {
-    try {
-      const response = await api.put(`/api/interviews/${id}`, data);
-      setInterviews(prev => prev.map(i => i.id === id ? response.data : i));
-      return { success: true, data: response.data };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
-
-  const deleteInterview = async (id) => {
-    try {
-      await api.delete(`/api/interviews/${id}`);
-      setInterviews(prev => prev.filter(i => i.id !== id));
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
+  const deleteInterview = useMutation({
+    mutationFn: (id) => api.delete(`/api/interviews/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
   return {
     interviews,
-    upcomingInterviews,
     loading,
-    error,
-    fetchInterviews,
-    fetchUpcoming,
+    error: error?.response?.data?.detail ?? null,
     createInterview,
     updateInterview,
-    deleteInterview
+    deleteInterview,
   };
+};
+
+export const useUpcomingInterviews = (limit = 5) => {
+  const { data: upcomingInterviews = [], isLoading: loading } = useQuery({
+    queryKey: ['interviews', 'upcoming', limit],
+    queryFn: () => api.get('/api/interviews/upcoming', { params: { limit } }).then(r => r.data),
+  });
+  return { upcomingInterviews, loading };
 };

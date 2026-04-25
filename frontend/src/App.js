@@ -1,5 +1,8 @@
 import "@/App.css";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import { queryClient } from "./lib/queryClient";
 import { LanguageProvider } from "./i18n";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RefreshProvider } from "./contexts/RefreshContext";
@@ -123,20 +126,23 @@ function App() {
   }, []);
 
   return (
-    <LanguageProvider>
-      <AuthProvider>
-        <RefreshProvider>
-          <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-            <div className="min-h-screen bg-[#020817]">
-              <BrowserRouter>
-                <AppRouter />
-                <Toaster />
-              </BrowserRouter>
-            </div>
-          </ThemeProvider>
-        </RefreshProvider>
-      </AuthProvider>
-    </LanguageProvider>
+    <QueryClientProvider client={queryClient}>
+      <LanguageProvider>
+        <AuthProvider>
+          <RefreshProvider>
+            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+              <div className="min-h-screen bg-[#020817]">
+                <BrowserRouter>
+                  <AppRouter />
+                  <Toaster />
+                </BrowserRouter>
+              </div>
+            </ThemeProvider>
+          </RefreshProvider>
+        </AuthProvider>
+      </LanguageProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 

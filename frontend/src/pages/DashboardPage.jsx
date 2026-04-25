@@ -6,11 +6,10 @@ import {
   TrendingUp, TrendingDown, ArrowRight, Plus, Target, Trophy,
   Lightbulb, AlertTriangle, Zap, ChevronUp, ChevronDown
 } from 'lucide-react';
-import { useStatistics } from '../hooks/useStatistics';
-import { useInterviews } from '../hooks/useInterviews';
+import { useStatisticsDashboardV2 } from '../hooks/useStatistics';
+import { useUpcomingInterviews } from '../hooks/useInterviews';
 import { useApplications } from '../hooks/useApplications';
 import { useLanguage } from '../i18n';
-import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../contexts/AuthContext';
 import { useOnboarding } from '../hooks/useOnboarding';
@@ -475,11 +474,10 @@ const ApplicationCardSkeleton = () => (
 // MAIN DASHBOARD
 // ============================================
 export default function DashboardPage() {
-  const { dashboardV2, fetchDashboardV2, loading: statsLoading } = useStatistics();
-  const { upcomingInterviews, fetchUpcoming, loading: interviewsLoading } = useInterviews();
-  const { applications, fetchApplications, loading: applicationsLoading } = useApplications();
+  const { data: dashboardV2, isLoading: statsLoading } = useStatisticsDashboardV2();
+  const { upcomingInterviews, loading: interviewsLoading } = useUpcomingInterviews(5);
+  const { applications, loading: applicationsLoading } = useApplications({ per_page: 5 });
   const { language } = useLanguage();
-  const { refreshKey } = useRefresh();
   const { user } = useAuth();
   const { markWelcomeShown } = useOnboarding();
   const [showWelcome, setShowWelcome] = useState(false);
@@ -523,12 +521,6 @@ export default function DashboardPage() {
       noApplications: 'No applications'
     }
   }[language];
-
-  useEffect(() => {
-    fetchDashboardV2();
-    fetchUpcoming(5);
-    fetchApplications({ per_page: 5 });
-  }, [fetchDashboardV2, fetchUpcoming, fetchApplications, refreshKey]);
 
   const stats = dashboardV2?.stats;
 

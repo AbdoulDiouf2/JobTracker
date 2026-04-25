@@ -63,15 +63,11 @@ function Section({ title, icon: Icon, children }) {
 export default function ProfilePage() {
   const { user, updateProfile, logout } = useAuth();
   const { language } = useLanguage();
-  const { dashboard, fetchDashboard } = useStatistics();
+  const { dashboard } = useStatistics();
 
   const [editing, setEditing] = useState(false);
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
 
   const handleSave = async () => {
     if (!fullName.trim()) return;

@@ -1,103 +1,92 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 
-export const useApplications = () => {
-  const [applications, setApplications] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [pagination, setPagination] = useState({
-    total: 0,
-    page: 1,
-    per_page: 20,
-    total_pages: 0
+export const useApplications = (params = {}) => {
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ['applications', params],
+    queryFn: () => api.get('/api/applications', { params }).then(r => r.data),
+    placeholderData: (prev) => prev,
   });
 
-  const fetchApplications = useCallback(async (params = {}) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await api.get('/api/applications', { params });
-      setApplications(response.data.items);
-      setPagination({
-        total: response.data.total,
-        page: response.data.page,
-        per_page: response.data.per_page,
-        total_pages: response.data.total_pages
+  const createApplication = useMutation({
+    mutationFn: (data) => api.post('/api/applications', data).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
+
+  const updateApplication = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/api/applications/${id}`, data).then(r => r.data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['applications'] });
+      const snapshot = queryClient.getQueriesData({ queryKey: ['applications'] });
+      queryClient.setQueriesData({ queryKey: ['applications'] }, (old) => {
+        if (!old?.items) return old;
+        return { ...old, items: old.items.map(app => app.id === id ? { ...app, ...data } : app) };
       });
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail || 'Erreur de chargement');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      context?.snapshot?.forEach(([key, value]) => queryClient.setQueryData(key, value));
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
-  const createApplication = async (data) => {
-    try {
-      const response = await api.post('/api/applications', data);
-      setApplications(prev => [response.data, ...prev]);
-      return { success: true, data: response.data };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
+  const deleteApplication = useMutation({
+    mutationFn: (id) => api.delete(`/api/applications/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
-  const updateApplication = async (id, data) => {
-    try {
-      const response = await api.put(`/api/applications/${id}`, data);
-      setApplications(prev => prev.map(app => app.id === id ? response.data : app));
-      return { success: true, data: response.data };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
-
-  const deleteApplication = async (id) => {
-    try {
-      await api.delete(`/api/applications/${id}`);
-      setApplications(prev => prev.filter(app => app.id !== id));
-      return { success: true };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
-
-  const toggleFavorite = async (id) => {
-    try {
-      const response = await api.post(`/api/applications/${id}/favorite`);
-      setApplications(prev => prev.map(app => 
-        app.id === id ? { ...app, is_favorite: response.data.is_favorite } : app
-      ));
-      return { success: true, is_favorite: response.data.is_favorite };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
-
-  const bulkUpdate = async (applicationIds, status) => {
-    try {
-      const response = await api.post('/api/applications/bulk-update', {
-        application_ids: applicationIds,
-        reponse: status
+  const toggleFavorite = useMutation({
+    mutationFn: (id) => api.post(`/api/applications/${id}/favorite`).then(r => r.data),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['applications'] });
+      const snapshot = queryClient.getQueriesData({ queryKey: ['applications'] });
+      queryClient.setQueriesData({ queryKey: ['applications'] }, (old) => {
+        if (!old?.items) return old;
+        return { ...old, items: old.items.map(app => app.id === id ? { ...app, is_favorite: !app.is_favorite } : app) };
       });
-      await fetchApplications({ page: pagination.page });
-      return { success: true, modified: response.data.modified_count };
-    } catch (err) {
-      return { success: false, error: err.response?.data?.detail };
-    }
-  };
+      return { snapshot };
+    },
+    onError: (_err, _vars, context) => {
+      context?.snapshot?.forEach(([key, value]) => queryClient.setQueryData(key, value));
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['applications'] }),
+  });
+
+  const bulkUpdate = useMutation({
+    mutationFn: ({ applicationIds, status }) =>
+      api.post('/api/applications/bulk-update', { application_ids: applicationIds, reponse: status }).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] });
+      queryClient.invalidateQueries({ queryKey: ['statistics'] });
+    },
+  });
 
   return {
-    applications,
-    loading,
-    error,
-    pagination,
-    fetchApplications,
+    applications: data?.items ?? [],
+    pagination: {
+      total: data?.total ?? 0,
+      page: data?.page ?? 1,
+      per_page: data?.per_page ?? 20,
+      total_pages: data?.total_pages ?? 0,
+    },
+    loading: isLoading,
+    isError,
+    error: error?.response?.data?.detail ?? null,
     createApplication,
     updateApplication,
     deleteApplication,
     toggleFavorite,
-    bulkUpdate
+    bulkUpdate,
   };
 };

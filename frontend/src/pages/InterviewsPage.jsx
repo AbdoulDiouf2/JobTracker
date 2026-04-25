@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 import { useInterviews } from '../hooks/useInterviews';
 import { useApplications } from '../hooks/useApplications';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../i18n';
-import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
@@ -977,10 +977,12 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
 };
 
 export default function InterviewsPage() {
-  const { interviews, loading, fetchInterviews, createInterview, updateInterview, deleteInterview } = useInterviews();
-  const { applications, fetchApplications } = useApplications();
+  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
+    filter !== 'all' ? { status: filter } : {}
+  );
+  const { applications } = useApplications({ per_page: 100 });
   const { language } = useLanguage();
-  const { refreshKey } = useRefresh();
+  const queryClient = useQueryClient();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   const location = useLocation();
 
@@ -1048,11 +1050,6 @@ export default function InterviewsPage() {
   }[language];
 
   useEffect(() => {
-    fetchInterviews(filter !== 'all' ? { status: filter } : {});
-    fetchApplications({ per_page: 100 });
-  }, [fetchInterviews, fetchApplications, filter, refreshKey]);
-
-  useEffect(() => {
     if (location.state?.openModal) {
       setPrefillApp(location.state.prefillApp || null);
       setEditingInterview(null);
@@ -1063,21 +1060,24 @@ export default function InterviewsPage() {
 
   const handleSubmit = async (data) => {
     setSubmitting(true);
-    if (editingInterview) {
-      await updateInterview(editingInterview.id, data);
-    } else {
-      await createInterview(data);
+    try {
+      if (editingInterview) {
+        await updateInterview.mutateAsync({ id: editingInterview.id, data });
+      } else {
+        await createInterview.mutateAsync(data);
+      }
+    } catch (err) {
+      // errors handled by mutation (cache rollback)
     }
     setSubmitting(false);
     setIsModalOpen(false);
     setEditingInterview(null);
-    fetchInterviews(filter !== 'all' ? { status: filter } : {});
   };
 
   const handleStatusChange = async (id, newStatus) => {
-    await updateInterview(id, { statut: newStatus });
-    fetchInterviews(filter !== 'all' ? { status: filter } : {});
-    // Update viewing interview if open
+    try {
+      await updateInterview.mutateAsync({ id, data: { statut: newStatus } });
+    } catch (err) { /* optimistic rollback done by mutation */ }
     if (viewingInterview && viewingInterview.id === id) {
       setViewingInterview(prev => ({ ...prev, statut: newStatus }));
     }
@@ -1095,7 +1095,7 @@ export default function InterviewsPage() {
     });
     
     if (confirmed) {
-      await deleteInterview(id);
+      await deleteInterview.mutateAsync(id);
     }
   };
 
@@ -1118,8 +1118,7 @@ export default function InterviewsPage() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       
-      // Update local state with google_calendar_event_id
-      await fetchInterviews(filter !== 'all' ? { status: filter } : {});
+      queryClient.invalidateQueries({ queryKey: ['interviews'] });
       
       toast.success(language === 'fr' ? 'Entretien synchronisé avec Google Calendar' : 'Interview synced with Google Calendar');
     } catch (error) {

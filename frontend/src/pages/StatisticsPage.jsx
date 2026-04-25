@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, 
@@ -8,9 +7,8 @@ import {
   Briefcase, TrendingUp, Clock, CheckCircle, XCircle, 
   Calendar, Star, Download
 } from 'lucide-react';
-import { useStatistics } from '../hooks/useStatistics';
+import { useStatisticsOverview } from '../hooks/useStatistics';
 import { useLanguage } from '../i18n';
-import { useRefresh } from '../contexts/RefreshContext';
 import { Button } from '../components/ui/button';
 import { api } from '../contexts/AuthContext';
 import { Skeleton } from '../components/ui/skeleton';
@@ -33,9 +31,8 @@ const StatCard = ({ icon: Icon, label, value, color = "gold" }) => (
 );
 
 export default function StatisticsPage() {
-  const { stats, fetchOverview, loading } = useStatistics();
+  const { data: stats, isLoading: loading } = useStatisticsOverview();
   const { language } = useLanguage();
-  const { refreshKey } = useRefresh();
 
   const t = {
     fr: {
@@ -85,10 +82,6 @@ export default function StatisticsPage() {
       exportJson: 'Export JSON'
     }
   }[language];
-
-  useEffect(() => {
-    fetchOverview();
-  }, [fetchOverview, refreshKey]);
 
   const handleExport = async (type) => {
     try {

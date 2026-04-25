@@ -1,30 +1,20 @@
 import { createContext, useContext, useState, useCallback } from 'react';
+import { queryClient } from '../lib/queryClient';
 
 const RefreshContext = createContext();
 
 export function RefreshProvider({ children }) {
-  // Compteur qui change à chaque rafraîchissement
-  const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const triggerRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    
-    // Incrémenter le compteur pour déclencher les useEffect des composants
-    setRefreshKey(prev => prev + 1);
-    
-    // Petit délai pour l'animation
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
+    await queryClient.invalidateQueries();
+    await new Promise(resolve => setTimeout(resolve, 300));
     setIsRefreshing(false);
   }, []);
 
   return (
-    <RefreshContext.Provider value={{ 
-      refreshKey, 
-      isRefreshing, 
-      triggerRefresh 
-    }}>
+    <RefreshContext.Provider value={{ isRefreshing, triggerRefresh }}>
       {children}
     </RefreshContext.Provider>
   );

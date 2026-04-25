@@ -1,106 +1,55 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 
+export const useStatisticsDashboardV2 = () => useQuery({
+  queryKey: ['statistics', 'dashboard-v2'],
+  queryFn: () => api.get('/api/statistics/dashboard-v2').then(r => r.data),
+});
+
+export const useStatisticsDashboard = () => useQuery({
+  queryKey: ['statistics', 'dashboard'],
+  queryFn: () => api.get('/api/statistics/dashboard').then(r => r.data),
+});
+
+export const useStatisticsOverview = () => useQuery({
+  queryKey: ['statistics', 'overview'],
+  queryFn: () => api.get('/api/statistics/overview').then(r => r.data),
+});
+
+export const useStatisticsTimeline = () => useQuery({
+  queryKey: ['statistics', 'timeline'],
+  queryFn: () => api.get('/api/statistics/timeline').then(r => r.data),
+});
+
+export const useStatisticsPreferences = () => useQuery({
+  queryKey: ['statistics', 'preferences'],
+  queryFn: () => api.get('/api/statistics/preferences').then(r => r.data),
+  placeholderData: { monthly_goal: 40, weekly_goal: 10 },
+});
+
+export const useUpdatePreferences = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newPrefs) => api.put('/api/statistics/preferences', newPrefs).then(r => r.data),
+    onSuccess: (data) => queryClient.setQueryData(['statistics', 'preferences'], data),
+  });
+};
+
+// Barrel hook pour la compatibilité avec les pages existantes (SettingsPage, ProfilePage)
 export const useStatistics = () => {
-  const [stats, setStats] = useState(null);
-  const [dashboard, setDashboard] = useState(null);
-  const [dashboardV2, setDashboardV2] = useState(null);
-  const [timeline, setTimeline] = useState([]);
-  const [preferences, setPreferences] = useState({ monthly_goal: 40, weekly_goal: 10 });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/statistics/dashboard');
-      setDashboard(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Dashboard V2 avec insights intelligents
-  const fetchDashboardV2 = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/statistics/dashboard-v2');
-      setDashboardV2(response.data);
-      setDashboard(response.data.stats);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Préférences utilisateur (objectifs)
-  const fetchPreferences = useCallback(async () => {
-    try {
-      const response = await api.get('/api/statistics/preferences');
-      setPreferences(response.data);
-      return response.data;
-    } catch (err) {
-      return { monthly_goal: 40, weekly_goal: 10 };
-    }
-  }, []);
-
-  const updatePreferences = useCallback(async (newPrefs) => {
-    try {
-      const response = await api.put('/api/statistics/preferences', newPrefs);
-      setPreferences(response.data);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail);
-      return null;
-    }
-  }, []);
-
-  const fetchOverview = useCallback(async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/api/statistics/overview');
-      setStats(response.data);
-      setDashboard(response.data.dashboard);
-      setTimeline(response.data.timeline);
-      return response.data;
-    } catch (err) {
-      setError(err.response?.data?.detail);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const fetchTimeline = useCallback(async () => {
-    try {
-      const response = await api.get('/api/statistics/timeline');
-      setTimeline(response.data);
-      return response.data;
-    } catch (err) {
-      return [];
-    }
-  }, []);
+  const { data: dashboardV2, isLoading: loadingV2 } = useStatisticsDashboardV2();
+  const { data: overview, isLoading: loadingOverview } = useStatisticsOverview();
+  const { data: preferences = { monthly_goal: 40, weekly_goal: 10 } } = useStatisticsPreferences();
+  const updatePreferencesMutation = useUpdatePreferences();
 
   return {
-    stats,
-    dashboard,
     dashboardV2,
-    timeline,
+    stats: dashboardV2?.stats ?? null,
+    dashboard: dashboardV2?.stats ?? overview?.dashboard ?? null,
+    timeline: overview?.timeline ?? [],
     preferences,
-    loading,
-    error,
-    fetchDashboard,
-    fetchDashboardV2,
-    fetchOverview,
-    fetchTimeline,
-    fetchPreferences,
-    updatePreferences
+    loading: loadingV2 || loadingOverview,
+    error: null,
+    updatePreferences: (newPrefs) => updatePreferencesMutation.mutateAsync(newPrefs),
   };
 };
