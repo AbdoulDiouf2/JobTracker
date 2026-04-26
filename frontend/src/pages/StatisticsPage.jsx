@@ -253,8 +253,10 @@ export default function StatisticsPage() {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#f1f5f9' }}
+                labelStyle={{ color: '#f1f5f9' }}
+                itemStyle={{ color: '#f1f5f9' }}
               />
             </PieChart>
           </ResponsiveContainer>
@@ -296,8 +298,10 @@ export default function StatisticsPage() {
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+              <Tooltip
+                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#f1f5f9' }}
+                labelStyle={{ color: '#f1f5f9' }}
+                itemStyle={{ color: '#f1f5f9' }}
               />
               <Legend 
                 verticalAlign="bottom" 
