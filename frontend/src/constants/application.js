@@ -22,6 +22,14 @@ export const TYPE_OPTIONS = [
   { value: 'interim',    label: 'Intérim' },
 ];
 
+export const INTERVIEW_STATUS_OPTIONS = [
+  { value: 'planned',   label: 'Planifié', color: 'bg-blue-500/20 text-blue-400',  textColor: 'text-blue-400',  dotColor: 'bg-blue-400' },
+  { value: 'completed', label: 'Effectué', color: 'bg-green-500/20 text-green-400', textColor: 'text-green-400', dotColor: 'bg-green-400' },
+  { value: 'cancelled', label: 'Annulé',   color: 'bg-red-500/20 text-red-400',    textColor: 'text-red-400',   dotColor: 'bg-red-400' },
+];
+
+export const INTERVIEW_STATUS_MAP = Object.fromEntries(INTERVIEW_STATUS_OPTIONS.map(s => [s.value, s]));
+
 export const METHOD_OPTIONS = [
   { value: 'linkedin',          label: 'LinkedIn' },
   { value: 'company_website',   label: 'Site entreprise' },

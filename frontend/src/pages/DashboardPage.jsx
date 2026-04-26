@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { STATUS_MAP } from '../constants/application';
 import { 
   Briefcase, Clock, CheckCircle, XCircle, Star, Calendar,
   TrendingUp, TrendingDown, ArrowRight, Plus, Target, Trophy,
@@ -437,13 +438,6 @@ const InterviewCardSkeleton = () => (
 );
 
 const RecentAppCard = ({ app }) => {
-  const statusColors = {
-    pending: 'bg-yellow-500/20 text-yellow-400',
-    positive: 'bg-green-500/20 text-green-400',
-    negative: 'bg-red-500/20 text-red-400',
-    no_response: 'bg-slate-500/20 text-slate-400',
-    cancelled: 'bg-red-500/20 text-red-400'
-  };
 
   return (
     <div className="flex items-center justify-between p-4 bg-slate-800/30 rounded-xl border border-slate-700/50">
@@ -458,8 +452,8 @@ const RecentAppCard = ({ app }) => {
       </div>
       <div className="flex items-center gap-3">
         {app.is_favorite && <Star size={16} className="text-gold fill-gold" />}
-        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[app.reponse]}`}>
-          {app.reponse}
+        <span className={`px-2 py-1 rounded text-xs font-medium ${STATUS_MAP[app.reponse]?.color || 'bg-slate-500/20 text-slate-400'}`}>
+          {STATUS_MAP[app.reponse]?.label || app.reponse}
         </span>
       </div>
     </div>

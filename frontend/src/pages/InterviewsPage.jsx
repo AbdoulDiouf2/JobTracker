@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { INTERVIEW_STATUS_OPTIONS as STATUS_OPTIONS, INTERVIEW_STATUS_MAP } from '../constants/application';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -57,11 +58,6 @@ const FORMAT_OPTIONS = [
   { value: 'in_person', label: '🏢 Présentiel', icon: Building }
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'planned', label: '🔄 Planifié', color: 'bg-blue-500/20 text-blue-400', dotColor: 'bg-blue-400' },
-  { value: 'completed', label: '✅ Effectué', color: 'bg-green-500/20 text-green-400', dotColor: 'bg-green-400' },
-  { value: 'cancelled', label: '❌ Annulé', color: 'bg-red-500/20 text-red-400', dotColor: 'bg-red-400' }
-];
 
 // Interview Card
 const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusChange, onSyncCalendar, syncLoading }) => {
