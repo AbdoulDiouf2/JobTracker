@@ -113,6 +113,10 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
   }, [isOpen, application?.id, loadExistingScore]);
 
   const handleCalculate = async () => {
+    if (!application.description_poste && !cvText?.trim()) {
+      toast.error('Ajoutez une description de poste ou collez votre CV pour lancer l\'analyse');
+      return;
+    }
     setCalculating(true);
     try {
       const result = await calculateMatchingScore(application.id, cvText || null);

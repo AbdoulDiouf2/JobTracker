@@ -19,6 +19,7 @@ from utils.auth import (
     get_current_user, security
 )
 from utils.email import send_password_reset_email, send_email_verification
+from utils.crypto import encrypt, decrypt
 from config import settings
 from datetime import timedelta, datetime, timezone
 from pydantic import BaseModel, EmailStr
@@ -308,11 +309,11 @@ async def update_api_keys(
     """Met à jour les clés API IA"""
     update_data = {}
     if google_ai_key is not None:
-        update_data["google_ai_key"] = google_ai_key if google_ai_key else None
+        update_data["google_ai_key"] = encrypt(google_ai_key) if google_ai_key else None
     if openai_key is not None:
-        update_data["openai_key"] = openai_key if openai_key else None
+        update_data["openai_key"] = encrypt(openai_key) if openai_key else None
     if groq_key is not None:
-        update_data["groq_key"] = groq_key if groq_key else None
+        update_data["groq_key"] = encrypt(groq_key) if groq_key else None
     
     if update_data:
         await db.users.update_one(

@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+from utils.crypto import decrypt
 import os
 import uuid
 import json
@@ -143,9 +144,9 @@ async def get_user_api_keys(user_id: str, db) -> dict:
     if not user:
         return {}
     return {
-        "google": user.get("google_ai_key"),
-        "openai": user.get("openai_key"),
-        "groq": user.get("groq_key")
+        "google": decrypt(user.get("google_ai_key")),
+        "openai": decrypt(user.get("openai_key")),
+        "groq": decrypt(user.get("groq_key")),
     }
 
 

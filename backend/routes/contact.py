@@ -1,5 +1,6 @@
 import smtplib
 import ssl
+import html as html_lib
 from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -36,15 +37,18 @@ async def send_contact_email(form: ContactForm, db=Depends(get_db)):
         msg["To"] = settings.SUPPORT_EMAIL
         msg["Reply-To"] = form.email
 
+        safe_name = html_lib.escape(form.name)
+        safe_email = html_lib.escape(form.email)
+        safe_message = html_lib.escape(form.message).replace('\n', '<br>')
         html = f"""
         <html><body style="font-family: sans-serif; color: #333;">
           <h2 style="color: #c4a052;">Nouveau message de support</h2>
-          <p><strong>Nom :</strong> {form.name}</p>
-          <p><strong>Email :</strong> <a href="mailto:{form.email}">{form.email}</a></p>
+          <p><strong>Nom :</strong> {safe_name}</p>
+          <p><strong>Email :</strong> <a href="mailto:{safe_email}">{safe_email}</a></p>
           <hr style="border-color: #eee;" />
           <p><strong>Message :</strong></p>
           <blockquote style="border-left: 4px solid #c4a052; margin: 0; padding-left: 16px; color: #555;">
-            {form.message.replace(chr(10), '<br>')}
+            {safe_message}
           </blockquote>
           <hr style="border-color: #eee;" />
           <p style="font-size: 12px; color: #999;">Envoyé depuis le formulaire de support JobTracker</p>

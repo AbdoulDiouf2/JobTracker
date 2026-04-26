@@ -52,6 +52,10 @@ class Settings(BaseSettings):
     SMTP_FROM_EMAIL: str = os.environ.get('SMTP_FROM_EMAIL', '')
     SUPPORT_EMAIL: str = os.environ.get('SUPPORT_EMAIL', 'abdoulam.diouf@maadec.com')
 
+    # Encryption (Fernet key for API keys at rest)
+    # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    ENCRYPTION_KEY: Optional[str] = os.environ.get('ENCRYPTION_KEY')
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'

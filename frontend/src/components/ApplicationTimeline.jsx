@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { STATUS_MAP } from '../constants/application';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -52,14 +53,7 @@ const EVENT_CONFIG = {
   }
 };
 
-// Status labels
-const STATUS_LABELS = {
-  pending: { label: 'En attente', color: 'text-yellow-400' },
-  positive: { label: 'Réponse positive', color: 'text-green-400' },
-  negative: { label: 'Réponse négative', color: 'text-red-400' },
-  no_response: { label: 'Pas de réponse', color: 'text-slate-400' },
-  cancelled: { label: 'Annulée', color: 'text-red-400' }
-};
+// STATUS_MAP imported from constants
 
 const TimelineEvent = ({ event, isLast }) => {
   const config = EVENT_CONFIG[event.event_type] || EVENT_CONFIG.note_added;
@@ -75,7 +69,7 @@ const TimelineEvent = ({ event, isLast }) => {
   };
 
   const getStatusLabel = (status) => {
-    return STATUS_LABELS[status]?.label || status;
+    return STATUS_MAP[status]?.label || status;
   };
 
   return (
@@ -100,11 +94,11 @@ const TimelineEvent = ({ event, isLast }) => {
           
           {event.event_type === 'status_change' && (
             <div className="flex items-center gap-2 text-sm">
-              <span className={STATUS_LABELS[event.old_value]?.color || 'text-slate-400'}>
+              <span className={STATUS_MAP[event.old_value]?.textColor || 'text-slate-400'}>
                 {getStatusLabel(event.old_value)}
               </span>
               <span className="text-slate-500">→</span>
-              <span className={STATUS_LABELS[event.new_value]?.color || 'text-slate-400'}>
+              <span className={STATUS_MAP[event.new_value]?.textColor || 'text-slate-400'}>
                 {getStatusLabel(event.new_value)}
               </span>
             </div>

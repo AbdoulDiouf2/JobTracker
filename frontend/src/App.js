@@ -8,37 +8,37 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { RefreshProvider } from "./contexts/RefreshContext";
 import { ThemeProvider } from "next-themes";
 import { Toaster, toast } from "@/components/ui/sonner";
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 
-// Pages
+// Pages chargées immédiatement (critiques pour le rendu initial)
 import LandingPage from "./pages/LandingPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import AuthCallback from "./pages/AuthCallback";
-import DashboardPage from "./pages/DashboardPage";
-import ApplicationsPage from "./pages/ApplicationsPage";
-import InterviewsPage from "./pages/InterviewsPage";
-import StatisticsPage from "./pages/StatisticsPage";
-import SettingsPage from "./pages/SettingsPage";
-import AIAdvisorPage from "./pages/AIAdvisorPage";
-import ImportExportPage from "./pages/ImportExportPage";
-import DocumentsPage from "./pages/DocumentsPage";
-import LegalNoticePage from "./pages/LegalNoticePage";
-import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
-import TermsOfServicePage from "./pages/TermsOfServicePage";
 import NotFoundPage from "./pages/NotFoundPage";
 
-
-import SupportPage from "./pages/SupportPage";
-import OnboardingPage from "./pages/OnboardingPage";
-import ProfilePage from "./pages/ProfilePage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
+// Pages chargées à la demande (code splitting)
+const DashboardPage    = lazy(() => import("./pages/DashboardPage"));
+const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
+const InterviewsPage   = lazy(() => import("./pages/InterviewsPage"));
+const StatisticsPage   = lazy(() => import("./pages/StatisticsPage"));
+const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
+const AIAdvisorPage    = lazy(() => import("./pages/AIAdvisorPage"));
+const ImportExportPage = lazy(() => import("./pages/ImportExportPage"));
+const DocumentsPage    = lazy(() => import("./pages/DocumentsPage"));
+const SupportPage      = lazy(() => import("./pages/SupportPage"));
+const OnboardingPage   = lazy(() => import("./pages/OnboardingPage"));
+const ProfilePage      = lazy(() => import("./pages/ProfilePage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage  = lazy(() => import("./pages/ResetPasswordPage"));
+const LegalNoticePage    = lazy(() => import("./pages/LegalNoticePage"));
+const PrivacyPolicyPage  = lazy(() => import("./pages/PrivacyPolicyPage"));
+const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 
 // Admin Pages
-import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
-import AdminUsersPage from "./pages/admin/AdminUsersPage";
-import AdminSupportPage from "./pages/admin/AdminSupportPage";
+const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
+const AdminUsersPage     = lazy(() => import("./pages/admin/AdminUsersPage"));
+const AdminSupportPage   = lazy(() => import("./pages/admin/AdminSupportPage"));
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -141,7 +141,13 @@ function App() {
               <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
                 <div className="min-h-screen bg-[#020817]">
                   <BrowserRouter>
-                    <AppRouter />
+                    <Suspense fallback={
+                      <div className="min-h-screen bg-[#020817] flex items-center justify-center">
+                        <div className="w-8 h-8 border-2 border-[#c4a052] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    }>
+                      <AppRouter />
+                    </Suspense>
                     <Toaster />
                   </BrowserRouter>
                 </div>

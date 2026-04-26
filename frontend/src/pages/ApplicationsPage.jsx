@@ -16,6 +16,7 @@ import { useApplications } from '../hooks/useApplications';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
+import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
@@ -63,33 +64,7 @@ const applicationSchema = z.object({
   description_poste: z.string().optional().nullable()
 });
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: '⏳ En attente', color: 'bg-yellow-500/20 text-yellow-400', dotColor: 'bg-yellow-400' },
-  { value: 'positive', label: '✅ Positive', color: 'bg-green-500/20 text-green-400', dotColor: 'bg-green-400' },
-  { value: 'negative', label: '❌ Négative', color: 'bg-red-500/20 text-red-400', dotColor: 'bg-red-400' },
-  { value: 'no_response', label: '🔇 Pas de réponse', color: 'bg-slate-500/20 text-slate-400', dotColor: 'bg-slate-400' },
-  { value: 'cancelled', label: '🚫 Annulé', color: 'bg-red-500/20 text-red-400', dotColor: 'bg-red-400' }
-];
-
-const TYPE_OPTIONS = [
-  { value: 'cdi', label: 'CDI' },
-  { value: 'cdd', label: 'CDD' },
-  { value: 'stage', label: 'Stage' },
-  { value: 'alternance', label: 'Alternance' },
-  { value: 'freelance', label: 'Freelance' },
-  { value: 'interim', label: 'Intérim' }
-];
-
-const METHOD_OPTIONS = [
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'company_website', label: 'Site entreprise' },
-  { value: 'email', label: 'Email' },
-  { value: 'indeed', label: 'Indeed' },
-  { value: 'apec', label: 'APEC' },
-  { value: 'pole_emploi', label: 'France Travail' },
-  { value: 'welcome_to_jungle', label: 'Welcome to the Jungle' },
-  { value: 'other', label: 'Autre' }
-];
+import { STATUS_OPTIONS, STATUS_MAP, TYPE_OPTIONS, METHOD_OPTIONS } from '../constants/application';
 
 // Application Card Component
 const ApplicationCard = ({ app, onEdit, onDelete, onToggleFavorite, onStatusChange, onViewDetails, t }) => {
@@ -986,7 +961,9 @@ export default function ApplicationsPage() {
       } else {
         await createApplication.mutateAsync(data);
       }
-    } catch (err) { /* cache rollback handled by mutation */ }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || (language === 'fr' ? 'Erreur lors de la sauvegarde' : 'Error saving application'));
+    }
     setSubmitting(false);
     setIsModalOpen(false);
     setEditingApp(null);
@@ -1009,14 +986,21 @@ export default function ApplicationsPage() {
     });
     
     if (confirmed) {
-      await deleteApplication.mutateAsync(id);
+      try {
+        await deleteApplication.mutateAsync(id);
+        toast.success(language === 'fr' ? 'Candidature supprimée' : 'Application deleted');
+      } catch (err) {
+        toast.error(err?.response?.data?.detail || (language === 'fr' ? 'Erreur lors de la suppression' : 'Error deleting application'));
+      }
     }
   };
 
   const handleStatusChange = async (id, newStatus) => {
     try {
       await updateApplication.mutateAsync({ id, data: { reponse: newStatus } });
-    } catch (err) { /* optimistic rollback done by mutation */ }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || (language === 'fr' ? 'Erreur lors du changement de statut' : 'Error updating status'));
+    }
     if (viewingApp && viewingApp.id === id) {
       setViewingApp(prev => ({ ...prev, reponse: newStatus }));
     }
