@@ -23,6 +23,7 @@ from utils.crypto import encrypt, decrypt
 from config import settings
 from datetime import timedelta, datetime, timezone
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
