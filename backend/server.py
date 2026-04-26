@@ -131,12 +131,22 @@ api_router = APIRouter(prefix="/api")
 
 # Dependency pour obtenir la DB
 def get_database():
+    return _ensure_db()
+
+
+def _ensure_db():
+    """Initialize DB connection lazily (required for Vercel serverless where lifespan doesn't run)."""
+    global client, db
+    if db is None:
+        logger.info("Initialisation lazye de MongoDB (serverless)...")
+        client = AsyncIOMotorClient(settings.MONGO_URL)
+        db = client[settings.DB_NAME]
     return db
 
 
 # Override les dépendances get_db dans chaque router
 def override_get_db():
-    return db
+    return _ensure_db()
 
 
 # Root endpoint
@@ -153,8 +163,7 @@ async def root():
 @api_router.get("/health")
 async def health_check():
     try:
-        # Vérifier la connexion MongoDB
-        await db.command("ping")
+        await _ensure_db().command("ping")
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         return {"status": "unhealthy", "database": "disconnected", "error": str(e)}
