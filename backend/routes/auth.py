@@ -6,18 +6,26 @@ from fastapi import APIRouter, HTTPException, status, Depends, Response, Request
 from datetime import timedelta
 import httpx
 import uuid
+import secrets
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from models import (
     UserCreate, UserLogin, UserUpdate, User, UserResponse, Token, UserRole, OnboardingSteps
 )
 from utils.auth import (
-    verify_password, get_password_hash, create_access_token, 
+    verify_password, get_password_hash, create_access_token,
     get_current_user, security
 )
+from utils.email import send_password_reset_email, send_email_verification
 from config import settings
 from datetime import timedelta, datetime, timezone
+from pydantic import BaseModel, EmailStr
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+limiter = Limiter(key_func=get_remote_address)
 
 
 def _build_user_response(user: dict) -> UserResponse:
@@ -53,30 +61,39 @@ def get_db():
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, user_data: UserCreate, db = Depends(get_db)):
     """Inscription d'un nouvel utilisateur"""
-    # Vérifier si l'email existe déjà
     existing_user = await db.users.find_one({"email": user_data.email})
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Un compte avec cet email existe déjà"
         )
-    
-    # Créer l'utilisateur
+
+    verification_token = secrets.token_urlsafe(32)
+
     user = User(
         email=user_data.email,
         full_name=user_data.full_name,
         hashed_password=get_password_hash(user_data.password)
     )
-    
+
     user_dict = user.model_dump()
     user_dict['created_at'] = user_dict['created_at'].isoformat()
     user_dict['onboarding_completed'] = False
     user_dict['welcome_shown'] = False
     user_dict['onboarding_steps'] = OnboardingSteps().model_dump()
+    user_dict['email_verified'] = False
+    user_dict['email_verification_token'] = verification_token
+    user_dict['verification_token_expires'] = (
+        datetime.now(timezone.utc) + timedelta(hours=24)
+    ).isoformat()
 
     await db.users.insert_one(user_dict)
+
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+    send_email_verification(user.email, user.full_name, verify_url)
 
     return UserResponse(
         id=user.id,
@@ -94,41 +111,149 @@ async def register(user_data: UserCreate, db = Depends(get_db)):
 
 
 @router.post("/login", response_model=Token)
-async def login(user_data: UserLogin, db = Depends(get_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, user_data: UserLogin, db = Depends(get_db)):
     """Connexion utilisateur"""
     user = await db.users.find_one({"email": user_data.email})
-    
-    if not user:
+
+    if not user or not user.get("hashed_password") or not verify_password(user_data.password, user["hashed_password"]):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Email ou mot de passe incorrect"
         )
-    
-    if not verify_password(user_data.password, user["hashed_password"]):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Email ou mot de passe incorrect"
-        )
-    
+
     if not user.get("is_active", True):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Compte désactivé"
         )
-    
-    # Mettre à jour la dernière connexion
+
     await db.users.update_one(
         {"id": user["id"]},
         {"$set": {"last_login": datetime.now(timezone.utc).isoformat()}}
     )
-    
-    # Créer le token avec le rôle
+
     access_token = create_access_token(
         data={"sub": user["id"], "role": user.get("role", "standard")},
         expires_delta=timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     )
-    
+
     return Token(access_token=access_token)
+
+
+# ============================================
+# EMAIL VERIFICATION
+# ============================================
+
+@router.get("/verify-email")
+async def verify_email(token: str, db = Depends(get_db)):
+    """Vérifie le token d'email et active le compte."""
+    user = await db.users.find_one({"email_verification_token": token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Token invalide ou déjà utilisé")
+
+    expires = datetime.fromisoformat(
+        user.get("verification_token_expires", "2000-01-01T00:00:00+00:00").replace("Z", "+00:00")
+    )
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(status_code=400, detail="Lien de vérification expiré")
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "email_verified": True,
+            "email_verification_token": None,
+            "verification_token_expires": None,
+        }}
+    )
+    return {"message": "Email vérifié avec succès"}
+
+
+@router.post("/resend-verification")
+@limiter.limit("3/minute")
+async def resend_verification(request: Request, current_user: dict = Depends(get_current_user), db = Depends(get_db)):
+    """Renvoie l'email de vérification."""
+    user = await db.users.find_one({"id": current_user["user_id"]})
+    if not user:
+        raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email déjà vérifié")
+
+    verification_token = secrets.token_urlsafe(32)
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "email_verification_token": verification_token,
+            "verification_token_expires": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
+        }}
+    )
+    verify_url = f"{settings.FRONTEND_URL}/verify-email?token={verification_token}"
+    send_email_verification(user["email"], user["full_name"], verify_url)
+    return {"message": "Email de vérification renvoyé"}
+
+
+# ============================================
+# PASSWORD RESET
+# ============================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db = Depends(get_db)):
+    """Envoie un email de réinitialisation de mot de passe."""
+    user = await db.users.find_one({"email": body.email})
+    # Toujours répondre 200 pour ne pas confirmer l'existence d'un compte
+    if not user or not user.get("hashed_password"):
+        return {"message": "Si cet email existe, un lien vous a été envoyé"}
+
+    reset_token = secrets.token_urlsafe(32)
+    expires = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"password_reset_token": reset_token, "password_reset_expires": expires}}
+    )
+
+    reset_url = f"{settings.FRONTEND_URL}/reset-password?token={reset_token}"
+    send_password_reset_email(user["email"], user["full_name"], reset_url)
+
+    return {"message": "Si cet email existe, un lien vous a été envoyé"}
+
+
+@router.post("/reset-password")
+@limiter.limit("5/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest, db = Depends(get_db)):
+    """Réinitialise le mot de passe via token."""
+    if len(body.new_password) < 8:
+        raise HTTPException(status_code=400, detail="Le mot de passe doit faire au moins 8 caractères")
+
+    user = await db.users.find_one({"password_reset_token": body.token})
+    if not user:
+        raise HTTPException(status_code=400, detail="Token invalide ou expiré")
+
+    expires = datetime.fromisoformat(
+        user.get("password_reset_expires", "2000-01-01T00:00:00+00:00").replace("Z", "+00:00")
+    )
+    if datetime.now(timezone.utc) > expires:
+        raise HTTPException(status_code=400, detail="Lien de réinitialisation expiré")
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "hashed_password": get_password_hash(body.new_password),
+            "password_reset_token": None,
+            "password_reset_expires": None,
+        }}
+    )
+    return {"message": "Mot de passe réinitialisé avec succès"}
 
 
 @router.get("/me", response_model=UserResponse)

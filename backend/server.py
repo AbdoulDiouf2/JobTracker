@@ -2,10 +2,15 @@
 JobTracker SaaS - Serveur Principal FastAPI
 """
 
-from fastapi import FastAPI, APIRouter, Depends
+from fastapi import FastAPI, APIRouter, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from motor.motor_asyncio import AsyncIOMotorClient
 from contextlib import asynccontextmanager
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 import os
 import logging
 
@@ -105,6 +110,9 @@ async def lifespan(app: FastAPI):
     client.close()
 
 
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+
 # Create FastAPI app
 app = FastAPI(
     title="JobTracker SaaS API",
@@ -112,6 +120,10 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 # Create API router with /api prefix
 api_router = APIRouter(prefix="/api")
