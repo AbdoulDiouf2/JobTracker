@@ -138,16 +138,30 @@ class AvailableModelsResponse(BaseModel):
 
 # ============== Helper Functions ==============
 
-async def get_user_api_keys(user_id: str, db) -> dict:
-    """Get user's configured API keys"""
-    user = await db.users.find_one({"id": user_id}, {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
-    if not user:
-        return {}
+def _extract_keys(user: dict) -> dict:
     return {
         "google": decrypt(user.get("google_ai_key")),
         "openai": decrypt(user.get("openai_key")),
         "groq": decrypt(user.get("groq_key")),
     }
+
+def _has_any_key(keys: dict) -> bool:
+    return any(v for v in keys.values())
+
+async def get_user_api_keys(user_id: str, db) -> dict:
+    """Get user's API keys, falling back to admin keys if the user has none."""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
+    if user:
+        keys = _extract_keys(user)
+        if _has_any_key(keys):
+            return keys
+
+    # Fallback: use admin's keys so all users benefit from the platform keys
+    admin = await db.users.find_one({"role": "admin"}, {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
+    if admin:
+        return _extract_keys(admin)
+
+    return {}
 
 
 async def get_user_context(user_id: str, db) -> str:
