@@ -13,6 +13,8 @@ import RefreshButton from '../components/RefreshButton';
 import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { useReminders } from '../hooks/useReminders';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
+import { useAIUsage } from '../hooks/useAIUsage';
+import { Sparkles as SparklesIcon } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -162,6 +164,35 @@ const Sidebar = ({ isOpen, onClose }) => {
   );
 };
 
+const AICreditsIndicator = () => {
+  const { data: aiUsage } = useAIUsage();
+  const { language } = useLanguage();
+
+  if (!aiUsage || aiUsage.has_own_key) return null;
+
+  const remaining = aiUsage.quota_daily - aiUsage.calls_today;
+  const pct = (remaining / aiUsage.quota_daily) * 100;
+  const color = pct > 50 ? 'text-green-400' : pct > 20 ? 'text-yellow-400' : 'text-red-400';
+  const bgColor = pct > 50 ? 'bg-green-400' : pct > 20 ? 'bg-yellow-400' : 'bg-red-400';
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${pct > 50 ? 'border-green-500/20 bg-green-500/5' : pct > 20 ? 'border-yellow-500/20 bg-yellow-500/5' : 'border-red-500/20 bg-red-500/5'}`}
+      title={language === 'fr' ? `${remaining} requêtes IA restantes aujourd'hui` : `${remaining} AI requests left today`}
+    >
+      <SparklesIcon size={12} className={color} />
+      <span className={`text-xs font-medium tabular-nums ${color}`}>{remaining}</span>
+      <div className="flex gap-px">
+        {Array.from({ length: aiUsage.quota_daily }).map((_, i) => (
+          <div
+            key={i}
+            className={`w-1 h-2 rounded-sm ${i < remaining ? bgColor : 'bg-slate-700'}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export default function DashboardLayout() {
   const { isAuthenticated, user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -223,7 +254,8 @@ export default function DashboardLayout() {
               className="h-12"
             />
           </Link>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
+            <AICreditsIndicator />
             <RefreshButton />
             <NotificationBell />
           </div>
@@ -231,7 +263,8 @@ export default function DashboardLayout() {
 
         {/* Desktop header with notification */}
         <header className="hidden lg:flex flex-shrink-0 items-center justify-end p-4 border-b border-slate-800 bg-[#020817]">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <AICreditsIndicator />
             <RefreshButton />
             <NotificationBell />
           </div>
