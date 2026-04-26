@@ -41,7 +41,7 @@ except ImportError:
     print("⚠️ Groq SDK not available")
 
 from utils.auth import get_current_user
-from utils.ai_quota import check_and_increment_quota, get_usage_today, DAILY_QUOTA
+from utils.ai_quota import check_and_increment_quota, get_usage_today
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -389,14 +389,16 @@ async def get_ai_usage_stats(
     db = Depends(get_db)
 ):
     """Retourne les stats d'usage IA du jour pour l'utilisateur"""
+    from utils.ai_quota import get_quota_limit
     user_id = current_user["user_id"]
     is_admin = current_user.get("role") == "admin"
     own_keys = await get_user_own_keys(user_id, db)
     has_own_key = _has_any_key(own_keys)
     calls_today = await get_usage_today(user_id, db)
+    quota = await get_quota_limit(db)
     return {
         "calls_today": calls_today,
-        "quota_daily": DAILY_QUOTA,
+        "quota_daily": quota,
         "has_own_key": has_own_key or is_admin,
     }
 
