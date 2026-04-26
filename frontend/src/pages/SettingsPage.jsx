@@ -10,7 +10,6 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing, Target, Chrome, Copy, Check, RefreshCw } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import axios from 'axios';
-import api from '../services/api';
 import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
