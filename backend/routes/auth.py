@@ -442,98 +442,116 @@ async def get_extension_status(
 
 
 # ============================================
-# GOOGLE OAUTH AUTHENTICATION (Native)
+# GOOGLE OAUTH AUTHENTICATION (stateless, compatible Vercel serverless)
 # ============================================
 
-from authlib.integrations.starlette_client import OAuth
-from starlette.config import Config
+import urllib.parse
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 
-# Init OAuth
-oauth = OAuth()
-
-oauth.register(
-    name='google',
-    client_id=settings.GOOGLE_CLIENT_ID,
-    client_secret=settings.GOOGLE_CLIENT_SECRET,
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={
-        'scope': 'openid email profile'
-    }
-)
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
 @router.get("/google/login")
 async def google_login(request: Request):
-    """
-    Initie le flux OAuth Google.
-    Redirige l'utilisateur vers la page de connexion Google.
-    """
+    """Initie le flux OAuth Google (stateless — compatible Vercel)."""
     if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Google OAuth not configured (missing keys)"
+            detail="Google OAuth not configured"
         )
-        
+
     redirect_uri = f"{settings.BACKEND_URL}/api/auth/google/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
+    # On génère un state signé avec itsdangerous pour la protection CSRF
+    from itsdangerous import URLSafeTimedSerializer
+    s = URLSafeTimedSerializer(settings.SECRET_KEY)
+    state = s.dumps("oauth_state")
+
+    params = {
+        "client_id": settings.GOOGLE_CLIENT_ID,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "state": state,
+        "access_type": "online",
+    }
+    auth_url = f"{GOOGLE_AUTH_URL}?{urllib.parse.urlencode(params)}"
+    return RedirectResponse(url=auth_url)
 
 
 @router.get("/google/callback")
-async def google_callback(request: Request, db = Depends(get_db)):
-    """
-    Callback appelé par Google après connexion réussie.
-    Échange le code contre un token, récupère les infos et connecte l'utilisateur.
-    """
-    try:
-        token = await oauth.google.authorize_access_token(request)
-    except Exception as e:
-        # Gérer le cas où l'utilisateur annule ou erreur OAuth
-        frontend_error_url = f"{settings.FRONTEND_URL}/login?error=OAuth failed: {str(e)}"
-        return RedirectResponse(url=frontend_error_url)
+async def google_callback(request: Request, db=Depends(get_db)):
+    """Callback Google OAuth — échange le code contre un token JWT."""
+    code = request.query_params.get("code")
+    state = request.query_params.get("state")
+    error = request.query_params.get("error")
 
-    user_info = token.get('userinfo')
-    if not user_info:
-        # Fallback si userinfo n'est pas dans le token
-        user_info = await oauth.google.userinfo(token=token)
+    if error or not code:
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_cancelled")
+
+    # Vérification du state CSRF
+    from itsdangerous import URLSafeTimedSerializer, BadSignature, SignatureExpired
+    s = URLSafeTimedSerializer(settings.SECRET_KEY)
+    try:
+        s.loads(state, max_age=600)
+    except (BadSignature, SignatureExpired):
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_invalid_state")
+
+    redirect_uri = f"{settings.BACKEND_URL}/api/auth/google/callback"
+
+    # Échange code → access token
+    try:
+        async with httpx.AsyncClient() as client:
+            token_resp = await client.post(GOOGLE_TOKEN_URL, data={
+                "code": code,
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            })
+            token_data = token_resp.json()
+
+            if "error" in token_data:
+                return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_token_failed")
+
+            # Récupérer les infos utilisateur
+            userinfo_resp = await client.get(
+                GOOGLE_USERINFO_URL,
+                headers={"Authorization": f"Bearer {token_data['access_token']}"}
+            )
+            user_info = userinfo_resp.json()
+    except Exception as e:
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_failed")
 
     email = user_info.get("email", "").lower()
     name = user_info.get("name", "")
     picture = user_info.get("picture")
-    
+
     if not email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email non fourni par Google"
-        )
-    
-    # Chercher l'utilisateur existant
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=oauth_no_email")
+
     existing_user = await db.users.find_one({"email": email})
-    is_new_user = False
     user_id = None
-    
+
     if existing_user:
-        # Utilisateur existant - mettre à jour les infos Google
         user_id = existing_user["id"]
         await db.users.update_one(
             {"id": user_id},
             {"$set": {
                 "google_picture": picture,
                 "last_login": datetime.now(timezone.utc).isoformat(),
-                "auth_provider": "google"
+                "auth_provider": "google",
             }}
         )
     else:
-        # Nouvel utilisateur - créer le compte
         user_id = str(uuid.uuid4())
-        is_new_user = True
-        
         new_user = {
             "id": user_id,
             "email": email,
             "full_name": name,
-            "hashed_password": None,  # Pas de mot de passe pour auth Google
+            "hashed_password": None,
             "role": "standard",
             "created_at": datetime.now(timezone.utc).isoformat(),
             "is_active": True,
@@ -545,22 +563,15 @@ async def google_callback(request: Request, db = Depends(get_db)):
             "groq_key": None,
             "onboarding_completed": False,
             "welcome_shown": False,
-            "onboarding_steps": OnboardingSteps().model_dump()
+            "email_verified": True,  # Google garantit l'email
+            "onboarding_steps": OnboardingSteps().model_dump(),
         }
-        
         await db.users.insert_one(new_user)
-    
-    # Créer notre propre JWT
-    # Note: On inclut 'is_new_user' dans le token temporairement ou on le passe en paramètre d'URL
+
     access_token = create_access_token(
         data={"sub": user_id, "role": "standard", "provider": "google"},
         expires_delta=timedelta(days=7)
     )
-    
-    # Rediriger vers le frontend avec le token en fragment (hash)
-    # Le frontend (AuthCallback.jsx) le lira et le stockera
-    # Format: /auth/callback#access_token=...
-    
-    redirect_url = f"{settings.FRONTEND_URL}/auth/callback#session_id={access_token}" # On garde le nom paramètre session_id pour compatibilité minimale avec le frontend existant ou on adapte le frontend
-    
+
+    redirect_url = f"{settings.FRONTEND_URL}/auth/callback#session_id={access_token}"
     return RedirectResponse(url=redirect_url)
