@@ -1,7 +1,15 @@
 from datetime import date
 from fastapi import HTTPException
 
-DAILY_QUOTA = 10
+DAILY_QUOTA = 10  # valeur par défaut si rien en DB
+
+
+async def get_quota_limit(db) -> int:
+    """Lit le quota journalier configuré par l'admin depuis la DB."""
+    doc = await db.platform_settings.find_one({"key": "ai_daily_quota"})
+    if doc and isinstance(doc.get("value"), int) and doc["value"] > 0:
+        return doc["value"]
+    return DAILY_QUOTA
 
 
 async def check_and_increment_quota(user_id: str, db) -> None:
@@ -11,14 +19,15 @@ async def check_and_increment_quota(user_id: str, db) -> None:
     if user and user.get("role") == "admin":
         return
 
+    quota = await get_quota_limit(db)
     today = date.today().isoformat()
     doc = await db.ai_usage.find_one({"user_id": user_id, "date": today})
     count = doc["call_count"] if doc else 0
 
-    if count >= DAILY_QUOTA:
+    if count >= quota:
         raise HTTPException(
             status_code=429,
-            detail={"code": "quota_exceeded", "calls_today": count, "quota": DAILY_QUOTA}
+            detail={"code": "quota_exceeded", "calls_today": count, "quota": quota}
         )
 
     await db.ai_usage.update_one(

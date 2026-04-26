@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
+import { useState } from 'react';
 import {
   Users, Briefcase, Calendar, TrendingUp,
-  UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward
+  UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward, Shield
 } from 'lucide-react';
-import { useAdminDashboard, useAdminUserGrowth, useAdminActivityStats, useAdminOnboardingStats } from '../../hooks/useAdmin';
+import { useAdminDashboard, useAdminUserGrowth, useAdminActivityStats, useAdminOnboardingStats, useQuotaSettings, useUpdateQuota } from '../../hooks/useAdmin';
+import { toast } from 'sonner';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, Legend 
@@ -102,6 +104,9 @@ export default function AdminDashboardPage() {
   const { data: userGrowth = [] } = useAdminUserGrowth(30);
   const { data: activityStats = [] } = useAdminActivityStats(30);
   const { data: onboardingStats } = useAdminOnboardingStats();
+  const { data: quotaSettings } = useQuotaSettings();
+  const updateQuota = useUpdateQuota();
+  const [quotaInput, setQuotaInput] = useState('');
 
   return (
     <div className="space-y-8" data-testid="admin-dashboard-page">
@@ -345,6 +350,56 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Quota IA */}
+      <div className="glass-card rounded-xl p-6 border border-slate-800">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gold/10 flex items-center justify-center">
+            <Shield size={20} className="text-gold" />
+          </div>
+          <div>
+            <h2 className="font-heading text-lg font-semibold text-white">Quota IA journalier</h2>
+            <p className="text-sm text-slate-400">Nombre d'appels IA autorisés par jour pour les utilisateurs sans clé propre</p>
+          </div>
+        </div>
+
+        <div className="flex items-end gap-4">
+          <div className="flex-1 max-w-xs">
+            <label className="block text-xs text-slate-400 mb-1.5">
+              Quota actuel : <span className="text-gold font-semibold">{quotaSettings?.daily_quota ?? '…'} appels/jour</span>
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              placeholder={quotaSettings?.daily_quota ?? 10}
+              value={quotaInput}
+              onChange={e => setQuotaInput(e.target.value)}
+              className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-gold transition-colors"
+              data-testid="quota-input"
+            />
+          </div>
+          <button
+            disabled={!quotaInput || updateQuota.isPending}
+            onClick={() => {
+              const val = parseInt(quotaInput, 10);
+              if (!val || val < 1) return;
+              updateQuota.mutate(val, {
+                onSuccess: () => { toast.success(`Quota mis à jour : ${val} appels/jour`); setQuotaInput(''); },
+                onError: () => toast.error('Erreur lors de la mise à jour du quota'),
+              });
+            }}
+            className="px-5 py-2 rounded-lg bg-gold text-black font-semibold text-sm hover:bg-gold/90 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            data-testid="quota-save-btn"
+          >
+            {updateQuota.isPending ? 'Sauvegarde…' : 'Enregistrer'}
+          </button>
+        </div>
+
+        <p className="mt-3 text-xs text-slate-500">
+          Valeur par défaut : {quotaSettings?.default ?? 10} appels/jour. Les admins et les utilisateurs avec leurs propres clés API sont toujours exemptés.
+        </p>
+      </div>
     </div>
   );
 }

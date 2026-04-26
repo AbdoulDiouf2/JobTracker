@@ -99,6 +99,23 @@ export const useAdminSupportMutations = () => {
   return { updateTicket, deleteTicket };
 };
 
+export const useQuotaSettings = () => useQuery({
+  queryKey: ['admin', 'settings', 'quota'],
+  queryFn: () => api.get('/api/admin/settings/quota').then(r => r.data),
+  staleTime: 60 * 1000,
+});
+
+export const useUpdateQuota = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (daily_quota) => api.put('/api/admin/settings/quota', { daily_quota }).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'settings', 'quota'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'ai-quota-stats'] });
+    },
+  });
+};
+
 // Barrel hook pour la compatibilité avec les pages admin existantes
 export const useAdmin = () => {
   const { data: dashboardStats, isLoading: loadingDashboard } = useAdminDashboard();

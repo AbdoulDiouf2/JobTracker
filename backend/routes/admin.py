@@ -539,7 +539,9 @@ async def get_ai_quota_stats(
 ):
     """Retourne les stats de quota IA de tous les utilisateurs pour aujourd'hui"""
     from datetime import date
+    from utils.ai_quota import get_quota_limit
     today = date.today().isoformat()
+    quota = await get_quota_limit(db)
 
     # Récupérer tous les utilisateurs actifs
     users = await db.users.find(
@@ -566,8 +568,8 @@ async def get_ai_quota_stats(
             "has_own_key": has_own_key,
             "is_exempt": is_admin or has_own_key,
             "calls_today": calls,
-            "quota_daily": DAILY_QUOTA,
-            "remaining": max(0, DAILY_QUOTA - calls) if not (is_admin or has_own_key) else None,
+            "quota_daily": quota,
+            "remaining": max(0, quota - calls) if not (is_admin or has_own_key) else None,
         })
 
     # Trier : quota épuisé en premier, puis par usage décroissant
@@ -575,12 +577,48 @@ async def get_ai_quota_stats(
 
     return {
         "date": today,
-        "quota_daily": DAILY_QUOTA,
+        "quota_daily": quota,
         "total_users": len(result),
-        "users_at_limit": sum(1 for r in result if not r["is_exempt"] and r["calls_today"] >= DAILY_QUOTA),
+        "users_at_limit": sum(1 for r in result if not r["is_exempt"] and r["calls_today"] >= quota),
         "total_calls_today": sum(r["calls_today"] for r in result),
         "users": result
     }
+
+
+# ============================================
+# PLATFORM SETTINGS (QUOTA IA)
+# ============================================
+
+from pydantic import BaseModel as _BaseModel, Field
+
+class QuotaSettingsUpdate(_BaseModel):
+    daily_quota: int = Field(..., ge=1, le=10000)
+
+
+@router.get("/settings/quota")
+async def get_quota_settings(
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Retourne le quota journalier IA configuré"""
+    from utils.ai_quota import get_quota_limit, DAILY_QUOTA
+    current = await get_quota_limit(db)
+    return {"daily_quota": current, "default": DAILY_QUOTA}
+
+
+@router.put("/settings/quota")
+async def update_quota_settings(
+    body: QuotaSettingsUpdate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Met à jour le quota journalier IA pour tous les utilisateurs non-exemptés"""
+    await db.platform_settings.update_one(
+        {"key": "ai_daily_quota"},
+        {"$set": {"key": "ai_daily_quota", "value": body.daily_quota, "updated_at": datetime.now(timezone.utc).isoformat()}},
+        upsert=True
+    )
+    return {"daily_quota": body.daily_quota}
 
 
 # ============================================

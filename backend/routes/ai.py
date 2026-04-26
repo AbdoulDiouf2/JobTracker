@@ -148,6 +148,14 @@ def _extract_keys(user: dict) -> dict:
 def _has_any_key(keys: dict) -> bool:
     return any(v for v in keys.values())
 
+async def get_user_own_keys(user_id: str, db) -> dict:
+    """Get only the user's own API keys, without any admin fallback."""
+    user = await db.users.find_one({"id": user_id}, {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
+    if user:
+        return _extract_keys(user)
+    return {}
+
+
 async def get_user_api_keys(user_id: str, db) -> dict:
     """Get user's API keys, falling back to admin keys if the user has none."""
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "google_ai_key": 1, "openai_key": 1, "groq_key": 1})
@@ -383,8 +391,8 @@ async def get_ai_usage_stats(
     """Retourne les stats d'usage IA du jour pour l'utilisateur"""
     user_id = current_user["user_id"]
     is_admin = current_user.get("role") == "admin"
-    user_keys = await get_user_api_keys(user_id, db)
-    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
+    own_keys = await get_user_own_keys(user_id, db)
+    has_own_key = _has_any_key(own_keys)
     calls_today = await get_usage_today(user_id, db)
     return {
         "calls_today": calls_today,
@@ -401,9 +409,11 @@ async def get_career_advice(
 ):
     """Get career advice from AI advisor"""
     user_id = current_user["user_id"]
+    is_admin = current_user.get("role") == "admin"
+    own_keys = await get_user_own_keys(user_id, db)
+    has_own_key = _has_any_key(own_keys)
     user_keys = await get_user_api_keys(user_id, db)
-    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
-    if not has_own_key:
+    if not has_own_key and not is_admin:
         await check_and_increment_quota(user_id, db)
 
     api_key, provider = select_api_key(user_keys, request.model_provider)
@@ -473,9 +483,11 @@ async def chat_with_assistant(
 ):
     """Chat with AI assistant with model selection"""
     user_id = current_user["user_id"]
+    is_admin = current_user.get("role") == "admin"
+    own_keys = await get_user_own_keys(user_id, db)
+    has_own_key = _has_any_key(own_keys)
     user_keys = await get_user_api_keys(user_id, db)
-    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
-    if not has_own_key:
+    if not has_own_key and not is_admin:
         await check_and_increment_quota(user_id, db)
 
     api_key, provider = select_api_key(user_keys, request.model_provider)
@@ -549,11 +561,13 @@ async def extract_job_from_page(
 ):
     """Extract job information from page content using AI (for Chrome extension)"""
     user_id = current_user["user_id"]
+    is_admin = current_user.get("role") == "admin"
+    own_keys = await get_user_own_keys(user_id, db)
+    has_own_key = _has_any_key(own_keys)
     user_keys = await get_user_api_keys(user_id, db)
-    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
     origin = http_request.headers.get("origin", "")
     from_extension = origin.startswith("chrome-extension://")
-    if not has_own_key and not from_extension:
+    if not has_own_key and not is_admin and not from_extension:
         await check_and_increment_quota(user_id, db)
 
     # Build ordered list of providers for fallback (groq first)
