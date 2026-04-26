@@ -27,6 +27,7 @@ import {
 } from '../components/ui/select';
 import axios from 'axios';
 import Markdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { useAIUsage, useInvalidateAIUsage } from '../hooks/useAIUsage';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -882,7 +883,7 @@ export default function AIAdvisorPage() {
                     }`}>
                       {msg.role === 'assistant' ? (
                         <div className="prose prose-sm prose-invert max-w-none prose-headings:text-gold prose-headings:font-semibold prose-headings:mt-4 prose-headings:mb-2 prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:text-white prose-a:text-gold">
-                          <Markdown>{msg.content}</Markdown>
+                          <Markdown rehypePlugins={[rehypeSanitize]}>{msg.content}</Markdown>
                         </div>
                       ) : (
                         <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>

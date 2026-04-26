@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Textarea } from './ui/textarea';
+import { toast } from 'sonner';
 
 // Score color based on value
 const getScoreColor = (score) => {
@@ -101,6 +102,7 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
       }
     } catch (err) {
       console.error('Erreur chargement score:', err);
+      toast.error('Impossible de charger le score de matching');
     }
   }, [getMatchingScore, application?.id]);
 
@@ -118,6 +120,7 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
       setShowCvInput(false);
     } catch (err) {
       console.error('Erreur calcul matching:', err);
+      toast.error(err?.response?.data?.detail || 'Erreur lors du calcul du matching');
     } finally {
       setCalculating(false);
     }

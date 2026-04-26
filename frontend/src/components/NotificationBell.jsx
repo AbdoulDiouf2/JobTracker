@@ -4,6 +4,7 @@ import { Bell, Check, CheckCheck, Trash2, X, Calendar, AlertCircle } from 'lucid
 import { formatDistanceToNow } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import { useLanguage } from '../i18n';
+import { toast } from 'sonner';
 import axios from 'axios';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
@@ -93,6 +94,7 @@ export default function NotificationBell() {
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Error marking as read:', error);
+      toast.error('Impossible de marquer comme lu');
     }
   };
 
@@ -107,6 +109,7 @@ export default function NotificationBell() {
       setUnreadCount(0);
     } catch (error) {
       console.error('Error marking all as read:', error);
+      toast.error('Impossible de marquer tout comme lu');
     }
   };
 
@@ -124,6 +127,7 @@ export default function NotificationBell() {
       }
     } catch (error) {
       console.error('Error deleting notification:', error);
+      toast.error('Impossible de supprimer la notification');
     }
   };
 

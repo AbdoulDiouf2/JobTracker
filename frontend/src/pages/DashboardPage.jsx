@@ -221,6 +221,15 @@ const JobScoreCard = ({ score }) => {
 // ============================================
 // STAT CARDS
 // ============================================
+const STAT_COLOR_CLASSES = {
+  gold: { bg: 'bg-[#c4a052]/10', text: 'text-[#c4a052]' },
+  green: { bg: 'bg-green-500/10', text: 'text-green-500' },
+  blue: { bg: 'bg-blue-500/10', text: 'text-blue-500' },
+  red: { bg: 'bg-red-500/10', text: 'text-red-500' },
+  purple: { bg: 'bg-purple-500/10', text: 'text-purple-500' },
+  slate: { bg: 'bg-slate-500/10', text: 'text-slate-400' },
+};
+
 const StatCard = ({ icon: Icon, label, value, color = "gold", delay = 0 }) => (
   <motion.div
     initial={{ opacity: 0, y: 20 }}
@@ -229,8 +238,8 @@ const StatCard = ({ icon: Icon, label, value, color = "gold", delay = 0 }) => (
     whileHover={{ scale: 1.02 }}
     className="glass-card rounded-xl p-5 border border-slate-800 hover:border-gold/30 transition-all"
   >
-    <div className={`w-10 h-10 rounded-lg bg-${color}/10 flex items-center justify-center mb-3`}>
-      <Icon size={20} className={`text-${color}`} />
+    <div className={`w-10 h-10 rounded-lg ${(STAT_COLOR_CLASSES[color] || STAT_COLOR_CLASSES.gold).bg} flex items-center justify-center mb-3`}>
+      <Icon size={20} className={(STAT_COLOR_CLASSES[color] || STAT_COLOR_CLASSES.gold).text} />
     </div>
     <p className="text-2xl font-bold text-white">
       {typeof value === 'number' ? <AnimatedCounter value={value} /> : value}

@@ -15,6 +15,15 @@ import { Skeleton } from '../components/ui/skeleton';
 
 const COLORS = ['#c4a052', '#1a365d', '#22c55e', '#ef4444', '#6b7280', '#3b82f6'];
 
+const STAT_COLOR_CLASSES = {
+  gold: { bg: 'bg-[#c4a052]/10', text: 'text-[#c4a052]' },
+  green: { bg: 'bg-green-500/10', text: 'text-green-500' },
+  blue: { bg: 'bg-blue-500/10', text: 'text-blue-500' },
+  red: { bg: 'bg-red-500/10', text: 'text-red-500' },
+  purple: { bg: 'bg-purple-500/10', text: 'text-purple-500' },
+  slate: { bg: 'bg-slate-500/10', text: 'text-slate-400' },
+};
+
 // Stat Card
 const StatCard = ({ icon: Icon, label, value, color = "gold" }) => (
   <motion.div
@@ -22,8 +31,8 @@ const StatCard = ({ icon: Icon, label, value, color = "gold" }) => (
     animate={{ opacity: 1, y: 0 }}
     className="glass-card rounded-xl p-5 border border-slate-800"
   >
-    <div className={`w-10 h-10 rounded-lg bg-${color}/10 flex items-center justify-center mb-3`}>
-      <Icon size={20} className={`text-${color}`} />
+    <div className={`w-10 h-10 rounded-lg ${(STAT_COLOR_CLASSES[color] || STAT_COLOR_CLASSES.gold).bg} flex items-center justify-center mb-3`}>
+      <Icon size={20} className={(STAT_COLOR_CLASSES[color] || STAT_COLOR_CLASSES.gold).text} />
     </div>
     <p className="text-2xl font-bold text-white">{value}</p>
     <p className="text-slate-400 text-sm">{label}</p>

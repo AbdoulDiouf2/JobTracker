@@ -41,6 +41,7 @@ import AdminSupportPage from "./pages/admin/AdminSupportPage";
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
 import AdminLayout from "./layouts/AdminLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 function OnboardingGuard({ children }) {
   const { user, isAuthenticated } = useAuth();
@@ -128,23 +129,25 @@ function App() {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <LanguageProvider>
-        <AuthProvider>
-          <RefreshProvider>
-            <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-              <div className="min-h-screen bg-[#020817]">
-                <BrowserRouter>
-                  <AppRouter />
-                  <Toaster />
-                </BrowserRouter>
-              </div>
-            </ThemeProvider>
-          </RefreshProvider>
-        </AuthProvider>
-      </LanguageProvider>
-      <ReactQueryDevtools initialIsOpen={false} />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <LanguageProvider>
+          <AuthProvider>
+            <RefreshProvider>
+              <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+                <div className="min-h-screen bg-[#020817]">
+                  <BrowserRouter>
+                    <AppRouter />
+                    <Toaster />
+                  </BrowserRouter>
+                </div>
+              </ThemeProvider>
+            </RefreshProvider>
+          </AuthProvider>
+        </LanguageProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

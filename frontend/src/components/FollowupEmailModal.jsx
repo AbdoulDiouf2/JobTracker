@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { useLanguage } from '../i18n';
+import { toast } from 'sonner';
 
 export const FollowupEmailModal = ({ application, isOpen, onClose, onEmailSent }) => {
   const { generateFollowupEmail, markReminderSent, loading } = useTracking();
@@ -42,6 +43,7 @@ export const FollowupEmailModal = ({ application, isOpen, onClose, onEmailSent }
       setEmail(result);
     } catch (err) {
       console.error('Erreur génération email:', err);
+      toast.error(err?.response?.data?.detail || "Erreur lors de la génération de l'email");
     } finally {
       setGenerating(false);
     }
