@@ -16,7 +16,6 @@ import { useApplications } from '../hooks/useApplications';
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
-import { toast } from 'sonner';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useConfirmDialog } from '../components/ui/confirm-dialog';
@@ -47,6 +46,7 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '../components/ui/skeleton';
 import axios from 'axios';
+import { STATUS_OPTIONS, STATUS_MAP, TYPE_OPTIONS, METHOD_OPTIONS } from '../constants/application';
 
 const applicationSchema = z.object({
   entreprise: z.string().min(1, 'Entreprise requise'),
@@ -63,8 +63,6 @@ const applicationSchema = z.object({
   competences: z.any().optional(), // Can be string or array
   description_poste: z.string().optional().nullable()
 });
-
-import { STATUS_OPTIONS, STATUS_MAP, TYPE_OPTIONS, METHOD_OPTIONS } from '../constants/application';
 
 // Application Card Component
 const ApplicationCard = ({ app, onEdit, onDelete, onToggleFavorite, onStatusChange, onViewDetails, t }) => {
