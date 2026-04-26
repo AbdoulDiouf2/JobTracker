@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { STATUS_MAP } from '../constants/application';
 import { 
   Briefcase, Clock, CheckCircle, XCircle, Star, Calendar,
   TrendingUp, TrendingDown, ArrowRight, Plus, Target, Trophy,
-  Lightbulb, AlertTriangle, Zap, ChevronUp, ChevronDown
+  Lightbulb, AlertTriangle, Zap, ChevronUp, ChevronDown, ChevronRight
 } from 'lucide-react';
 import { useStatisticsDashboardV2 } from '../hooks/useStatistics';
 import { useUpcomingInterviews } from '../hooks/useInterviews';
@@ -252,9 +252,12 @@ const StatCard = ({ icon: Icon, label, value, color = "gold", delay = 0 }) => (
 // ============================================
 // INSIGHTS SECTION
 // ============================================
-const InsightsCard = ({ insights }) => {
+const InsightsCard = ({ insights, navigate }) => {
   if (!insights || insights.length === 0) return null;
-  
+
+  const isFollowupInsight = (msg) =>
+    msg && (msg.toLowerCase().includes('relancer') || msg.toLowerCase().includes('sans réponse'));
+
   const getIcon = (type) => {
     switch (type) {
       case 'positive': return <CheckCircle className="text-green-400" size={18} />;
@@ -285,18 +288,23 @@ const InsightsCard = ({ insights }) => {
         Insights
       </h3>
       <div className="space-y-4">
-        {insights.map((insight, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 + index * 0.1 }}
-            className={`flex items-start gap-3 p-3 rounded-lg border ${getBgColor(insight.type)} mb-2`}
-          >
-            {getIcon(insight.type)}
-            <p className="text-sm text-slate-300">{insight.message}</p>
-          </motion.div>
-        ))}
+        {insights.map((insight, index) => {
+          const clickable = isFollowupInsight(insight.message);
+          return (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.4 + index * 0.1 }}
+              onClick={clickable ? () => navigate('/dashboard/applications?needs_followup=true') : undefined}
+              className={`flex items-start gap-3 p-3 rounded-lg border ${getBgColor(insight.type)} mb-2 ${clickable ? 'cursor-pointer hover:brightness-110 transition-all' : ''}`}
+            >
+              {getIcon(insight.type)}
+              <p className="text-sm text-slate-300 flex-1">{insight.message}</p>
+              {clickable && <ChevronRight size={16} className="text-slate-400 mt-0.5 shrink-0" />}
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );
@@ -480,6 +488,7 @@ export default function DashboardPage() {
   const { data: dashboardV2, isLoading: statsLoading } = useStatisticsDashboardV2();
   const { upcomingInterviews, loading: interviewsLoading } = useUpcomingInterviews(5);
   const { applications, loading: applicationsLoading } = useApplications({ per_page: 5 });
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const { user } = useAuth();
   const { markWelcomeShown } = useOnboarding();
@@ -603,7 +612,7 @@ export default function DashboardPage() {
       {/* Insights & Chart Row */}
       {!statsLoading && (
         <div className="grid lg:grid-cols-2 gap-6 mt-8">
-          <InsightsCard insights={dashboardV2?.insights} />
+          <InsightsCard insights={dashboardV2?.insights} navigate={navigate} />
           <WeeklyChart data={dashboardV2?.weekly_evolution} />
         </div>
       )}
