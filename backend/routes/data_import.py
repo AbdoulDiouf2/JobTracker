@@ -43,6 +43,7 @@ except ImportError:
     DOCX_SUPPORT = False
 
 from utils.auth import get_current_user
+from utils.ai_quota import check_and_increment_quota
 
 router = APIRouter(prefix="/import", tags=["Import"])
 
@@ -696,10 +697,15 @@ async def analyze_cv(
     
     if not api_key:
         raise HTTPException(
-            status_code=500, 
+            status_code=500,
             detail="Service IA non configuré. Ajoutez une clé API dans Paramètres ou contactez l'administrateur."
         )
-    
+
+    # Quota check — exempte si clé personnelle ou admin
+    has_own_key = user and any([user.get("openai_key"), user.get("google_ai_key"), user.get("groq_key")])
+    if not has_own_key:
+        await check_and_increment_quota(user_id, db)
+
     # Check file type
     allowed_types = ['.pdf', '.docx', '.doc', '.txt']
     file_ext = '.' + file.filename.split('.')[-1].lower() if '.' in file.filename else ''

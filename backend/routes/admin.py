@@ -17,6 +17,7 @@ import uuid
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 from utils.auth import get_current_user
+from utils.ai_quota import DAILY_QUOTA
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
@@ -529,6 +530,57 @@ async def get_onboarding_stats(
 # ============================================
 # EXPORT ADMIN
 # ============================================
+
+@router.get("/ai-quota-stats")
+async def get_ai_quota_stats(
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Retourne les stats de quota IA de tous les utilisateurs pour aujourd'hui"""
+    from datetime import date
+    today = date.today().isoformat()
+
+    # Récupérer tous les utilisateurs actifs
+    users = await db.users.find(
+        {"is_active": True},
+        {"_id": 0, "id": 1, "full_name": 1, "email": 1, "role": 1,
+         "google_ai_key": 1, "openai_key": 1, "groq_key": 1}
+    ).to_list(length=None)
+
+    # Récupérer tous les usages du jour en une seule requête
+    usages = await db.ai_usage.find({"date": today}).to_list(length=None)
+    usage_map = {u["user_id"]: u["call_count"] for u in usages}
+
+    result = []
+    for u in users:
+        uid = u["id"]
+        has_own_key = any([u.get("google_ai_key"), u.get("openai_key"), u.get("groq_key")])
+        is_admin = u.get("role") == "admin"
+        calls = usage_map.get(uid, 0)
+        result.append({
+            "user_id": uid,
+            "full_name": u.get("full_name"),
+            "email": u.get("email"),
+            "role": u.get("role", "standard"),
+            "has_own_key": has_own_key,
+            "is_exempt": is_admin or has_own_key,
+            "calls_today": calls,
+            "quota_daily": DAILY_QUOTA,
+            "remaining": max(0, DAILY_QUOTA - calls) if not (is_admin or has_own_key) else None,
+        })
+
+    # Trier : quota épuisé en premier, puis par usage décroissant
+    result.sort(key=lambda x: (-x["calls_today"], x["full_name"] or ""))
+
+    return {
+        "date": today,
+        "quota_daily": DAILY_QUOTA,
+        "total_users": len(result),
+        "users_at_limit": sum(1 for r in result if not r["is_exempt"] and r["calls_today"] >= DAILY_QUOTA),
+        "total_calls_today": sum(r["calls_today"] for r in result),
+        "users": result
+    }
+
 
 @router.get("/export/stats")
 async def export_admin_stats(

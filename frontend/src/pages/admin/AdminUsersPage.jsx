@@ -6,9 +6,10 @@ import {
   Search, Users, Shield, ShieldCheck, ShieldX, Eye,
   Edit2, Trash2, RefreshCw, ChevronLeft, ChevronRight,
   Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus,
-  CheckCircle2, Clock, SkipForward
+  CheckCircle2, Clock, SkipForward, Sparkles, Key, Infinity
 } from 'lucide-react';
 import { useAdminUsers, useAdminMutations } from '../../hooks/useAdmin';
+import { useQuery } from '@tanstack/react-query';
 import { api } from '../../contexts/AuthContext';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -538,10 +539,18 @@ const CreateUserModal = ({ isOpen, onClose, onCreate, loading }) => {
 export default function AdminUsersPage() {
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
 
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'quotas'
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+
+  const { data: quotaStats, isLoading: quotaLoading, refetch: refetchQuotas } = useQuery({
+    queryKey: ['admin', 'ai-quota-stats'],
+    queryFn: () => api.get('/api/admin/ai-quota-stats').then(r => r.data),
+    enabled: activeTab === 'quotas',
+    staleTime: 30 * 1000,
+  });
   const [viewingUser, setViewingUser] = useState(null);
   const [viewingUserStats, setViewingUserStats] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
@@ -658,21 +667,136 @@ export default function AdminUsersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="font-heading text-3xl font-bold text-white">Gestion des Utilisateurs</h1>
-          <p className="text-slate-400 mt-1">
-            {usersPagination.total} utilisateur(s) au total
-          </p>
+          <p className="text-slate-400 mt-1">{usersPagination.total} utilisateur(s) au total</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={() => setShowCreateModal(true)} className="bg-gold hover:bg-gold-light text-[#020817]" data-testid="create-user-button">
-            <UserPlus size={18} className="mr-2" />
-            Créer un utilisateur
-          </Button>
-          <Button onClick={handleExport} variant="outline" className="border-slate-700">
-            <Download size={18} className="mr-2" />
-            Exporter
-          </Button>
+          {activeTab === 'users' && (
+            <>
+              <Button onClick={() => setShowCreateModal(true)} className="bg-gold hover:bg-gold-light text-[#020817]" data-testid="create-user-button">
+                <UserPlus size={18} className="mr-2" />
+                Créer un utilisateur
+              </Button>
+              <Button onClick={handleExport} variant="outline" className="border-slate-700">
+                <Download size={18} className="mr-2" />
+                Exporter
+              </Button>
+            </>
+          )}
+          {activeTab === 'quotas' && (
+            <Button onClick={() => refetchQuotas()} variant="outline" className="border-slate-700">
+              <RefreshCw size={16} className="mr-2" />
+              Actualiser
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 p-1 bg-slate-800/50 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'users' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Users size={16} />
+          Utilisateurs
+        </button>
+        <button
+          onClick={() => setActiveTab('quotas')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'quotas' ? 'bg-slate-700 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          <Sparkles size={16} />
+          Quotas IA
+        </button>
+      </div>
+
+      {/* Quota View */}
+      {activeTab === 'quotas' && (
+        <div className="space-y-4">
+          {quotaLoading ? (
+            <div className="flex items-center justify-center py-20 text-slate-400">
+              <Loader2 size={24} className="animate-spin mr-2" /> Chargement...
+            </div>
+          ) : quotaStats ? (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Total utilisateurs', value: quotaStats.total_users, icon: Users, color: 'text-blue-400' },
+                  { label: 'Requêtes aujourd\'hui', value: quotaStats.total_calls_today, icon: Sparkles, color: 'text-gold' },
+                  { label: 'Quota atteint', value: quotaStats.users_at_limit, icon: ShieldX, color: 'text-red-400' },
+                  { label: 'Quota / jour', value: quotaStats.quota_daily, icon: Shield, color: 'text-green-400' },
+                ].map(({ label, value, icon: Icon, color }) => (
+                  <div key={label} className="bg-slate-800/50 border border-slate-700 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Icon size={16} className={color} />
+                      <span className="text-xs text-slate-400">{label}</span>
+                    </div>
+                    <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Users table */}
+              <div className="bg-slate-800/30 border border-slate-700/50 rounded-xl overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-400 text-xs uppercase">
+                      <th className="text-left px-4 py-3">Utilisateur</th>
+                      <th className="text-left px-4 py-3">Rôle</th>
+                      <th className="text-left px-4 py-3">Clé perso</th>
+                      <th className="text-center px-4 py-3">Appels aujourd'hui</th>
+                      <th className="text-left px-4 py-3 w-40">Usage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {quotaStats.users.map((u) => {
+                      const pct = u.is_exempt ? 100 : Math.min(100, (u.calls_today / u.quota_daily) * 100);
+                      const barColor = u.is_exempt ? 'bg-green-500' : pct >= 100 ? 'bg-red-500' : pct >= 70 ? 'bg-yellow-500' : 'bg-gold';
+                      return (
+                        <tr key={u.user_id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="text-white font-medium">{u.full_name}</p>
+                            <p className="text-slate-500 text-xs">{u.email}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-gold/10 text-gold' : 'bg-slate-700 text-slate-300'}`}>
+                              {u.role}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            {u.has_own_key
+                              ? <Key size={14} className="text-green-400" />
+                              : <span className="text-slate-600 text-xs">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {u.is_exempt
+                              ? <Infinity size={14} className="text-slate-400 mx-auto" />
+                              : <span className={`font-mono font-bold ${pct >= 100 ? 'text-red-400' : 'text-white'}`}>{u.calls_today}/{u.quota_daily}</span>}
+                          </td>
+                          <td className="px-4 py-3">
+                            {u.is_exempt ? (
+                              <span className="text-xs text-green-400">Illimité</span>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                                  <div className={`h-full ${barColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <span className="text-xs text-slate-400 w-8 text-right">{Math.round(pct)}%</span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {activeTab === 'users' && <div className="space-y-6">
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -785,7 +909,9 @@ export default function AdminUsersPage() {
         loading={saving}
       />
 
-      {/* Create User Modal */}
+      </div>}
+
+      {/* Modals — always mounted */}
       <CreateUserModal
         isOpen={showCreateModal}
         onClose={() => setShowCreateModal(false)}

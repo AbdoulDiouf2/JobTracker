@@ -3,7 +3,7 @@ JobTracker SaaS - Routes IA (Google Gemini, OpenAI & Groq)
 Supporte trois fournisseurs d'IA avec sélection dynamique du modèle.
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone
@@ -528,6 +528,7 @@ Si tu ne sais pas quelque chose, dis-le honnêtement."""
 @router.post("/extract-job", response_model=JobExtractionResponse)
 async def extract_job_from_page(
     request: JobExtractionRequest,
+    http_request: Request,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -535,7 +536,9 @@ async def extract_job_from_page(
     user_id = current_user["user_id"]
     user_keys = await get_user_api_keys(user_id, db)
     has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
-    if not has_own_key:
+    origin = http_request.headers.get("origin", "")
+    from_extension = origin.startswith("chrome-extension://")
+    if not has_own_key and not from_extension:
         await check_and_increment_quota(user_id, db)
 
     # Build ordered list of providers for fallback (groq first)

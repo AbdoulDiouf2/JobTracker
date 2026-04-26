@@ -19,6 +19,7 @@ from models import (
     GeneratedCoverLetter, ApplicationDocumentLink
 )
 from utils.auth import get_current_user
+from utils.ai_quota import check_and_increment_quota
 
 # Cloudinary configuration
 import cloudinary
@@ -875,34 +876,41 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
     # Select AI provider
     api_key = None
     provider = None
-    
-    # Check user keys first
-    if user.get("openai_key"):
-        api_key = user["openai_key"]
-        provider = "openai"
-    elif user.get("google_ai_key"):
-        api_key = user["google_ai_key"]
-        provider = "google"
-    elif user.get("groq_key"):
-        api_key = user["groq_key"]
-        provider = "groq"
-    
+    has_own_key = False
+
+    # Check user keys first (priority: groq > openai > google, same as ai.py)
+    for p, field in [("groq", "groq_key"), ("openai", "openai_key"), ("google", "google_ai_key")]:
+        if user.get(field):
+            api_key = user[field]
+            provider = p
+            has_own_key = True
+            break
+
     # Fallback to env keys
     if not api_key:
-        api_key = os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
-        if api_key:
-            provider = "openai"
-    
-    if not api_key:
-        api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-        if api_key:
-            provider = "google"
-    
+        for p, env_vars in [
+            ("groq", ["GROQ_API_KEY"]),
+            ("openai", ["OPENAI_API_KEY", "EMERGENT_LLM_KEY"]),
+            ("google", ["GOOGLE_API_KEY", "GEMINI_API_KEY", "EMERGENT_LLM_KEY"]),
+        ]:
+            for env in env_vars:
+                val = os.environ.get(env)
+                if val:
+                    api_key = val
+                    provider = p
+                    break
+            if api_key:
+                break
+
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Aucune clé API configurée. Configurez une clé OpenAI, Google ou Groq dans les paramètres."
         )
+
+    # Quota check (exempts users with own key and admins)
+    if not has_own_key:
+        await check_and_increment_quota(user_id, db)
     
     # Call AI
     try:
