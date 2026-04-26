@@ -1,9 +1,9 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, Users, BarChart3, Settings, LogOut, Menu, 
-  ChevronRight, User, ShieldCheck, ArrowLeft
+import {
+  LayoutDashboard, Users, BarChart3, Settings, LogOut, Menu,
+  ChevronRight, User, ShieldCheck, ArrowLeft, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell';
@@ -16,6 +16,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard Admin', exact: true },
     { path: '/admin/users', icon: Users, label: 'Utilisateurs' },
+    { path: '/admin/support', icon: MessageSquare, label: 'Support' },
   ];
 
   const isActive = (path, exact) => {

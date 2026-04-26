@@ -731,6 +731,46 @@ class PaginatedResponse(BaseModel):
 
 
 # ============================================
+# SUPPORT TICKET MODELS
+# ============================================
+
+class SupportTicketStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    CLOSED = "closed"
+
+    @property
+    def label_fr(self) -> str:
+        labels = {
+            "open": "Ouvert",
+            "in_progress": "En cours",
+            "resolved": "Résolu",
+            "closed": "Fermé",
+        }
+        return labels.get(self.value, self.value)
+
+
+class SupportTicket(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: EmailStr
+    message: str
+    status: SupportTicketStatus = SupportTicketStatus.OPEN
+    admin_note: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    email_sent: bool = False
+
+
+class SupportTicketUpdate(BaseModel):
+    status: Optional[SupportTicketStatus] = None
+    admin_note: Optional[str] = None
+
+
+# ============================================
 # ADMIN MODELS
 # ============================================
 

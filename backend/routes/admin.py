@@ -9,7 +9,8 @@ from typing import Optional
 
 from models import (
     UserResponse, UserAdminResponse, UserRole, AdminDashboardStats,
-    AdminUserUpdate, AdminUserCreate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse
+    AdminUserUpdate, AdminUserCreate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse,
+    SupportTicket, SupportTicketStatus, SupportTicketUpdate
 )
 from passlib.context import CryptContext
 import uuid
@@ -580,6 +581,115 @@ async def get_ai_quota_stats(
         "total_calls_today": sum(r["calls_today"] for r in result),
         "users": result
     }
+
+
+# ============================================
+# SUPPORT TICKETS
+# ============================================
+
+@router.get("/support-tickets")
+async def list_support_tickets(
+    status: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Liste tous les tickets de support avec pagination et filtrage"""
+    query = {}
+    if status:
+        query["status"] = status
+
+    total = await db.support_tickets.count_documents(query)
+    skip = (page - 1) * per_page
+
+    tickets = await db.support_tickets.find(
+        query, {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(per_page).to_list(length=per_page)
+
+    # Sérialiser les datetimes
+    for t in tickets:
+        for field in ("created_at", "updated_at"):
+            if isinstance(t.get(field), datetime):
+                t[field] = t[field].isoformat()
+
+    return {
+        "items": tickets,
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+        "total_pages": (total + per_page - 1) // per_page,
+    }
+
+
+@router.get("/support-tickets/stats")
+async def support_tickets_stats(
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Résumé rapide des tickets par statut"""
+    pipeline = [{"$group": {"_id": "$status", "count": {"$sum": 1}}}]
+    raw = await db.support_tickets.aggregate(pipeline).to_list(length=None)
+    counts = {item["_id"]: item["count"] for item in raw}
+    total = sum(counts.values())
+    return {
+        "total": total,
+        "open": counts.get("open", 0),
+        "in_progress": counts.get("in_progress", 0),
+        "resolved": counts.get("resolved", 0),
+        "closed": counts.get("closed", 0),
+    }
+
+
+@router.get("/support-tickets/{ticket_id}")
+async def get_support_ticket(
+    ticket_id: str,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Détail d'un ticket de support"""
+    ticket = await db.support_tickets.find_one({"id": ticket_id}, {"_id": 0})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    for field in ("created_at", "updated_at"):
+        if isinstance(ticket.get(field), datetime):
+            ticket[field] = ticket[field].isoformat()
+    return ticket
+
+
+@router.put("/support-tickets/{ticket_id}")
+async def update_support_ticket(
+    ticket_id: str,
+    data: SupportTicketUpdate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Met à jour le statut ou la note admin d'un ticket"""
+    ticket = await db.support_tickets.find_one({"id": ticket_id})
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+
+    update_fields = {"updated_at": datetime.now(timezone.utc)}
+    if data.status is not None:
+        update_fields["status"] = data.status.value
+    if data.admin_note is not None:
+        update_fields["admin_note"] = data.admin_note
+
+    await db.support_tickets.update_one({"id": ticket_id}, {"$set": update_fields})
+    return {"success": True}
+
+
+@router.delete("/support-tickets/{ticket_id}")
+async def delete_support_ticket(
+    ticket_id: str,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Supprime définitivement un ticket de support"""
+    result = await db.support_tickets.delete_one({"id": ticket_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Ticket non trouvé")
+    return {"success": True}
 
 
 @router.get("/export/stats")

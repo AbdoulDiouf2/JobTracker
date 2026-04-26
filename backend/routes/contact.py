@@ -1,14 +1,21 @@
 import smtplib
 import ssl
+from datetime import datetime, timezone
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, EmailStr
 
 from config import settings
+from models import SupportTicket
 
 router = APIRouter(prefix="/contact", tags=["contact"])
+
+
+def get_db():
+    """Dependency injection pour la DB - sera override dans server.py"""
+    pass
 
 
 class ContactForm(BaseModel):
@@ -18,7 +25,10 @@ class ContactForm(BaseModel):
 
 
 @router.post("/")
-async def send_contact_email(form: ContactForm):
+async def send_contact_email(form: ContactForm, db=Depends(get_db)):
+    ticket = SupportTicket(name=form.name, email=form.email, message=form.message)
+    email_sent = False
+
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = f"[JobTracker Support] Message de {form.name}"
@@ -53,9 +63,19 @@ async def send_contact_email(form: ContactForm):
                 server.login(settings.SMTP_USER, settings.SMTP_PASSWORD_APP)
                 server.sendmail(settings.SMTP_FROM_EMAIL, settings.SUPPORT_EMAIL, msg.as_string())
 
-        return {"success": True}
+        email_sent = True
 
     except smtplib.SMTPAuthenticationError:
-        raise HTTPException(status_code=500, detail="SMTP authentication failed")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        pass  # On persiste quand même le ticket
+    except Exception:
+        pass  # On persiste quand même le ticket
+
+    ticket.email_sent = email_sent
+    await db.support_tickets.insert_one(ticket.model_dump())
+
+    if not email_sent:
+        # Message reçu mais email non envoyé - on retourne quand même success
+        # Le ticket est sauvegardé, l'admin peut le voir dans le panel
+        return {"success": True, "email_sent": False}
+
+    return {"success": True, "email_sent": True}

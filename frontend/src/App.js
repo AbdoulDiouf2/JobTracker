@@ -36,6 +36,7 @@ import ProfilePage from "./pages/ProfilePage";
 // Admin Pages
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminSupportPage from "./pages/admin/AdminSupportPage";
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -92,6 +93,7 @@ function AppRouter() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="support" element={<AdminSupportPage />} />
       </Route>
 
       {/* Catch-all Route for 404 */}

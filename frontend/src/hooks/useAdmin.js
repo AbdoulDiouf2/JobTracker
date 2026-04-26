@@ -66,6 +66,39 @@ export const useAdminMutations = () => {
   return { updateUser, deleteUser, reactivateUser, createUser, exportStats };
 };
 
+export const useAdminSupportTickets = (params = {}) => useQuery({
+  queryKey: ['admin', 'support-tickets', params],
+  queryFn: () => api.get('/api/admin/support-tickets', { params }).then(r => r.data),
+  placeholderData: (prev) => prev,
+});
+
+export const useAdminSupportStats = () => useQuery({
+  queryKey: ['admin', 'support-tickets', 'stats'],
+  queryFn: () => api.get('/api/admin/support-tickets/stats').then(r => r.data),
+  staleTime: 60 * 1000,
+});
+
+export const useAdminSupportMutations = () => {
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'support-tickets'] });
+  };
+
+  const updateTicket = useMutation({
+    mutationFn: ({ ticketId, data }) =>
+      api.put(`/api/admin/support-tickets/${ticketId}`, data).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const deleteTicket = useMutation({
+    mutationFn: (ticketId) =>
+      api.delete(`/api/admin/support-tickets/${ticketId}`).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  return { updateTicket, deleteTicket };
+};
+
 // Barrel hook pour la compatibilité avec les pages admin existantes
 export const useAdmin = () => {
   const { data: dashboardStats, isLoading: loadingDashboard } = useAdminDashboard();

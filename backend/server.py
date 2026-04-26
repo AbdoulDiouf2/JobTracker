@@ -41,6 +41,7 @@ from routes.reminders import get_db as reminders_get_db
 from routes.onboarding import router as onboarding_router
 from routes.onboarding import get_db as onboarding_get_db
 from routes.contact import router as contact_router
+from routes.contact import get_db as contact_get_db
 from utils.auth import get_current_user, security
 from utils.scheduler import setup_scheduler, shutdown_scheduler
 
@@ -85,6 +86,10 @@ async def lifespan(app: FastAPI):
     await db.push_subscriptions.create_index([("user_id", 1), ("subscription.endpoint", 1)])
     # AI usage quota index
     await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
+    # Support tickets indexes
+    await db.support_tickets.create_index("id", unique=True)
+    await db.support_tickets.create_index("status")
+    await db.support_tickets.create_index("created_at")
     
     logger.info(f"Connecté à MongoDB: {settings.DB_NAME}")
     
@@ -178,6 +183,7 @@ app.dependency_overrides[documents_get_db] = override_get_db
 app.dependency_overrides[calendar_get_db] = override_get_db
 app.dependency_overrides[reminders_get_db] = override_get_db
 app.dependency_overrides[onboarding_get_db] = override_get_db
+app.dependency_overrides[contact_get_db] = override_get_db
 
 # Session Middleware (Required for OAuth)
 from starlette.middleware.sessions import SessionMiddleware
