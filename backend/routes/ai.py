@@ -40,6 +40,7 @@ except ImportError:
     print("⚠️ Groq SDK not available")
 
 from utils.auth import get_current_user
+from utils.ai_quota import check_and_increment_quota, get_usage_today, DAILY_QUOTA
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -359,6 +360,24 @@ async def get_available_models(
     return AvailableModelsResponse(models=available_models, default_model=default_model)
 
 
+@router.get("/usage-stats")
+async def get_ai_usage_stats(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Retourne les stats d'usage IA du jour pour l'utilisateur"""
+    user_id = current_user["user_id"]
+    is_admin = current_user.get("role") == "admin"
+    user_keys = await get_user_api_keys(user_id, db)
+    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
+    calls_today = await get_usage_today(user_id, db)
+    return {
+        "calls_today": calls_today,
+        "quota_daily": DAILY_QUOTA,
+        "has_own_key": has_own_key or is_admin,
+    }
+
+
 @router.post("/career-advisor", response_model=CareerAdviceResponse)
 async def get_career_advice(
     request: CareerAdviceRequest,
@@ -368,9 +387,12 @@ async def get_career_advice(
     """Get career advice from AI advisor"""
     user_id = current_user["user_id"]
     user_keys = await get_user_api_keys(user_id, db)
-    
+    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
+    if not has_own_key:
+        await check_and_increment_quota(user_id, db)
+
     api_key, provider = select_api_key(user_keys, request.model_provider)
-    
+
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -437,9 +459,12 @@ async def chat_with_assistant(
     """Chat with AI assistant with model selection"""
     user_id = current_user["user_id"]
     user_keys = await get_user_api_keys(user_id, db)
-    
+    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
+    if not has_own_key:
+        await check_and_increment_quota(user_id, db)
+
     api_key, provider = select_api_key(user_keys, request.model_provider)
-    
+
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -509,7 +534,10 @@ async def extract_job_from_page(
     """Extract job information from page content using AI (for Chrome extension)"""
     user_id = current_user["user_id"]
     user_keys = await get_user_api_keys(user_id, db)
-    
+    has_own_key = any([user_keys.get("google"), user_keys.get("openai"), user_keys.get("groq")])
+    if not has_own_key:
+        await check_and_increment_quota(user_id, db)
+
     # Build ordered list of providers for fallback (groq first)
     providers_to_try = []
     if request.model_provider:

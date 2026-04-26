@@ -83,6 +83,8 @@ async def lifespan(app: FastAPI):
     # Reminders indexes
     await db.sent_reminders.create_index([("user_id", 1), ("reminder_key", 1)], unique=True)
     await db.push_subscriptions.create_index([("user_id", 1), ("subscription.endpoint", 1)])
+    # AI usage quota index
+    await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
     
     logger.info(f"Connecté à MongoDB: {settings.DB_NAME}")
     

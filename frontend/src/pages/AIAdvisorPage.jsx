@@ -27,11 +27,14 @@ import {
 } from '../components/ui/select';
 import axios from 'axios';
 import Markdown from 'react-markdown';
+import { useAIUsage, useInvalidateAIUsage } from '../hooks/useAIUsage';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function AIAdvisorPage() {
   const { language } = useLanguage();
+  const { data: aiUsage } = useAIUsage();
+  const invalidateAIUsage = useInvalidateAIUsage();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -283,14 +286,21 @@ export default function AIAdvisorPage() {
       if (response.data.model_used) {
         setModelUsed(response.data.model_used);
       }
+      invalidateAIUsage();
     } catch (error) {
       console.error('AI Error:', error);
+      const isQuotaError = error.response?.status === 429;
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: language === 'fr' 
-          ? 'Désolé, une erreur est survenue. Veuillez réessayer.'
-          : 'Sorry, an error occurred. Please try again.'
+        content: isQuotaError
+          ? (language === 'fr'
+              ? 'Quota journalier atteint (20 requêtes). Revenez demain ou configurez votre propre clé API dans les Paramètres.'
+              : 'Daily quota reached (20 requests). Come back tomorrow or configure your own API key in Settings.')
+          : (language === 'fr'
+              ? 'Désolé, une erreur est survenue. Veuillez réessayer.'
+              : 'Sorry, an error occurred. Please try again.')
       }]);
+      if (isQuotaError) invalidateAIUsage();
     } finally {
       setLoading(false);
     }
@@ -426,8 +436,25 @@ export default function AIAdvisorPage() {
             {t.title}
           </h1>
           <p className="text-slate-400 mt-1">{t.subtitle}</p>
+          {/* Quota bar */}
+          {aiUsage && !aiUsage.has_own_key && (
+            <div className="mt-2 flex items-center gap-3">
+              <div className="flex-1 max-w-[200px]">
+                <Progress
+                  value={(aiUsage.calls_today / aiUsage.quota_daily) * 100}
+                  className="h-1.5 bg-slate-700"
+                />
+              </div>
+              <span className={`text-xs ${aiUsage.calls_today >= aiUsage.quota_daily ? 'text-red-400' : 'text-slate-400'}`}>
+                {aiUsage.calls_today}/{aiUsage.quota_daily} {language === 'fr' ? 'requêtes aujourd\'hui' : 'requests today'}
+              </span>
+            </div>
+          )}
+          {aiUsage?.has_own_key && (
+            <p className="text-xs text-green-400 mt-1">{language === 'fr' ? 'Quota illimité — clé personnelle active' : 'Unlimited — personal key active'}</p>
+          )}
         </div>
-        
+
         {/* Tab Toggle & Model Selector */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           {/* Model Selector */}
@@ -928,13 +955,15 @@ export default function AIAdvisorPage() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
-                  placeholder={t.placeholder}
+                  placeholder={aiUsage && !aiUsage.has_own_key && aiUsage.calls_today >= aiUsage.quota_daily
+                    ? (language === 'fr' ? 'Quota journalier atteint...' : 'Daily quota reached...')
+                    : t.placeholder}
                   className="flex-1 bg-slate-800/50 border-slate-700 text-white"
-                  disabled={loading}
+                  disabled={loading || (aiUsage && !aiUsage.has_own_key && aiUsage.calls_today >= aiUsage.quota_daily)}
                 />
                 <Button
                   onClick={sendMessage}
-                  disabled={loading || !input.trim()}
+                  disabled={loading || !input.trim() || (aiUsage && !aiUsage.has_own_key && aiUsage.calls_today >= aiUsage.quota_daily)}
                   className="bg-gold hover:bg-gold-light text-[#020817]"
                 >
                   {loading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}

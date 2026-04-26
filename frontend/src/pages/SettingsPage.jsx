@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import { useStatistics } from '../hooks/useStatistics';
+import { useAIUsage } from '../hooks/useAIUsage';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Switch } from '../components/ui/switch';
@@ -16,6 +17,7 @@ import { Link } from 'react-router-dom';
 export default function SettingsPage() {
   const { user, updateProfile, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
+  const { data: aiUsage } = useAIUsage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   const { preferences, updatePreferences } = useStatistics();
   const { 
@@ -734,7 +736,16 @@ export default function SettingsPage() {
 
           {/* API Keys */}
           <div className="glass-card rounded-xl p-6 border border-slate-800 lg:row-span-2">
-            <h3 className="font-medium text-white mb-4">{t.apiKeys}</h3>
+            <h3 className="font-medium text-white mb-2">{t.apiKeys}</h3>
+            {/* Quota display */}
+            {aiUsage && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${aiUsage.has_own_key ? 'bg-green-500/10 border border-green-500/20 text-green-400' : 'bg-slate-800/50 border border-slate-700 text-slate-400'}`}>
+                {aiUsage.has_own_key
+                  ? (language === 'fr' ? 'Quota illimité — vous utilisez votre propre clé' : 'Unlimited quota — using your own API key')
+                  : `${aiUsage.calls_today} / ${aiUsage.quota_daily} ${language === 'fr' ? 'requêtes IA utilisées aujourd\'hui' : 'AI requests used today'}`
+                }
+              </div>
+            )}
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-300 mb-2">
