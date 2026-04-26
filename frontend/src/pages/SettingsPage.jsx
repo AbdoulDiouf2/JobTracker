@@ -10,12 +10,14 @@ import { useConfirmDialog } from '../components/ui/confirm-dialog';
 import { User, Key, Globe, Save, Loader2, Bell, Trash2, AlertTriangle, Briefcase, Calendar, Smartphone, BellRing, Target, Chrome, Copy, Check, RefreshCw } from 'lucide-react';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import axios from 'axios';
+import api from '../services/api';
+import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 import { Link } from 'react-router-dom';
 
 export default function SettingsPage() {
-  const { user, updateProfile, api } = useAuth();
+  const { user, updateProfile, updateUser, api } = useAuth();
   const { language, toggleLanguage } = useLanguage();
   const { data: aiUsage } = useAIUsage();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
@@ -296,15 +298,13 @@ export default function SettingsPage() {
         await updateProfile({ full_name: formData.full_name });
       }
       
-      // Update API keys
-      if (formData.google_ai_key || formData.openai_key || formData.groq_key) {
-        await api.put('/api/auth/update-api-keys', null, {
-          params: {
-            google_ai_key: formData.google_ai_key || undefined,
-            openai_key: formData.openai_key || undefined,
-            groq_key: formData.groq_key || undefined
-          }
-        });
+      // Update API keys (only fields that have a value)
+      const keysPayload = {};
+      if (formData.google_ai_key) keysPayload.google_ai_key = formData.google_ai_key;
+      if (formData.openai_key) keysPayload.openai_key = formData.openai_key;
+      if (formData.groq_key) keysPayload.groq_key = formData.groq_key;
+      if (Object.keys(keysPayload).length > 0) {
+        await api.put('/api/auth/update-api-keys', keysPayload);
       }
 
       // Update notification settings
@@ -319,6 +319,21 @@ export default function SettingsPage() {
       setMessage('Erreur');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteApiKey = async (keyName) => {
+    const flagMap = {
+      google_ai_key: 'has_google_ai_key',
+      openai_key: 'has_openai_key',
+      groq_key: 'has_groq_key',
+    };
+    try {
+      await api.put('/api/auth/update-api-keys', { [keyName]: '' });
+      updateUser({ [flagMap[keyName]]: false });
+      toast.success('Clé API supprimée');
+    } catch {
+      toast.error('Erreur lors de la suppression');
     }
   };
 
@@ -748,41 +763,62 @@ export default function SettingsPage() {
             )}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                   {t.googleKey}
-                  {user?.has_google_ai_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
+                  {user?.has_google_ai_key && (
+                    <>
+                      <span className="text-green-400 text-xs">✓ Configurée</span>
+                      <button type="button" onClick={() => handleDeleteApiKey('google_ai_key')} className="text-red-400 hover:text-red-300 transition-colors" title="Supprimer">
+                        <Trash2 size={13} />
+                      </button>
+                    </>
+                  )}
                 </label>
                 <Input
                   type="password"
                   value={formData.google_ai_key}
                   onChange={(e) => setFormData(prev => ({ ...prev, google_ai_key: e.target.value }))}
-                  placeholder="AIza..."
+                  placeholder={user?.has_google_ai_key ? '••••••••••••• (laisser vide pour conserver)' : 'AIza...'}
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                   {t.openaiKey}
-                  {user?.has_openai_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
+                  {user?.has_openai_key && (
+                    <>
+                      <span className="text-green-400 text-xs">✓ Configurée</span>
+                      <button type="button" onClick={() => handleDeleteApiKey('openai_key')} className="text-red-400 hover:text-red-300 transition-colors" title="Supprimer">
+                        <Trash2 size={13} />
+                      </button>
+                    </>
+                  )}
                 </label>
                 <Input
                   type="password"
                   value={formData.openai_key}
                   onChange={(e) => setFormData(prev => ({ ...prev, openai_key: e.target.value }))}
-                  placeholder="sk-..."
+                  placeholder={user?.has_openai_key ? '••••••••••••• (laisser vide pour conserver)' : 'sk-...'}
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
                   {t.groqKey}
-                  {user?.has_groq_key && <span className="ml-2 text-green-400 text-xs">✓</span>}
+                  {user?.has_groq_key && (
+                    <>
+                      <span className="text-green-400 text-xs">✓ Configurée</span>
+                      <button type="button" onClick={() => handleDeleteApiKey('groq_key')} className="text-red-400 hover:text-red-300 transition-colors" title="Supprimer">
+                        <Trash2 size={13} />
+                      </button>
+                    </>
+                  )}
                 </label>
                 <Input
                   type="password"
                   value={formData.groq_key}
                   onChange={(e) => setFormData(prev => ({ ...prev, groq_key: e.target.value }))}
-                  placeholder="gsk_..."
+                  placeholder={user?.has_groq_key ? '••••••••••••• (laisser vide pour conserver)' : 'gsk_...'}
                   className="bg-slate-900/50 border-slate-700 text-white"
                 />
                 <p className="text-xs text-slate-500 mt-1">

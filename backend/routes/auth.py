@@ -298,8 +298,15 @@ async def update_profile(
     return _build_user_response(user)
 
 
+class ApiKeysUpdate(BaseModel):
+    google_ai_key: Optional[str] = None
+    openai_key: Optional[str] = None
+    groq_key: Optional[str] = None
+
 @router.put("/update-api-keys")
 async def update_api_keys(
+    body: ApiKeysUpdate = None,
+    # legacy query param support
     google_ai_key: str = None,
     openai_key: str = None,
     groq_key: str = None,
@@ -307,13 +314,18 @@ async def update_api_keys(
     db = Depends(get_db)
 ):
     """Met à jour les clés API IA"""
+    # Body takes precedence over query params
+    g_key = body.google_ai_key if body and body.google_ai_key is not None else google_ai_key
+    o_key = body.openai_key if body and body.openai_key is not None else openai_key
+    r_key = body.groq_key if body and body.groq_key is not None else groq_key
+
     update_data = {}
-    if google_ai_key is not None:
-        update_data["google_ai_key"] = encrypt(google_ai_key) if google_ai_key else None
-    if openai_key is not None:
-        update_data["openai_key"] = encrypt(openai_key) if openai_key else None
-    if groq_key is not None:
-        update_data["groq_key"] = encrypt(groq_key) if groq_key else None
+    if g_key is not None:
+        update_data["google_ai_key"] = encrypt(g_key) if g_key else None
+    if o_key is not None:
+        update_data["openai_key"] = encrypt(o_key) if o_key else None
+    if r_key is not None:
+        update_data["groq_key"] = encrypt(r_key) if r_key else None
     
     if update_data:
         await db.users.update_one(
