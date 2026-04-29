@@ -5,14 +5,18 @@ import {
   Search, Briefcase, Calendar, BarChart3, 
   Sparkles, Settings, User, ShieldCheck,
   Plus, FileText, FolderSync, Command, X,
-  ExternalLink, ArrowRight, MessageSquare
+  ExternalLink, ArrowRight, MessageSquare,
+  LogOut, LayoutDashboard, Bell
 } from 'lucide-react';
+
+
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 
 const CommandPalette = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, logout } = useAuth();
+
   const { language } = useLanguage();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -52,19 +56,22 @@ const CommandPalette = ({ isOpen, onClose }) => {
   }[language];
 
   const staticPages = [
-    { id: 'p1', type: 'page', title: language === 'fr' ? 'Tableau de bord' : 'Dashboard', icon: BarChart3, url: '/dashboard' },
-    { id: 'p2', type: 'page', title: language === 'fr' ? 'Candidatures' : 'Applications', icon: Briefcase, url: '/dashboard/applications' },
-    { id: 'p3', type: 'page', title: language === 'fr' ? 'Entretiens' : 'Interviews', icon: Calendar, url: '/dashboard/interviews' },
-    { id: 'p4', type: 'page', title: language === 'fr' ? 'Assistant IA' : 'AI Advisor', icon: Sparkles, url: '/dashboard/ai-advisor' },
-    { id: 'p5', type: 'page', title: language === 'fr' ? 'Documents' : 'Documents', icon: FileText, url: '/dashboard/documents' },
-    { id: 'p6', type: 'page', title: language === 'fr' ? 'Paramètres' : 'Settings', icon: Settings, url: '/dashboard/settings' },
-    { id: 'p7', type: 'page', title: language === 'fr' ? 'Profil' : 'Profile', icon: User, url: '/dashboard/profile' },
+    { id: 'p1', type: 'page', title: language === 'fr' ? 'Tableau de bord' : 'Dashboard', icon: LayoutDashboard, url: '/dashboard', keywords: 'home accueil' },
+    { id: 'p2', type: 'page', title: language === 'fr' ? 'Mes Candidatures' : 'Applications', icon: Briefcase, url: '/dashboard/applications', keywords: 'jobs offres postuler' },
+    { id: 'p3', type: 'page', title: language === 'fr' ? 'Entretiens' : 'Interviews', icon: Calendar, url: '/dashboard/interviews', keywords: 'rdv meeting' },
+    { id: 'p4', type: 'page', title: language === 'fr' ? 'Statistiques' : 'Statistics', icon: BarChart3, url: '/dashboard/statistics', keywords: 'charts graphiques analyse' },
+    { id: 'p5', type: 'page', title: language === 'fr' ? 'Assistant IA' : 'AI Advisor', icon: Sparkles, url: '/dashboard/ai-advisor', keywords: 'ia bot conseil' },
+    { id: 'p6', type: 'page', title: language === 'fr' ? 'Documents' : 'Documents', icon: FileText, url: '/dashboard/documents', keywords: 'cv lettre motivation' },
+    { id: 'p7', type: 'page', title: language === 'fr' ? 'Import/Export' : 'Import/Export', icon: FolderSync, url: '/dashboard/import-export', keywords: 'csv data excel' },
+    { id: 'p8', type: 'page', title: language === 'fr' ? 'Paramètres' : 'Settings', icon: Settings, url: '/dashboard/settings', keywords: 'compte theme dark' },
+    { id: 'p9', type: 'page', title: language === 'fr' ? 'Profil' : 'Profile', icon: User, url: '/dashboard/profile', keywords: 'me moi' },
+    { id: 'p_logout', type: 'action', title: language === 'fr' ? 'Déconnexion' : 'Logout', icon: LogOut, action: 'logout', keywords: 'quitter exit' },
   ];
 
   if (isAdmin) {
-    staticPages.push({ id: 'p8', type: 'page', title: 'Admin : Dashboard', icon: ShieldCheck, url: '/admin' });
-    staticPages.push({ id: 'p9', type: 'page', title: 'Admin : Utilisateurs', icon: ShieldCheck, url: '/admin/users' });
-    staticPages.push({ id: 'p10', type: 'page', title: 'Admin : Support', icon: MessageSquare, url: '/admin/support' });
+    staticPages.push({ id: 'p10', type: 'page', title: 'Admin : Dashboard', icon: ShieldCheck, url: '/admin' });
+    staticPages.push({ id: 'p11', type: 'page', title: 'Admin : Utilisateurs', icon: ShieldCheck, url: '/admin/users' });
+    staticPages.push({ id: 'p12', type: 'page', title: 'Admin : Support', icon: MessageSquare, url: '/admin/support' });
   }
 
   const searchData = useCallback(async (searchQuery) => {
@@ -109,8 +116,10 @@ const CommandPalette = ({ isOpen, onClose }) => {
   }, [isOpen]);
 
   const filteredPages = staticPages.filter(page => 
-    page.title.toLowerCase().includes(query.toLowerCase())
+    page.title.toLowerCase().includes(query.toLowerCase()) ||
+    (page.keywords && page.keywords.toLowerCase().includes(query.toLowerCase()))
   );
+
 
   const allItems = [...filteredPages, ...results];
 
@@ -132,9 +141,16 @@ const CommandPalette = ({ isOpen, onClose }) => {
   };
 
   const handleSelect = (item) => {
+    if (item.action === 'logout') {
+      logout();
+      onClose();
+      return;
+    }
     navigate(item.url);
     onClose();
   };
+
+
 
   if (!isOpen) return null;
 
@@ -263,8 +279,50 @@ const CommandPalette = ({ isOpen, onClose }) => {
 };
 
 const ResultItem = ({ item, isSelected, onMouseEnter, onClick, language }) => {
-  const Icon = item.icon || (item.type === 'application' ? Briefcase : item.type === 'interview' ? Calendar : Search);
+  const getIcon = () => {
+    if (item.icon) return item.icon;
+    switch (item.type) {
+      case 'application': return Briefcase;
+      case 'interview': return Calendar;
+      case 'document': return FileText;
+      case 'letter': return Sparkles;
+      case 'notification': return Bell;
+      case 'user': return User;
+      case 'support': return MessageSquare;
+      default: return Search;
+    }
+  };
+
+  const Icon = getIcon();
   
+  const getTypeLabel = () => {
+    const labels = {
+      fr: {
+        application: 'Candidature',
+        interview: 'Entretien',
+        document: 'Document',
+        letter: 'Lettre IA',
+        notification: 'Alerte',
+        user: 'Utilisateur',
+        support: 'Ticket',
+        page: 'Page',
+        action: 'Action'
+      },
+      en: {
+        application: 'Application',
+        interview: 'Interview',
+        document: 'Document',
+        letter: 'AI Letter',
+        notification: 'Alert',
+        user: 'User',
+        support: 'Ticket',
+        page: 'Page',
+        action: 'Action'
+      }
+    };
+    return labels[language]?.[item.type] || item.type;
+  };
+
   return (
     <div
       onMouseEnter={onMouseEnter}
@@ -281,18 +339,18 @@ const ResultItem = ({ item, isSelected, onMouseEnter, onClick, language }) => {
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
           <p className="font-medium truncate">{item.title}</p>
-          <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded
+          <span className={`text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded font-bold
             ${isSelected ? 'bg-gold/20 text-gold' : 'bg-slate-800 text-slate-500'}
           `}>
-            {item.type}
+            {getTypeLabel()}
           </span>
         </div>
-        {item.subtitle && (
-          <p className="text-xs text-slate-500 truncate">{item.subtitle}</p>
-        )}
+        <p className={`text-xs truncate ${isSelected ? 'text-gold/70' : 'text-slate-500'}`}>
+          {item.subtitle}
+        </p>
       </div>
       {isSelected && (
-        <ArrowRight size={14} className="text-gold" />
+        <ArrowRight size={14} className="text-gold animate-pulse" />
       )}
     </div>
   );
