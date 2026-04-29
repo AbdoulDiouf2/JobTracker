@@ -75,7 +75,8 @@ const CommandPalette = ({ isOpen, onClose }) => {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:8001'}/api/search/global?q=${encodeURIComponent(searchQuery)}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://job-tracker-steel-eight.vercel.app'}/api/search/global?q=${encodeURIComponent(searchQuery)}`, {
+
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
