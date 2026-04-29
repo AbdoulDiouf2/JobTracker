@@ -89,6 +89,10 @@ async def lifespan(app: FastAPI):
     # Reminders indexes
     await db.sent_reminders.create_index([("user_id", 1), ("reminder_key", 1)], unique=True)
     await db.push_subscriptions.create_index([("user_id", 1), ("subscription.endpoint", 1)])
+    # Chrome extension auth code indexes
+    await db.extension_auth_codes.create_index("code")
+    await db.extension_auth_codes.create_index("user_id")
+    await db.extension_auth_codes.create_index("expires_at", expireAfterSeconds=0)
     # AI usage quota index
     await db.ai_usage.create_index([("user_id", 1), ("date", 1)], unique=True)
     # Support tickets indexes

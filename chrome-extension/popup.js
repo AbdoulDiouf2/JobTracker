@@ -120,6 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   logoutBtn.addEventListener("click", async () => {
+    await disconnectExtension();
     await clearAuth();
     showAuthSection();
     authMessage.classList.add("hidden");
@@ -283,6 +284,21 @@ document.addEventListener("DOMContentLoaded", async () => {
       chrome.storage.local.remove(["jt_token", "jt_userEmail", "jt_userName"]),
       chrome.storage.sync.remove(["jt_token", "jt_userEmail", "jt_userName"])
     ]);
+  }
+
+  async function disconnectExtension() {
+    const { apiUrl, token } = await getConfig();
+    if (!token) return;
+
+    try {
+      if (!await ensureApiPermission(apiUrl)) return;
+      await fetch(`${apiUrl}/api/auth/extension/disconnect`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.warn("Extension server disconnect failed:", error);
+    }
   }
 
   async function validateToken(apiUrl, token) {

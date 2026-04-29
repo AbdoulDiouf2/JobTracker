@@ -387,9 +387,11 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
   const [extensionCode, setExtensionCode] = useState('');
   const [extensionLoading, setExtensionLoading] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [codeError, setCodeError] = useState('');
 
   const handleGenerateCode = async () => {
     setExtensionLoading(true);
+    setCodeError('');
     try {
       const token = localStorage.getItem('token');
       const response = await axios.post(`${API_URL}/api/auth/extension/generate-code`, {}, {
@@ -399,6 +401,7 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
       setCodeCopied(false);
     } catch (error) {
       console.error('Error generating code:', error);
+      setCodeError(error.response?.data?.detail || 'Impossible de generer le code. Reessayez dans quelques instants.');
     } finally {
       setExtensionLoading(false);
     }
@@ -504,6 +507,11 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
                     {codeCopied ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>
+              )}
+              {codeError && (
+                <p style={{ color: '#f87171', fontSize: '12px', lineHeight: '1.4', marginTop: '10px' }}>
+                  {codeError}
+                </p>
               )}
             </div>
           </div>

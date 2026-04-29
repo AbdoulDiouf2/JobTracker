@@ -356,8 +356,21 @@ class ExtensionAuthRequest(BaseModel):
     code: str
 
 
+def _parse_extension_expiry(value) -> datetime:
+    """Parse legacy ISO-string expiries and native Mongo datetimes."""
+    if isinstance(value, datetime):
+        expiry = value
+    else:
+        expiry = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    if expiry.tzinfo is None:
+        expiry = expiry.replace(tzinfo=timezone.utc)
+    return expiry
+
+
 @router.post("/extension/generate-code", response_model=ExtensionAuthCode)
+@limiter.limit("5/minute")
 async def generate_extension_code(
+    request: Request,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -366,7 +379,7 @@ async def generate_extension_code(
     Le code expire après 5 minutes et ne peut être utilisé qu'une fois.
     """
     # Générer un code aléatoire de 8 caractères
-    code = secrets.token_urlsafe(6)[:8].upper()
+    code = secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8].upper()
     expires_at = datetime.now(timezone.utc) + timedelta(minutes=5)
     
     # Stocker le code en base
@@ -374,7 +387,7 @@ async def generate_extension_code(
     await db.extension_auth_codes.insert_one({
         "code": code,
         "user_id": current_user["user_id"],
-        "expires_at": expires_at.isoformat(),
+        "expires_at": expires_at,
         "used": False
     })
     
@@ -385,8 +398,10 @@ async def generate_extension_code(
 
 
 @router.post("/extension/verify-code", response_model=Token)
+@limiter.limit("10/minute")
 async def verify_extension_code(
-    request: ExtensionAuthRequest,
+    request: Request,
+    auth_request: ExtensionAuthRequest,
     db = Depends(get_db)
 ):
     """
@@ -395,7 +410,7 @@ async def verify_extension_code(
     """
     # Chercher le code
     auth_code = await db.extension_auth_codes.find_one({
-        "code": request.code.upper(),
+        "code": auth_request.code.upper(),
         "used": False
     })
     
@@ -406,7 +421,7 @@ async def verify_extension_code(
         )
     
     # Vérifier l'expiration
-    expires_at = datetime.fromisoformat(auth_code["expires_at"].replace("Z", "+00:00"))
+    expires_at = _parse_extension_expiry(auth_code["expires_at"])
     if datetime.now(timezone.utc) > expires_at:
         await db.extension_auth_codes.delete_one({"_id": auth_code["_id"]})
         raise HTTPException(
@@ -414,11 +429,8 @@ async def verify_extension_code(
             detail="Code expiré"
         )
     
-    # Marquer comme utilisé
-    await db.extension_auth_codes.update_one(
-        {"_id": auth_code["_id"]},
-        {"$set": {"used": True}}
-    )
+    # Invalider le code utilise immediatement
+    await db.extension_auth_codes.delete_one({"_id": auth_code["_id"]})
     
     # Récupérer l'utilisateur
     user = await db.users.find_one({"id": auth_code["user_id"]})
@@ -443,6 +455,25 @@ async def verify_extension_code(
     )
     
     return Token(access_token=access_token)
+
+
+@router.post("/extension/disconnect")
+async def disconnect_extension(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Deconnecte l'extension Chrome cote serveur."""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"id": current_user["user_id"]},
+        {"$set": {
+            "extension_connected": False,
+            "extension_disconnected_at": now,
+            "extension_last_sync": now,
+        }}
+    )
+    await db.extension_auth_codes.delete_many({"user_id": current_user["user_id"]})
+    return {"message": "Extension deconnectee"}
 
 
 @router.get("/extension/status")

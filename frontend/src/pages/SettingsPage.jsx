@@ -430,6 +430,7 @@ export default function SettingsPage() {
       setCodeCopied(false);
     } catch (error) {
       console.error('Error generating code:', error);
+      toast.error(error.response?.data?.detail || 'Impossible de générer le code extension');
     } finally {
       setExtensionLoading(false);
     }
