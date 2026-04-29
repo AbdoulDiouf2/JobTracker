@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut } from 'lucide-react';
+import { LogOut, Copy, Check } from 'lucide-react';
 import { useOnboarding } from '../hooks/useOnboarding';
 import { useAuth } from '../contexts/AuthContext';
 import WelcomeModal from '../components/WelcomeModal';
+import axios from 'axios';
+
+const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 /* ─── Design tokens (inline styles pour coller pixel-perfect au design) ─── */
 const css = {
@@ -381,6 +384,32 @@ function Step2({ onNext, dir }) {
 
 /* ─── Step 3: Extension Chrome ─── */
 function Step3({ onNext, onSkip, dir, extensionConnected }) {
+  const [extensionCode, setExtensionCode] = useState('');
+  const [extensionLoading, setExtensionLoading] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+
+  const handleGenerateCode = async () => {
+    setExtensionLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_URL}/api/auth/extension/generate-code`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setExtensionCode(response.data.code);
+      setCodeCopied(false);
+    } catch (error) {
+      console.error('Error generating code:', error);
+    } finally {
+      setExtensionLoading(false);
+    }
+  };
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(extensionCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
+
   return (
     <motion.div
       key="s3"
@@ -438,10 +467,28 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
               <GoldButton
                 outline
                 onClick={() => window.open('https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl', '_blank')}
-                style={{ padding: '11px 24px', fontSize: '14px' }}
+                style={{ padding: '11px 24px', fontSize: '14px', marginBottom: '16px' }}
               >
                 Installer l'extension
               </GoldButton>
+            </div>
+            
+            <div style={{ background: 'rgba(30,41,59,0.5)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginTop: '8px' }}>
+              <p style={{ fontSize: '13px', color: css.muted, marginBottom: '12px' }}>
+                Connexion rapide (idéal si vous utilisez Google) :
+              </p>
+              {!extensionCode ? (
+                <GhostButton onClick={handleGenerateCode} style={{ padding: '8px 16px' }}>
+                  {extensionLoading ? 'Génération...' : 'Générer un code'}
+                </GhostButton>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(196,160,82,0.3)' }}>
+                  <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold', color: css.gold, letterSpacing: '2px' }}>{extensionCode}</span>
+                  <button onClick={handleCopyCode} style={{ background: 'none', border: 'none', color: codeCopied ? css.success : css.muted, cursor: 'pointer', padding: '4px' }}>
+                    {codeCopied ? <Check size={16} /> : <Copy size={16} />}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}
