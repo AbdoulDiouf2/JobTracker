@@ -29,6 +29,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
       placeholder: 'Rechercher une page, une entreprise...',
       pages: 'Pages',
       data: 'Données',
+      suggestions: 'Suggestions pour vous',
       noResults: 'Aucun résultat trouvé',
       actions: 'Actions rapides',
       searchHint: 'Utilisez les flèches pour naviguer, Entrée pour valider',
@@ -43,6 +44,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
       placeholder: 'Search for a page, a company...',
       pages: 'Pages',
       data: 'Data',
+      suggestions: 'Recommended for you',
       noResults: 'No results found',
       actions: 'Quick actions',
       searchHint: 'Use arrows to navigate, Enter to select',
@@ -75,15 +77,14 @@ const CommandPalette = ({ isOpen, onClose }) => {
   }
 
   const searchData = useCallback(async (searchQuery) => {
-    if (!searchQuery.trim()) {
-      setResults([]);
-      return;
-    }
-
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://job-tracker-steel-eight.vercel.app'}/api/search/global?q=${encodeURIComponent(searchQuery)}`, {
+      const baseUrl = process.env.REACT_APP_API_URL || 'https://job-tracker-steel-eight.vercel.app';
+      const url = searchQuery.trim() 
+        ? `${baseUrl}/api/search/global?q=${encodeURIComponent(searchQuery)}`
+        : `${baseUrl}/api/search/global`;
 
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -93,19 +94,18 @@ const CommandPalette = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error('Search error:', error.message || error);
     } finally {
-
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (query) searchData(query);
-      else setResults([]);
-    }, 300);
+      searchData(query);
+    }, query ? 300 : 0); // Pas de délai si vide (montage)
 
     return () => clearTimeout(timer);
   }, [query, searchData]);
+
 
   useEffect(() => {
     if (isOpen) {
@@ -244,7 +244,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
               {results.length > 0 && (
                 <div>
                   <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2 px-2">
-                    {t.data}
+                    {query ? t.data : t.suggestions}
                   </p>
                   {results.map((result, idx) => (
                     <ResultItem 

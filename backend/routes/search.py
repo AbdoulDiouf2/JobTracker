@@ -14,17 +14,53 @@ def get_db():
 
 @router.get("/global")
 async def global_search(
-    q: str = Query(..., min_length=1),
+    q: Optional[str] = Query(None),
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
     """
-    Recherche exhaustive dans TOUTES les données de l'utilisateur.
+    Recherche exhaustive ou suggestions par défaut.
     """
     user_id = current_user["user_id"]
-    search_regex = {"$regex": re.escape(q), "$options": "i"}
-    
     results = []
+
+    # Cas où la recherche est vide : on renvoie des suggestions (Récents / Prochains)
+    if not q or q.strip() == "":
+        # 1. Candidatures récentes
+        recent_apps = await db.applications.find(
+            {"user_id": user_id}
+        ).sort("updated_at", -1).limit(4).to_list(4)
+        
+        for app in recent_apps:
+            results.append({
+                "id": app["id"],
+                "type": "application",
+                "title": app["entreprise"],
+                "subtitle": f"Récemment mis à jour - {app['poste']}",
+                "url": f"/dashboard/applications?id={app['id']}",
+                "suggestion": True
+            })
+
+        # 2. Entretiens à venir
+        upcoming_interviews = await db.interviews.find(
+            {"user_id": user_id, "statut": "planned"}
+        ).sort("date_entretien", 1).limit(3).to_list(3)
+        
+        for interview in upcoming_interviews:
+            app_info = await db.applications.find_one({"id": interview["candidature_id"]}, {"entreprise": 1, "poste": 1})
+            results.append({
+                "id": interview["id"],
+                "type": "interview",
+                "title": f"Entretien : {app_info['entreprise'] if app_info else '?'}",
+                "subtitle": f"Prochainement le {interview['date_entretien'][:10]}",
+                "url": f"/dashboard/interviews?id={interview['id']}",
+                "suggestion": True
+            })
+            
+        return results
+
+    search_regex = {"$regex": re.escape(q), "$options": "i"}
+
 
     # 1. Candidatures
     apps_cursor = db.applications.find({

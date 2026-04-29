@@ -981,6 +981,10 @@ export default function InterviewsPage() {
 
   const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingInterview, setEditingInterview] = useState(null);
+  const [prefillApp, setPrefillApp] = useState(null);
+  const [viewingInterview, setViewingInterview] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
   useEffect(() => {
@@ -993,10 +997,6 @@ export default function InterviewsPage() {
     }
   }, [searchParams, interviews]);
 
-  const [editingInterview, setEditingInterview] = useState(null);
-  const [prefillApp, setPrefillApp] = useState(null);
-  const [viewingInterview, setViewingInterview] = useState(null);
-  const [filter, setFilter] = useState('all');
 
   const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
     filter !== 'all' ? { status: filter } : {}
