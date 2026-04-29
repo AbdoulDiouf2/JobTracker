@@ -34,7 +34,7 @@ async def global_search(
             {"poste": search_regex},
             {"lieu": search_regex}
         ]
-    }).limit(5)
+    }).limit(10)
     
     async for app in apps_cursor:
         results.append({
@@ -42,29 +42,48 @@ async def global_search(
             "type": "application",
             "title": app["entreprise"],
             "subtitle": app["poste"],
-            "url": f"/dashboard/applications/{app['id']}",
+            "url": f"/dashboard/applications?id={app['id']}",
+
             "status": app.get("reponse", "pending")
         })
 
-    # 2. Entretiens
-    interviews_cursor = db.interviews.find({
+    # 2. Entretiens (Recherche croisée avec candidatures car entreprise/poste ne sont pas stockés dans l'entretien)
+    matching_apps = await db.applications.find({
         "user_id": user_id,
         "$or": [
             {"entreprise": search_regex},
-            {"notes": search_regex},
-            {"type_entretien": search_regex}
+            {"poste": search_regex}
         ]
-    }).limit(5)
+    }, {"id": 1}).to_list(100)
+    
+    app_ids = [app["id"] for app in matching_apps]
+    
+    interviews_cursor = db.interviews.find({
+        "user_id": user_id,
+        "$or": [
+            {"candidature_id": {"$in": app_ids}},
+            {"notes": search_regex},
+            {"type_entretien": search_regex},
+            {"interviewer": search_regex}
+        ]
+    }).limit(10)
     
     async for interview in interviews_cursor:
+
+        # Récupérer les infos de l'entreprise pour l'affichage
+        app_info = await db.applications.find_one({"id": interview["candidature_id"]}, {"entreprise": 1, "poste": 1})
+        title = app_info["entreprise"] if app_info else "Entretien"
+        subtitle = app_info["poste"] if app_info else interview.get("type_entretien", "RH")
+        
         results.append({
             "id": interview["id"],
             "type": "interview",
-            "title": f"Entretien : {interview['entreprise']}",
-            "subtitle": f"{interview.get('type_entretien', 'RH')} - {interview.get('date_entretien', '')}",
-            "url": f"/dashboard/interviews",
+            "title": f"Entretien : {title}",
+            "subtitle": f"{subtitle} - {interview.get('date_entretien', '')[:10]}",
+            "url": f"/dashboard/interviews?id={interview['id']}",
             "date": interview.get("date_entretien")
         })
+
 
     # 3. Documents (CV, Lettres)
     docs_cursor = db.documents.find({
@@ -74,15 +93,16 @@ async def global_search(
             {"original_filename": search_regex},
             {"description": search_regex}
         ]
-    }).limit(5)
+    }).limit(10)
     
     async for doc in docs_cursor:
+
         results.append({
             "id": doc["id"],
             "type": "document",
             "title": doc["name"],
             "subtitle": doc.get("document_type", "Document").upper(),
-            "url": "/dashboard/documents",
+            "url": f"/dashboard/documents?id={doc['id']}",
             "format": doc.get("mime_type")
         })
 
@@ -94,7 +114,8 @@ async def global_search(
             {"poste": search_regex},
             {"content": search_regex}
         ]
-    }).limit(3)
+    }).limit(8)
+
     
     async for letter in letters_cursor:
         results.append({
@@ -102,9 +123,10 @@ async def global_search(
             "type": "letter",
             "title": f"Lettre : {letter['entreprise']}",
             "subtitle": letter['poste'],
-            "url": "/dashboard/documents", # Ou une page dédiée si elle existe
+            "url": f"/dashboard/documents?id={letter['id']}",
             "is_ai": True
         })
+
 
     # 5. Notifications / Alertes
     notifs_cursor = db.notifications.find({
@@ -163,7 +185,8 @@ async def admin_search(
             {"email": search_regex},
             {"message": search_regex}
         ]
-    }).limit(5)
+    }).limit(10)
+
     
     async for ticket in tickets_cursor:
         results.append({

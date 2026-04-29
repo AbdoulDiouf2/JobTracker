@@ -194,7 +194,8 @@ const CommandPalette = ({ isOpen, onClose }) => {
         </div>
 
         {/* Results Area */}
-        <div className="max-h-[60vh] overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700">
+        <div className="max-h-[500px] overflow-y-auto p-2 custom-scrollbar">
+
           {allItems.length === 0 && query && (
             <div className="p-8 text-center text-slate-500">
               <X size={40} className="mx-auto mb-3 opacity-20" />

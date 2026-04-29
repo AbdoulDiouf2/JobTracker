@@ -896,7 +896,16 @@ export default function ApplicationsPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pagination.total_pages, searchQuery, filtersKey]);
+  // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
+  useEffect(() => {
+    const appId = searchParams.get('id');
+    if (appId && applications.length > 0) {
+      const app = applications.find(a => a.id === appId);
+      if (app) {
+        setViewingApp(app);
+      }
+    }
+  }, [searchParams, applications]);
 
   const t = {
     fr: {

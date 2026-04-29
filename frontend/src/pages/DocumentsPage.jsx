@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FileText, Upload, Link as LinkIcon, Trash2, Download, Edit2, 
@@ -223,6 +225,29 @@ export default function DocumentsPage() {
       setLoadingLetters(false);
     }
   }, []);
+
+  const [searchParams] = useSearchParams();
+
+  // Ouvrir automatiquement un document ou une lettre si ID présent dans l'URL (via recherche)
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (!id) return;
+
+    // Chercher dans les documents (CV)
+    const doc = documents.find(d => d.id === id);
+    if (doc) {
+      setActiveTab('cv');
+      handleViewDocument(doc);
+      return;
+    }
+
+    // Chercher dans les lettres générées
+    const letter = generatedLetters.find(l => l.id === id);
+    if (letter) {
+      setActiveTab('generated');
+      return;
+    }
+  }, [searchParams, documents, generatedLetters]);
 
   // Fetch documents on mount
   useEffect(() => {

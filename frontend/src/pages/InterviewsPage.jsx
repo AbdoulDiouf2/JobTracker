@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { INTERVIEW_STATUS_OPTIONS as STATUS_OPTIONS, INTERVIEW_STATUS_MAP } from '../constants/application';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
+
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { 
@@ -978,7 +979,20 @@ export default function InterviewsPage() {
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
   const location = useLocation();
 
+  const [searchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
+  useEffect(() => {
+    const interviewId = searchParams.get('id');
+    if (interviewId && interviews.length > 0) {
+      const interview = interviews.find(i => i.id === interviewId);
+      if (interview) {
+        setViewingInterview(interview);
+      }
+    }
+  }, [searchParams, interviews]);
+
   const [editingInterview, setEditingInterview] = useState(null);
   const [prefillApp, setPrefillApp] = useState(null);
   const [viewingInterview, setViewingInterview] = useState(null);
