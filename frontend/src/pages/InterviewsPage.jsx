@@ -985,11 +985,22 @@ export default function InterviewsPage() {
   const [prefillApp, setPrefillApp] = useState(null);
   const [viewingInterview, setViewingInterview] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [submitting, setSubmitting] = useState(false);
+  const [viewMode, setViewMode] = useState('calendar');
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarView, setCalendarView] = useState('month');
+  const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
+  const [syncCalendarLoading, setSyncCalendarLoading] = useState(null);
+
+  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
+    filter !== 'all' ? { status: filter } : {}
+  );
+  const { applications } = useApplications({ per_page: 100 });
 
   // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
   useEffect(() => {
     const interviewId = searchParams.get('id');
-    if (interviewId && interviews.length > 0) {
+    if (interviewId && interviews && interviews.length > 0) {
       const interview = interviews.find(i => i.id === interviewId);
       if (interview) {
         setViewingInterview(interview);
@@ -998,16 +1009,6 @@ export default function InterviewsPage() {
   }, [searchParams, interviews]);
 
 
-  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
-    filter !== 'all' ? { status: filter } : {}
-  );
-  const { applications } = useApplications({ per_page: 100 });
-  const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('calendar'); // 'card' or 'calendar' - calendar by default
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [calendarView, setCalendarView] = useState('month'); // 'day', 'week', 'month', 'year'
-  const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
-  const [syncCalendarLoading, setSyncCalendarLoading] = useState(null);
 
   const t = {
     fr: {
