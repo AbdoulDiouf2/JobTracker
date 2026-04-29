@@ -433,6 +433,14 @@ async def verify_extension_code(
         data={"sub": user["id"], "role": user.get("role", "standard"), "source": "extension"},
         expires_delta=timedelta(days=30)
     )
+
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {
+            "extension_connected": True,
+            "extension_last_sync": datetime.now(timezone.utc).isoformat(),
+        }}
+    )
     
     return Token(access_token=access_token)
 

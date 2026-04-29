@@ -1,34 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+  <meta charset="UTF-8">
   <title>Options JobTracker Clipper</title>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; padding: 20px; max-width: 500px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background-color: #2563eb; }
-    #status { margin-top: 10px; color: green; display: none; }
+    body {
+      max-width: 520px;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      background: #020817;
+      color: #e2e8f0;
+    }
+
+    h2 {
+      margin: 0 0 18px;
+      color: #c4a052;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 9px 10px;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    small {
+      display: block;
+      margin-top: 6px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    }
+
+    #save {
+      background: #c4a052;
+      color: #020817;
+    }
+
+    #save:hover {
+      background: #e5c57f;
+    }
+
+    #clearToken {
+      border: 1px solid #475569;
+      background: transparent;
+      color: #cbd5e1;
+    }
+
+    #clearToken:hover {
+      border-color: #ef4444;
+      color: #fecaca;
+    }
+
+    #status {
+      display: none;
+      margin-top: 12px;
+      color: #22c55e;
+    }
   </style>
 </head>
 <body>
   <h2>Configuration JobTracker</h2>
-  
+
   <div class="form-group">
-    <label for="apiUrl">URL de l'API (Backend)</label>
-    <input type="text" id="apiUrl" placeholder="Ex: http://localhost:5000">
-    <small>Par défaut: http://localhost:5000</small>
+    <label for="apiUrl">URL de l'API</label>
+    <input type="text" id="apiUrl" placeholder="https://job-tracker-steel-eight.vercel.app">
+    <small>Laissez l'URL officielle pour la version publiee. Utilisez localhost uniquement en developpement.</small>
   </div>
 
   <div class="form-group">
-    <label for="token">Token d'Authentification (JWT)</label>
-    <input type="password" id="token" placeholder="Collez votre token ici">
-    <small>Vous pouvez le récupérer dans la console du navigateur (Application > Local Storage) ou via la page de profil (bientôt).</small>
+    <label for="token">Token local</label>
+    <input type="password" id="token" placeholder="Gere automatiquement apres connexion">
+    <small>Le token est stocke localement sur cet appareil. Le code rapide depuis JobTracker reste la methode recommandee.</small>
   </div>
 
-  <button id="save">Enregistrer</button>
-  <div id="status">Options sauvegardées !</div>
+  <div class="actions">
+    <button id="save" type="button">Enregistrer</button>
+    <button id="clearToken" type="button">Supprimer la session</button>
+  </div>
+  <div id="status"></div>
 
   <script src="options.js"></script>
 </body>
