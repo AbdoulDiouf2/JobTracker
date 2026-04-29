@@ -20,7 +20,9 @@ from routes import (
     applications_router, 
     interviews_router,
     statistics_router,
-    export_router
+    export_router,
+    search_router
+
 )
 from routes.ai import router as ai_router
 from routes.data_import import router as import_router
@@ -47,7 +49,9 @@ from routes.onboarding import router as onboarding_router
 from routes.onboarding import get_db as onboarding_get_db
 from routes.contact import router as contact_router
 from routes.contact import get_db as contact_get_db
+from routes.search import get_db as search_get_db
 from utils.auth import get_current_user, security
+
 from utils.scheduler import setup_scheduler, shutdown_scheduler
 
 # Configure logging
@@ -189,6 +193,8 @@ api_router.include_router(calendar_router)
 api_router.include_router(reminders_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(contact_router)
+api_router.include_router(search_router)
+
 
 # Include main router
 app.include_router(api_router)
@@ -209,6 +215,8 @@ app.dependency_overrides[calendar_get_db] = override_get_db
 app.dependency_overrides[reminders_get_db] = override_get_db
 app.dependency_overrides[onboarding_get_db] = override_get_db
 app.dependency_overrides[contact_get_db] = override_get_db
+app.dependency_overrides[search_get_db] = override_get_db
+
 
 # CORS middleware
 app.add_middleware(

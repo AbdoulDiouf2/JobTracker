@@ -14,7 +14,10 @@ import PWAInstallPrompt from '../components/PWAInstallPrompt';
 import { useReminders } from '../hooks/useReminders';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { useAIUsage } from '../hooks/useAIUsage';
-import { Sparkles as SparklesIcon } from 'lucide-react';
+import { Sparkles as SparklesIcon, Search, Command } from 'lucide-react';
+import Breadcrumbs from '../components/Breadcrumbs';
+import CommandPalette from '../components/CommandPalette';
+
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -200,6 +203,21 @@ export default function DashboardLayout() {
   // Process interview reminders automatically
   useReminders();
 
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+
+  // Keyboard shortcut for palette
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+
   // Swipe gesture handlers for mobile
   const handleSwipeRight = useCallback(() => {
     // Only open sidebar on mobile (when it's not already open)
@@ -261,14 +279,28 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        {/* Desktop header with notification */}
-        <header className="hidden lg:flex flex-shrink-0 items-center justify-end p-4 border-b border-slate-800 bg-[#020817]">
+        {/* Desktop header with search and breadcrumbs */}
+        <header className="hidden lg:flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-800 bg-[#020817] sticky top-0 z-30">
+          <div className="flex-1 flex items-center gap-8">
+            <Breadcrumbs />
+            <button 
+              onClick={() => setIsPaletteOpen(true)}
+              className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 transition-all w-full max-w-sm group"
+            >
+              <Search size={16} className="group-hover:text-gold transition-colors" />
+              <span className="text-sm flex-1 text-left">Rechercher...</span>
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-[10px] font-mono">
+                <Command size={10} /> K
+              </div>
+            </button>
+          </div>
           <div className="flex items-center gap-3">
             <AICreditsIndicator />
             <RefreshButton />
             <NotificationBell />
           </div>
         </header>
+
 
         {/* Main content - only this part scrolls */}
         <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
@@ -278,6 +310,10 @@ export default function DashboardLayout() {
       
       {/* PWA Install Prompt */}
       <PWAInstallPrompt />
+
+      {/* Command Palette */}
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
     </div>
+
   );
 }

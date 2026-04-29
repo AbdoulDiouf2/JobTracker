@@ -8,6 +8,11 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell';
 import { useSwipeGesture } from '../hooks/useSwipeGesture';
+import { Search, Command, ShieldAlert } from 'lucide-react';
+import Breadcrumbs from '../components/Breadcrumbs';
+import CommandPalette from '../components/CommandPalette';
+import { useEffect } from 'react';
+
 
 const AdminSidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
@@ -115,6 +120,20 @@ const AdminSidebar = ({ isOpen, onClose }) => {
 export default function AdminLayout() {
   const { isAuthenticated, isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
+
+  // Keyboard shortcut for palette
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
 
   // Swipe gesture handlers for mobile
   const handleSwipeRight = useCallback(() => {
@@ -172,20 +191,41 @@ export default function AdminLayout() {
           <NotificationBell />
         </header>
 
-        {/* Desktop header with notification */}
-        <header className="hidden lg:flex flex-shrink-0 items-center justify-between p-4 border-b border-slate-800 bg-[#020817]">
-          <div className="flex items-center gap-2 text-red-400">
-            <ShieldCheck size={20} />
-            <span className="text-sm font-medium">Mode Administration</span>
+        {/* Desktop header with search and breadcrumbs */}
+        <header className="hidden lg:flex flex-shrink-0 items-center justify-between p-4 border-b border-red-900/30 bg-[#020817] sticky top-0 z-30">
+          <div className="flex-1 flex items-center gap-8">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-2 py-1 rounded bg-red-500/10 text-red-400 border border-red-500/20">
+                <ShieldAlert size={14} />
+                <span className="text-[10px] font-bold uppercase tracking-wider">Admin</span>
+              </div>
+              <Breadcrumbs />
+            </div>
+            
+            <button 
+              onClick={() => setIsPaletteOpen(true)}
+              className="flex items-center gap-3 px-4 py-2 bg-slate-900/50 hover:bg-slate-800 border border-slate-800 rounded-xl text-slate-400 transition-all w-full max-w-sm group"
+            >
+              <Search size={16} className="group-hover:text-red-400 transition-colors" />
+              <span className="text-sm flex-1 text-left">Recherche admin...</span>
+              <div className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-800 rounded border border-slate-700 text-[10px] font-mono">
+                <Command size={10} /> K
+              </div>
+            </button>
           </div>
           <NotificationBell />
         </header>
+
 
         {/* Main content - only this part scrolls */}
         <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
           <Outlet />
         </main>
       </div>
+
+      {/* Command Palette */}
+      <CommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
     </div>
+
   );
 }

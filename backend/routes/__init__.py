@@ -7,11 +7,15 @@ from .applications import router as applications_router
 from .interviews import router as interviews_router
 from .statistics import router as statistics_router
 from .export import router as export_router
+from .search import router as search_router
+
 
 __all__ = [
     'auth_router',
     'applications_router', 
     'interviews_router',
     'statistics_router',
-    'export_router'
+    'export_router',
+    'search_router'
 ]
+
