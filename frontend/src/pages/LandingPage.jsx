@@ -119,6 +119,7 @@ const Navigation = () => {
 // ============================================
 const HeroSection = () => {
   const { language } = useLanguage();
+  const { isAuthenticated } = useAuth();
 
   const t = {
     fr: {
@@ -128,7 +129,8 @@ const HeroSection = () => {
       title3: 'Commencez à décrocher.',
       description: 'Votre Agent de Carrière Personnel alimenté par l\'IA. Centralisez vos candidatures, analysez votre profil et générez des lettres de motivation sur-mesure en un clic.',
       cta: 'Commencer gratuitement',
-      ctaSecondary: 'Voir la démo',
+      ctaAuth: 'Accéder à mon dashboard',
+      ctaSecondary: 'Voir les fonctionnalités',
       chromeExt: 'Extension Chrome incluse',
       score: 'Job Search Score',
       scoreUp: '+5 pts cette semaine',
@@ -144,7 +146,8 @@ const HeroSection = () => {
       title3: 'Start landing.',
       description: 'Your AI-powered Personal Career Agent. Centralize your applications, analyze your profile and generate tailored cover letters in one click.',
       cta: 'Start for free',
-      ctaSecondary: 'Watch demo',
+      ctaAuth: 'Go to my dashboard',
+      ctaSecondary: 'See features',
       chromeExt: 'Chrome Extension included',
       score: 'Job Search Score',
       scoreUp: '+5 pts this week',
@@ -183,16 +186,18 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-wrap justify-center gap-4 mb-10">
-              <a href="/register">
+              <a href={isAuthenticated ? '/dashboard' : '/register'}>
                 <Button className="bg-gold text-[#020817] hover:bg-gold-light px-8 py-6 rounded-full font-semibold text-lg shadow-lg hover:shadow-gold/30 transition-all">
-                  {t.cta}
+                  {isAuthenticated ? t.ctaAuth : t.cta}
                   <ArrowRight size={20} className="ml-2" />
                 </Button>
               </a>
-              <Button variant="outline" className="border-slate-700 text-white hover:bg-slate-800 px-8 py-6 rounded-full font-semibold text-lg">
-                <Play size={20} className="mr-2" />
-                {t.ctaSecondary}
-              </Button>
+              <a href="#features">
+                <Button variant="outline" className="border-slate-700 text-white hover:bg-slate-800 px-8 py-6 rounded-full font-semibold text-lg">
+                  <Sparkles size={20} className="mr-2" />
+                  {t.ctaSecondary}
+                </Button>
+              </a>
             </div>
 
             <div className="flex flex-wrap justify-center gap-3">
