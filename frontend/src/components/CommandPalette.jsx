@@ -83,8 +83,9 @@ const CommandPalette = ({ isOpen, onClose }) => {
       const data = await response.json();
       setResults(data);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Search error:', error.message || error);
     } finally {
+
       setIsLoading(false);
     }
   }, []);
