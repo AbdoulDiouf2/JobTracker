@@ -36,6 +36,7 @@ export default function AIAdvisorPage() {
   const { language } = useLanguage();
   const { data: aiUsage } = useAIUsage();
   const invalidateAIUsage = useInvalidateAIUsage();
+  const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -675,9 +676,13 @@ export default function AIAdvisorPage() {
                     onChange={handleCVUpload}
                     className="hidden"
                     id="cv-file"
-                    disabled={analyzing}
+                    disabled={analyzing || isQuotaReached}
                   />
-                  <label htmlFor="cv-file" className={`cursor-pointer ${analyzing ? 'opacity-50 pointer-events-none' : ''}`}>
+                  <label 
+                    htmlFor="cv-file" 
+                    className={`cursor-pointer ${analyzing || isQuotaReached ? 'opacity-50 pointer-events-none' : ''}`}
+                    title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
+                  >
                     <FileUp size={40} className="mx-auto text-gold/50 mb-3" />
                     <p className="text-white font-medium mb-1">{t.uploadCv}</p>
                     <p className="text-slate-500 text-xs">{t.cvFormats}</p>
@@ -708,8 +713,9 @@ export default function AIAdvisorPage() {
                   
                   <Button 
                     onClick={handleAnalyzeExistingCV}
-                    disabled={!selectedCvId || analyzing}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    disabled={!selectedCvId || analyzing || isQuotaReached}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
                   >
                     <Sparkles size={16} className="mr-2" />
                     {t.analyzeSelected}
