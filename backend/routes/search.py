@@ -4,7 +4,8 @@ import re
 from datetime import datetime
 
 from utils.auth import get_current_user
-from routes.auth import get_admin_user
+from routes.admin import get_admin_user
+
 
 router = APIRouter(prefix="/search", tags=["Search"])
 

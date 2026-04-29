@@ -222,7 +222,8 @@ app.dependency_overrides[search_get_db] = override_get_db
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=settings.CORS_ORIGINS.split(','),
+    allow_origins=[o for o in settings.CORS_ORIGINS.split(',')] + ["https://jobtracker.maadec.com"],
+
     allow_methods=["*"],
     allow_headers=["*"],
 )
