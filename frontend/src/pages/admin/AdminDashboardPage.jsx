@@ -2,7 +2,8 @@ import { motion } from 'framer-motion';
 import { useState } from 'react';
 import {
   Users, Briefcase, Calendar, TrendingUp,
-  UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward, Shield
+  UserPlus, Activity, ArrowUpRight, ArrowDownRight, CheckCircle2, SkipForward, Shield,
+  Zap, Puzzle, Layout, MousePointer2
 } from 'lucide-react';
 import { useAdminDashboard, useAdminUserGrowth, useAdminActivityStats, useAdminOnboardingStats, useQuotaSettings, useUpdateQuota } from '../../hooks/useAdmin';
 import { toast } from 'sonner';
@@ -248,32 +249,96 @@ export default function AdminDashboardPage() {
         )}
       </div>
 
-      {/* Quick Stats */}
-      {loading ? (
-        <SummarySkeleton />
-      ) : (
+      {/* User Activation Funnel */}
+      {!loading && dashboardStats && (
+        <div className="glass-card rounded-xl p-6 border border-slate-800" data-testid="admin-activation-funnel">
+          <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <TrendingUp size={20} className="text-gold" />
+            Tunnel d'Activation
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[
+              { label: 'Inscrits', value: dashboardStats.total_users, icon: Users, color: 'text-slate-400', bg: 'bg-slate-500/10' },
+              { label: 'Onboarding', value: dashboardStats.onboarding_completed_count, icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10' },
+              { label: 'Extension', value: dashboardStats.extension_connected_count, icon: Puzzle, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+              { label: '1ère Candidature', value: dashboardStats.at_least_one_application_count, icon: MousePointer2, color: 'text-purple-400', bg: 'bg-purple-500/10' },
+              { label: '5+ Candidatures', value: dashboardStats.five_plus_applications_count, icon: Briefcase, color: 'text-gold', bg: 'bg-gold/10' },
+              { label: 'Usage IA', value: dashboardStats.ai_used_count, icon: Zap, color: 'text-amber-400', bg: 'bg-amber-400/10' },
+            ].map((item, i) => (
+              <div key={item.label} className="relative group">
+                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800/50 hover:border-slate-700 transition-all text-center">
+                  <div className={`w-10 h-10 ${item.bg} ${item.color} rounded-lg flex items-center justify-center mx-auto mb-3`}>
+                    <item.icon size={20} />
+                  </div>
+                  <p className="text-2xl font-bold text-white">{item.value}</p>
+                  <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{item.label}</p>
+                </div>
+                {i < 5 && (
+                  <div className="hidden lg:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 text-slate-700">
+                    <ArrowUpRight size={16} className="rotate-45" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Extension & AI Observability */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* Extension Stats */}
+        <div className="glass-card rounded-xl p-6 border border-slate-800">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-heading text-xl font-semibold text-white flex items-center gap-2">
+              <Puzzle size={20} className="text-blue-400" />
+              Observabilité Extension
+            </h2>
+            <span className="px-2 py-1 rounded bg-blue-500/10 text-blue-400 text-xs font-bold">
+              {dashboardStats?.extension_connection_rate}% d'adoption
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/50">
+              <p className="text-2xl font-bold text-white">{dashboardStats?.extension_connected_count || 0}</p>
+              <p className="text-sm text-slate-400">Extensions connectées</p>
+            </div>
+            <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/50">
+              <p className="text-2xl font-bold text-red-400">{dashboardStats?.users_with_extension_but_no_app || 0}</p>
+              <p className="text-sm text-slate-400">Connectés sans candidature</p>
+            </div>
+          </div>
+          <p className="mt-4 text-xs text-slate-500 italic">
+            Note: Un taux élevé de "Connectés sans candidature" peut indiquer un problème d'onboarding ou de compréhension de l'extension.
+          </p>
+        </div>
+
+        {/* Quick Stats Summary */}
         <div className="glass-card rounded-xl p-6 border border-slate-800" data-testid="admin-summary">
-          <h2 className="font-heading text-xl font-semibold text-white mb-6">Résumé</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <div className="text-center">
-              <p className="text-4xl font-bold text-gold">{dashboardStats?.total_users || 0}</p>
+          <h2 className="font-heading text-xl font-semibold text-white mb-6 flex items-center gap-2">
+            <Layout size={20} className="text-gold" />
+            Résumé Plateforme
+          </h2>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-3xl font-bold text-gold">{dashboardStats?.total_users || 0}</p>
               <p className="text-slate-400 text-sm mt-1">Utilisateurs inscrits</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-green-400">{dashboardStats?.active_users || 0}</p>
+            <div>
+              <p className="text-3xl font-bold text-green-400">{dashboardStats?.active_users || 0}</p>
               <p className="text-slate-400 text-sm mt-1">Actifs (7 jours)</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-blue-400">{dashboardStats?.total_applications || 0}</p>
-              <p className="text-slate-400 text-sm mt-1">Candidatures créées</p>
+            <div>
+              <p className="text-3xl font-bold text-blue-400">{dashboardStats?.total_applications || 0}</p>
+              <p className="text-slate-400 text-sm mt-1">Candidatures totales</p>
             </div>
-            <div className="text-center">
-              <p className="text-4xl font-bold text-purple-400">{dashboardStats?.total_interviews || 0}</p>
+            <div>
+              <p className="text-3xl font-bold text-purple-400">{dashboardStats?.total_interviews || 0}</p>
               <p className="text-slate-400 text-sm mt-1">Entretiens planifiés</p>
             </div>
           </div>
         </div>
-      )}
+      </div>
+
 
       {/* Onboarding Funnel */}
       {onboardingStats && (

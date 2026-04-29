@@ -6,7 +6,8 @@ import {
   Search, Users, Shield, ShieldCheck, ShieldX, Eye,
   Edit2, Trash2, RefreshCw, ChevronLeft, ChevronRight,
   Loader2, UserCheck, UserX, Briefcase, Calendar, Download, UserPlus,
-  CheckCircle2, Clock, SkipForward, Sparkles, Key, Infinity
+  CheckCircle2, Clock, SkipForward, Sparkles, Key, Infinity,
+  AlertTriangle, FileText, MapPin, Target, GraduationCap, Zap, Puzzle
 } from 'lucide-react';
 import { useAdminUsers, useAdminMutations } from '../../hooks/useAdmin';
 import { useQuery } from '@tanstack/react-query';
@@ -204,9 +205,9 @@ const UserDetailModal = ({ user, isOpen, onClose, stats }) => {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-5 mt-4 pr-2">
-          {/* Status & Role */}
-          <div className="flex items-center gap-4">
+        <div className="flex-1 overflow-y-auto space-y-5 mt-4 pr-2 custom-scrollbar">
+          {/* Status & Risk Signals */}
+          <div className="flex flex-wrap items-center gap-3">
             <span className={`px-3 py-1.5 rounded-lg text-sm font-medium ${roleInfo.color}`}>
               {roleInfo.label}
             </span>
@@ -219,29 +220,142 @@ const UserDetailModal = ({ user, isOpen, onClose, stats }) => {
                 Désactivé
               </span>
             )}
+            {user.extension_connected && (
+              <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1.5">
+                <Puzzle size={14} /> Extension OK
+              </span>
+            )}
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">Candidatures</p>
-              <p className="text-2xl font-bold text-white">{user.applications_count}</p>
+          {/* Risk Signals Alert */}
+          {user.risk_signals && user.risk_signals.length > 0 && (
+            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+              <div className="flex items-center gap-2 text-red-400 font-semibold mb-2">
+                <AlertTriangle size={18} />
+                <span>Signaux d'attention</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {user.risk_signals.map(signal => (
+                  <span key={signal} className="text-xs px-2 py-1 rounded bg-red-500/20 text-red-400">
+                    {signal}
+                  </span>
+                ))}
+              </div>
             </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">Entretiens</p>
-              <p className="text-2xl font-bold text-white">{user.interviews_count}</p>
+          )}
+
+          {/* Candidate Profile Info */}
+          {(user.job_title || user.monthly_goal) && (
+            <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800">
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                <Target size={14} className="text-gold" />
+                Profil Candidat
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {user.job_title && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 p-1.5 bg-slate-800 rounded-lg text-slate-400">
+                      <Briefcase size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Poste ciblé</p>
+                      <p className="text-sm font-medium text-white">{user.job_title}</p>
+                    </div>
+                  </div>
+                )}
+                {user.monthly_goal && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 p-1.5 bg-slate-800 rounded-lg text-slate-400">
+                      <Target size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Objectif mensuel</p>
+                      <p className="text-sm font-medium text-white">{user.monthly_goal} candidatures</p>
+                    </div>
+                  </div>
+                )}
+                {user.experience_level && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 p-1.5 bg-slate-800 rounded-lg text-slate-400">
+                      <GraduationCap size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Niveau</p>
+                      <p className="text-sm font-medium text-white capitalize">{user.experience_level}</p>
+                    </div>
+                  </div>
+                )}
+                {user.sector && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-1 p-1.5 bg-slate-800 rounded-lg text-slate-400">
+                      <MapPin size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">Secteur</p>
+                      <p className="text-sm font-medium text-white">{user.sector}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Activity Metrics */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="p-3 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-[10px] text-slate-500 uppercase font-bold">Candidatures</p>
+              <p className="text-xl font-bold text-white">{user.applications_count}</p>
+            </div>
+            <div className="p-3 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-[10px] text-slate-500 uppercase font-bold">Entretiens</p>
+              <p className="text-xl font-bold text-white">{user.interviews_count}</p>
+            </div>
+            <div className="p-3 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-[10px] text-slate-500 uppercase font-bold">Documents</p>
+              <p className="text-xl font-bold text-white">{user.documents_count || 0}</p>
+            </div>
+            <div className="p-3 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-[10px] text-slate-500 uppercase font-bold">Usage IA (Total)</p>
+              <p className="text-xl font-bold text-amber-400 flex items-center gap-1">
+                <Zap size={16} /> {user.ai_calls_total || 0}
+              </p>
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">Date d'inscription</p>
-              <p className="text-white">{format(new Date(user.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })}</p>
+          {/* AI Usage Today */}
+          <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-slate-400 text-sm flex items-center gap-2">
+                <Sparkles size={14} className="text-amber-400" /> Usage IA aujourd'hui
+              </p>
+              <span className="text-xs font-mono font-bold text-white">
+                {user.ai_calls_today || 0} appels
+              </span>
             </div>
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-1">Dernière connexion</p>
-              <p className="text-white">
+            <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-amber-400 rounded-full transition-all" 
+                style={{ width: `${Math.min(100, (user.ai_calls_today || 0) * 10)}%` }} 
+              />
+            </div>
+          </div>
+
+          {/* Timeline Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-xs text-slate-500 mb-1">Dernière candidature</p>
+              <p className="text-sm text-white flex items-center gap-2">
+                <Calendar size={14} className="text-slate-400" />
+                {user.last_application_date 
+                  ? format(new Date(user.last_application_date), 'dd MMMM yyyy', { locale: fr })
+                  : 'Aucune'
+                }
+              </p>
+            </div>
+            <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800/50">
+              <p className="text-xs text-slate-500 mb-1">Dernière connexion</p>
+              <p className="text-sm text-white flex items-center gap-2">
+                <Clock size={14} className="text-slate-400" />
                 {user.last_login 
                   ? format(new Date(user.last_login), 'dd MMMM yyyy à HH:mm', { locale: fr })
                   : 'Jamais'
@@ -251,72 +365,76 @@ const UserDetailModal = ({ user, isOpen, onClose, stats }) => {
           </div>
 
           {/* API Keys */}
-          <div className="p-4 bg-slate-900/30 rounded-xl">
-            <p className="text-slate-400 text-sm mb-2">Clés API configurées</p>
+          <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800">
+            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-3">Clés API Personnelles</p>
             <div className="flex gap-3">
-              <span className={`px-2 py-1 rounded text-xs ${user.has_google_ai_key ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                Google AI: {user.has_google_ai_key ? '✓' : '✗'}
+              <span className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${user.has_google_ai_key ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                Google AI {user.has_google_ai_key ? '✓' : '✗'}
               </span>
-              <span className={`px-2 py-1 rounded text-xs ${user.has_openai_key ? 'bg-green-500/20 text-green-400' : 'bg-slate-700 text-slate-400'}`}>
-                OpenAI: {user.has_openai_key ? '✓' : '✗'}
+              <span className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${user.has_openai_key ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                OpenAI {user.has_openai_key ? '✓' : '✗'}
+              </span>
+              <span className={`px-2 py-1 rounded text-xs flex items-center gap-1 ${user.has_groq_key ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-slate-800 text-slate-500'}`}>
+                Groq {user.has_groq_key ? '✓' : '✗'}
               </span>
             </div>
           </div>
 
-          {/* Applications by Status */}
-          {stats?.applications_by_status && Object.keys(stats.applications_by_status).length > 0 && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <p className="text-slate-400 text-sm mb-3">Candidatures par statut</p>
-              <div className="flex flex-wrap gap-2">
-                {Object.entries(stats.applications_by_status).map(([status, count]) => (
-                  <span key={status} className="px-2 py-1 rounded text-xs bg-slate-700 text-slate-300">
-                    {status}: {count}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Onboarding Steps */}
+          {/* Onboarding Progression */}
           {user.onboarding_steps && (
-            <div className="p-4 bg-slate-900/30 rounded-xl">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-slate-400 text-sm">Progression onboarding</p>
+            <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Progression Onboarding</p>
                 {user.onboarding_completed ? (
-                  <span className="text-xs text-green-400 flex items-center gap-1">
+                  <span className="text-xs text-green-400 flex items-center gap-1 bg-green-500/10 px-2 py-0.5 rounded-full">
                     <CheckCircle2 size={12} /> Terminé
                   </span>
                 ) : (
-                  <span className="text-xs text-amber-400 flex items-center gap-1">
-                    <Clock size={12} /> En cours
+                  <span className="text-xs text-amber-400 flex items-center gap-1 bg-amber-500/10 px-2 py-0.5 rounded-full">
+                    <Clock size={12} /> Incomplet
                   </span>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 {[
-                  { key: 'goal', label: 'Objectif mensuel' },
-                  { key: 'profile', label: 'Profil / Poste' },
-                  { key: 'extension', label: 'Extension Chrome' },
-                  { key: 'first_application', label: 'Première candidature' }
+                  { key: 'goal', label: 'Objectif' },
+                  { key: 'profile', label: 'Profil' },
+                  { key: 'extension', label: 'Extension' },
+                  { key: 'first_application', label: '1ère App' }
                 ].map(({ key, label }) => {
                   const step = user.onboarding_steps[key];
                   return (
-                    <div key={key} className="flex items-center gap-2 text-xs">
+                    <div key={key} className={`flex items-center justify-between p-2 rounded-lg border ${step?.completed ? 'bg-green-500/5 border-green-500/20' : step?.skipped ? 'bg-slate-800/50 border-slate-700/50' : 'bg-slate-900 border-slate-800'}`}>
+                      <span className={`text-xs ${step?.completed ? 'text-green-400 font-medium' : 'text-slate-500'}`}>{label}</span>
                       {step?.completed ? (
-                        <CheckCircle2 size={13} className="text-green-400 shrink-0" />
+                        <CheckCircle2 size={14} className="text-green-400" />
                       ) : step?.skipped ? (
-                        <SkipForward size={13} className="text-slate-500 shrink-0" />
+                        <SkipForward size={14} className="text-slate-500" />
                       ) : (
-                        <div className="w-3 h-3 rounded-full border border-slate-600 shrink-0" />
+                        <div className="w-3.5 h-3.5 rounded-full border border-slate-700" />
                       )}
-                      <span className={step?.completed ? 'text-slate-300' : 'text-slate-500'}>{label}</span>
                     </div>
                   );
                 })}
               </div>
             </div>
           )}
+
+          {/* Applications by Status */}
+          {stats?.applications_by_status && Object.keys(stats.applications_by_status).length > 0 && (
+            <div className="p-4 bg-slate-900/30 rounded-xl border border-slate-800">
+              <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Répartition des candidatures</p>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(stats.applications_by_status).map(([status, count]) => (
+                  <span key={status} className="px-3 py-1 rounded text-xs bg-slate-800 text-slate-300 border border-slate-700">
+                    {status}: <span className="text-white font-bold">{count}</span>
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+
       </DialogContent>
     </Dialog>
   );

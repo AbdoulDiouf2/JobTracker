@@ -97,6 +97,36 @@ async def get_admin_dashboard(
     interviews_week = await db.interviews.count_documents({
         "created_at": {"$gte": week_ago.isoformat()}
     })
+
+    # --- MÉTRIQUES D'ACTIVATION (OBSERVABILITÉ PRODUIT) ---
+    onboarding_completed = await db.users.count_documents({"onboarding_completed": True})
+    extension_connected = await db.users.count_documents({"extension_connected": True})
+    
+    # Users avec candidatures (1+ et 5+)
+    app_stats_pipeline = [
+        {"$group": {"_id": "$user_id", "count": {"$sum": 1}}},
+        {"$group": {
+            "_id": None,
+            "at_least_one": {"$sum": 1},
+            "five_plus": {"$sum": {"$cond": [{"$gte": ["$count", 5]}, 1, 0]}}
+        }}
+    ]
+    app_stats = await db.applications.aggregate(app_stats_pipeline).to_list(length=1)
+    at_least_one_app = app_stats[0]["at_least_one"] if app_stats else 0
+    five_plus_apps = app_stats[0]["five_plus"] if app_stats else 0
+
+    # Usage IA
+    ai_used_count = len(await db.ai_usage.distinct("user_id"))
+
+    # Extension sans app
+    # On cherche les IDs des utilisateurs qui ont des candidatures
+    user_ids_with_apps = await db.applications.distinct("user_id")
+    users_with_ext_no_app = await db.users.count_documents({
+        "extension_connected": True,
+        "id": {"$nin": user_ids_with_apps}
+    })
+
+    extension_rate = round(extension_connected / total_users * 100, 1) if total_users > 0 else 0
     
     return AdminDashboardStats(
         total_users=total_users,
@@ -106,8 +136,16 @@ async def get_admin_dashboard(
         total_applications=total_applications,
         total_interviews=total_interviews,
         applications_this_week=applications_week,
-        interviews_this_week=interviews_week
+        interviews_this_week=interviews_week,
+        onboarding_completed_count=onboarding_completed,
+        extension_connected_count=extension_connected,
+        at_least_one_application_count=at_least_one_app,
+        five_plus_applications_count=five_plus_apps,
+        ai_used_count=ai_used_count,
+        users_with_extension_but_no_app=users_with_ext_no_app,
+        extension_connection_rate=extension_rate
     )
+
 
 
 @router.get("/stats/user-growth")
@@ -294,7 +332,7 @@ async def get_user_detail(
     admin_user: dict = Depends(get_admin_user),
     db = Depends(get_db)
 ):
-    """Récupère les détails d'un utilisateur"""
+    """Récupère les détails d'un utilisateur enrichis pour l'admin"""
     user = await db.users.find_one({"id": user_id})
     
     if not user:
@@ -303,10 +341,56 @@ async def get_user_detail(
             detail="Utilisateur non trouvé"
         )
     
+    from datetime import date
+    today = date.today().isoformat()
+
+    # Compteurs de base
     apps_count = await db.applications.count_documents({"user_id": user_id})
     interviews_count = await db.interviews.count_documents({"user_id": user_id})
+    docs_count = await db.documents.count_documents({"user_id": user_id})
     
-    # Stats supplémentaires
+    # Usage IA
+    ai_today = await db.ai_usage.find_one({"user_id": user_id, "date": today})
+    ai_today_calls = ai_today["call_count"] if ai_today else 0
+    
+    ai_total_pipeline = [
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": None, "total": {"$sum": "$call_count"}}}
+    ]
+    ai_total_res = await db.ai_usage.aggregate(ai_total_pipeline).to_list(length=1)
+    ai_total_calls = ai_total_res[0]["total"] if ai_total_res else 0
+
+    # Dernière candidature
+    last_app = await db.applications.find_one(
+        {"user_id": user_id},
+        sort=[("date_candidature", -1)]
+    )
+    last_app_date = last_app["date_candidature"] if last_app else None
+
+    # Signaux de risque
+    risk_signals = []
+    created_at = datetime.fromisoformat(user["created_at"].replace("Z", "+00:00"))
+    last_login_str = user.get("last_login")
+    
+    if not last_login_str:
+        risk_signals.append("Jamais revenu")
+    else:
+        last_login = datetime.fromisoformat(last_login_str.replace("Z", "+00:00"))
+        if (last_login - created_at).total_seconds() < 3600 and apps_count == 0:
+            risk_signals.append("Jamais revenu (session unique)")
+    
+    if apps_count == 0:
+        risk_signals.append("Aucune candidature")
+    
+    if not user.get("onboarding_completed", False):
+        risk_signals.append("Onboarding abandonné")
+    
+    if last_app_date:
+        # Si plus de 14 jours sans candidature
+        if (datetime.now(timezone.utc) - last_app_date).days > 14:
+            risk_signals.append("Inactif (14j+ sans candidature)")
+
+    # Stats par statut
     apps_by_status = await db.applications.aggregate([
         {"$match": {"user_id": user_id}},
         {"$group": {"_id": "$reponse", "count": {"$sum": 1}}}
@@ -328,12 +412,24 @@ async def get_user_detail(
             interviews_count=interviews_count,
             onboarding_completed=user.get("onboarding_completed", True),
             welcome_shown=user.get("welcome_shown", True),
-            onboarding_steps=user.get("onboarding_steps")
+            onboarding_steps=user.get("onboarding_steps"),
+            documents_count=docs_count,
+            ai_calls_today=ai_today_calls,
+            ai_calls_total=ai_total_calls,
+            last_application_date=last_app_date,
+            risk_signals=risk_signals,
+            extension_connected=bool(user.get("extension_connected")),
+            monthly_goal=user.get("onboarding_steps", {}).get("goal", {}).get("data", {}).get("monthly_goal"),
+            job_title=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("job_title"),
+            experience_level=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("experience_level"),
+            sector=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("sector"),
+            contract_types=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("contract_types")
         ),
         "stats": {
             "applications_by_status": {item["_id"]: item["count"] for item in apps_by_status}
         }
     }
+
 
 
 @router.put("/users/{user_id}")

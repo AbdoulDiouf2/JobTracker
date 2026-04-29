@@ -244,6 +244,12 @@ class UserAdminResponse(UserResponse):
     applications_count: int = 0
     interviews_count: int = 0
     onboarding_steps: Optional[dict] = None
+    documents_count: int = 0
+    ai_calls_today: int = 0
+    ai_calls_total: int = 0
+    last_application_date: Optional[datetime] = None
+    risk_signals: List[str] = Field(default_factory=list)
+
 
 
 # ============================================
@@ -784,6 +790,14 @@ class AdminDashboardStats(BaseModel):
     total_interviews: int = 0
     applications_this_week: int = 0
     interviews_this_week: int = 0
+    # Activation & Observability
+    onboarding_completed_count: int = 0
+    extension_connected_count: int = 0
+    at_least_one_application_count: int = 0
+    five_plus_applications_count: int = 0
+    ai_used_count: int = 0
+    users_with_extension_but_no_app: int = 0
+    extension_connection_rate: float = 0.0
 
 
 class AdminUserUpdate(BaseModel):
