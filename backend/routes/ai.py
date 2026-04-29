@@ -67,8 +67,7 @@ AI_MODELS = {
     "groq": [
         {"model_id": "llama-3.3-70b-versatile", "display_name": "Llama 3.3 70B", "description": "Modèle Llama puissant sur Groq"},
         {"model_id": "llama-3.1-8b-instant", "display_name": "Llama 3.1 8B", "description": "Modèle rapide et léger"},
-        {"model_id": "mixtral-8x7b-32768", "display_name": "Mixtral 8x7B", "description": "Modèle Mixtral de Mistral AI"},
-        {"model_id": "gemma2-9b-it", "display_name": "Gemma 2 9B", "description": "Modèle Google Gemma sur Groq"},
+        {"model_id": "deepseek-r1-distill-llama-70b", "display_name": "DeepSeek R1 70B", "description": "Modèle raisonnant très puissant"},
     ]
 }
 
