@@ -35,9 +35,13 @@ import { toast } from 'sonner';
 import axios from 'axios';
 import CoverLetterGeneratorModal from '../components/CoverLetterGeneratorModal';
 
+import { useAIUsage } from '../hooks/useAIUsage';
+
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
 export default function DocumentsPage() {
+  const { data: aiUsage } = useAIUsage();
+  const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
   const { language } = useLanguage();
   const [documents, setDocuments] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -709,7 +713,9 @@ export default function DocumentsPage() {
           <div className="flex justify-end mb-4">
             <Button 
               onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }} 
-              className="bg-gold hover:bg-gold/90 text-[#020817]"
+              className="bg-gold hover:bg-gold/90 text-[#020817] disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isQuotaReached}
+              title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
             >
               <Sparkles size={16} className="mr-2" />
               {t.generateLetter}
@@ -729,7 +735,9 @@ export default function DocumentsPage() {
               <p className="text-sm text-slate-500 mt-2">{t.noGeneratedLettersDesc}</p>
               <Button 
                 onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }}
-                className="mt-4 bg-gold hover:bg-gold/90 text-[#020817]"
+                className="mt-4 bg-gold hover:bg-gold/90 text-[#020817] disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={isQuotaReached}
+                title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
               >
                 <Sparkles size={16} className="mr-2" />
                 {t.generateLetter}
