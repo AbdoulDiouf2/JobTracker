@@ -46,11 +46,13 @@ def decode_token(token: str) -> Optional[TokenData]:
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         user_id: str = payload.get("sub")
+        source: Optional[str] = payload.get("source")
         if user_id is None:
             return None
-        return TokenData(user_id=user_id)
+        return TokenData(user_id=user_id, source=source)
     except JWTError:
         return None
+
 
 
 async def get_current_user(
@@ -69,4 +71,8 @@ async def get_current_user(
     if token_data is None or token_data.user_id is None:
         raise credentials_exception
     
-    return {"user_id": token_data.user_id}
+    return {
+        "user_id": token_data.user_id,
+        "source": token_data.source or "webapp"
+    }
+

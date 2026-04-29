@@ -132,7 +132,8 @@ async def create_application(
     """Crée une nouvelle candidature"""
     application = JobApplication(
         **app_data.model_dump(),
-        user_id=current_user["user_id"]
+        user_id=current_user["user_id"],
+        source=current_user.get("source", "webapp")
     )
     
     app_dict = application.model_dump()

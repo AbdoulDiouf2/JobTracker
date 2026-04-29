@@ -115,10 +115,13 @@ async def get_admin_dashboard(
     at_least_one_app = app_stats[0]["at_least_one"] if app_stats else 0
     five_plus_apps = app_stats[0]["five_plus"] if app_stats else 0
 
-    # Usage IA
     ai_used_count = len(await db.ai_usage.distinct("user_id"))
 
+    # Candidatures via extension
+    apps_via_ext = await db.applications.count_documents({"source": "extension"})
+
     # Extension sans app
+
     # On cherche les IDs des utilisateurs qui ont des candidatures
     user_ids_with_apps = await db.applications.distinct("user_id")
     users_with_ext_no_app = await db.users.count_documents({
@@ -143,8 +146,10 @@ async def get_admin_dashboard(
         five_plus_applications_count=five_plus_apps,
         ai_used_count=ai_used_count,
         users_with_extension_but_no_app=users_with_ext_no_app,
-        extension_connection_rate=extension_rate
+        extension_connection_rate=extension_rate,
+        applications_via_extension_count=apps_via_ext
     )
+
 
 
 
@@ -419,7 +424,9 @@ async def get_user_detail(
             last_application_date=last_app_date,
             risk_signals=risk_signals,
             extension_connected=bool(user.get("extension_connected")),
+            extension_last_sync=user.get("extension_last_sync"),
             monthly_goal=user.get("onboarding_steps", {}).get("goal", {}).get("data", {}).get("monthly_goal"),
+
             job_title=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("job_title"),
             experience_level=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("experience_level"),
             sector=user.get("onboarding_steps", {}).get("profile", {}).get("data", {}).get("sector"),

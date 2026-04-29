@@ -303,8 +303,16 @@ export default function AdminDashboardPage() {
               <p className="text-sm text-slate-400">Extensions connectées</p>
             </div>
             <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/50">
+              <p className="text-2xl font-bold text-gold">{dashboardStats?.applications_via_extension_count || 0}</p>
+              <p className="text-sm text-slate-400">Apps via extension</p>
+            </div>
+            <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/50">
               <p className="text-2xl font-bold text-red-400">{dashboardStats?.users_with_extension_but_no_app || 0}</p>
-              <p className="text-sm text-slate-400">Connectés sans candidature</p>
+              <p className="text-sm text-slate-400">Connectés sans app</p>
+            </div>
+            <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/50">
+              <p className="text-2xl font-bold text-blue-400">{dashboardStats?.extension_connection_rate}%</p>
+              <p className="text-sm text-slate-400">Taux d'adoption</p>
             </div>
           </div>
           <p className="mt-4 text-xs text-slate-500 italic">

@@ -249,6 +249,8 @@ class UserAdminResponse(UserResponse):
     ai_calls_total: int = 0
     last_application_date: Optional[datetime] = None
     risk_signals: List[str] = Field(default_factory=list)
+    extension_last_sync: Optional[str] = None
+
 
 
 
@@ -277,6 +279,8 @@ class JobApplicationBase(BaseModel):
     experience_requise: Optional[str] = Field(None, max_length=100, description="Expérience requise extraite")
     # CV associé
     cv_id: Optional[str] = Field(None, description="ID du CV associé à cette candidature")
+    source: str = Field(default="webapp", description="Source de la candidature (webapp, extension)")
+
 
 
 class JobApplicationCreate(JobApplicationBase):
@@ -705,6 +709,8 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     user_id: Optional[str] = None
+    source: Optional[str] = None
+
 
 
 # ============================================
@@ -798,6 +804,8 @@ class AdminDashboardStats(BaseModel):
     ai_used_count: int = 0
     users_with_extension_but_no_app: int = 0
     extension_connection_rate: float = 0.0
+    applications_via_extension_count: int = 0
+
 
 
 class AdminUserUpdate(BaseModel):

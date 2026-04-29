@@ -221,8 +221,13 @@ const UserDetailModal = ({ user, isOpen, onClose, stats }) => {
               </span>
             )}
             {user.extension_connected && (
-              <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1.5">
+              <span className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-500/20 text-blue-400 flex items-center gap-1.5" title={user.extension_last_sync ? `Dernière sync: ${format(new Date(user.extension_last_sync), 'dd/MM HH:mm', { locale: fr })}` : 'Jamais synchronisé'}>
                 <Puzzle size={14} /> Extension OK
+                {user.extension_last_sync && (
+                  <span className="text-[10px] opacity-70 ml-1">
+                    ({format(new Date(user.extension_last_sync), 'dd/MM', { locale: fr })})
+                  </span>
+                )}
               </span>
             )}
           </div>
