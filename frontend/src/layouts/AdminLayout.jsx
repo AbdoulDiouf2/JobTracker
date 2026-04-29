@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, BarChart3, Settings, LogOut, Menu,
@@ -11,7 +11,7 @@ import { useSwipeGesture } from '../hooks/useSwipeGesture';
 import { Search, Command, ShieldAlert } from 'lucide-react';
 import Breadcrumbs from '../components/Breadcrumbs';
 import CommandPalette from '../components/CommandPalette';
-import { useEffect } from 'react';
+
 
 
 const AdminSidebar = ({ isOpen, onClose }) => {
