@@ -29,6 +29,7 @@ import axios from 'axios';
 import Markdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useAIUsage, useInvalidateAIUsage } from '../hooks/useAIUsage';
+import { Link } from 'react-router-dom';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -409,8 +410,9 @@ export default function AIAdvisorPage() {
     return 'text-red-400';
   };
 
-  // Group models by provider
+  // Group only available models by provider
   const modelsByProvider = availableModels.reduce((acc, model) => {
+    if (!model.is_available) return acc;
     if (!acc[model.provider]) acc[model.provider] = [];
     acc[model.provider].push(model);
     return acc;
@@ -491,10 +493,9 @@ export default function AIAdvisorPage() {
                       <DropdownMenuItem
                         key={model.model_id}
                         onClick={() => setSelectedModel(model)}
-                        className={`cursor-pointer ${!model.is_available ? 'opacity-50' : ''} ${
+                        className={`cursor-pointer ${
                           selectedModel?.model_id === model.model_id ? 'bg-slate-800' : ''
                         }`}
-                        disabled={!model.is_available}
                       >
                         <div className="flex flex-col">
                           <span className="text-white">{model.display_name}</span>
@@ -509,6 +510,11 @@ export default function AIAdvisorPage() {
                   </div>
                 ))
               )}
+              <div className="p-2">
+                <Link to="/settings" className="flex items-center justify-center w-full py-1.5 text-xs text-gold hover:text-gold-light bg-gold/10 hover:bg-gold/20 rounded transition-colors">
+                  {language === 'fr' ? 'Ajouter d\'autres modèles ⚙️' : 'Add more models ⚙️'}
+                </Link>
+              </div>
             </DropdownMenuContent>
           </DropdownMenu>
           
