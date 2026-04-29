@@ -405,9 +405,25 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(extensionCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(extensionCode).then(() => {
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      }).catch(err => console.error('Clipboard failed', err));
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = extensionCode;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      } catch (err) {
+        console.error('Fallback clipboard failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   return (
@@ -484,7 +500,7 @@ function Step3({ onNext, onSkip, dir, extensionConnected }) {
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '8px', border: '1px solid rgba(196,160,82,0.3)' }}>
                   <span style={{ fontFamily: 'monospace', fontSize: '18px', fontWeight: 'bold', color: css.gold, letterSpacing: '2px' }}>{extensionCode}</span>
-                  <button onClick={handleCopyCode} style={{ background: 'none', border: 'none', color: codeCopied ? css.success : css.muted, cursor: 'pointer', padding: '4px' }}>
+                  <button type="button" onClick={handleCopyCode} style={{ background: 'none', border: 'none', color: codeCopied ? css.success : css.muted, cursor: 'pointer', padding: '4px' }}>
                     {codeCopied ? <Check size={16} /> : <Copy size={16} />}
                   </button>
                 </div>

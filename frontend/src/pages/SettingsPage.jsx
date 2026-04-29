@@ -436,9 +436,25 @@ export default function SettingsPage() {
   };
 
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(extensionCode);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(extensionCode).then(() => {
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      }).catch(err => console.error('Clipboard failed', err));
+    } else {
+      const textArea = document.createElement("textarea");
+      textArea.value = extensionCode;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCodeCopied(true);
+        setTimeout(() => setCodeCopied(false), 2000);
+      } catch (err) {
+        console.error('Fallback clipboard failed', err);
+      }
+      document.body.removeChild(textArea);
+    }
   };
 
   return (
