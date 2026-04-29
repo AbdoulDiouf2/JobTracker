@@ -341,8 +341,8 @@ async def get_available_models(
     user_keys = await get_user_api_keys(current_user["user_id"], db)
     
     env_keys = {
-        "openai": bool(os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")),
-        "google": bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")),
+        "openai": bool(os.environ.get("OPENAI_API_KEY")),
+        "google": bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")),
         "groq": bool(os.environ.get("GROQ_API_KEY"))
     }
     

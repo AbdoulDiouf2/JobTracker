@@ -410,9 +410,8 @@ export default function AIAdvisorPage() {
     return 'text-red-400';
   };
 
-  // Group only available models by provider
+  // Group models by provider
   const modelsByProvider = availableModels.reduce((acc, model) => {
-    if (!model.is_available) return acc;
     if (!acc[model.provider]) acc[model.provider] = [];
     acc[model.provider].push(model);
     return acc;
@@ -492,10 +491,11 @@ export default function AIAdvisorPage() {
                     {models.map((model) => (
                       <DropdownMenuItem
                         key={model.model_id}
-                        onClick={() => setSelectedModel(model)}
-                        className={`cursor-pointer ${
+                        onClick={() => model.is_available && setSelectedModel(model)}
+                        className={`cursor-pointer ${!model.is_available ? 'opacity-40 grayscale pointer-events-none' : ''} ${
                           selectedModel?.model_id === model.model_id ? 'bg-slate-800' : ''
                         }`}
+                        disabled={!model.is_available}
                       >
                         <div className="flex flex-col">
                           <span className="text-white">{model.display_name}</span>
