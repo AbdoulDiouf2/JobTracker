@@ -55,8 +55,14 @@ def decode_token(token: str) -> Optional[TokenData]:
 
 
 
+def get_db():
+    """Dependency injection pour la DB — overridée dans server.py"""
+    pass
+
+
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db=Depends(get_db),
 ) -> dict:
     """Récupère l'utilisateur actuel depuis le token"""
     credentials_exception = HTTPException(
@@ -64,13 +70,21 @@ async def get_current_user(
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    
+
     token = credentials.credentials
     token_data = decode_token(token)
-    
+
     if token_data is None or token_data.user_id is None:
         raise credentials_exception
-    
+
+    user = await db.users.find_one({"id": token_data.user_id}, {"is_active": 1})
+    if not user or not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte désactivé",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return {
         "user_id": token_data.user_id,
         "source": token_data.source or "webapp"

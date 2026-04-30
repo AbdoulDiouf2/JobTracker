@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -40,9 +40,18 @@ const GoogleIcon = () => (
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { login, loginWithGoogle, loading } = useAuth();
   const { language } = useLanguage();
-  const [serverError, setServerError] = useState(location.state?.error || '');
+
+  const oauthErrorMessages = {
+    account_disabled: language === 'fr' ? 'Votre compte a été désactivé. Contactez le support.' : 'Your account has been disabled. Contact support.',
+    oauth_no_email: language === 'fr' ? 'Impossible de récupérer votre email Google.' : 'Could not retrieve your Google email.',
+  };
+  const oauthError = searchParams.get('error');
+  const [serverError, setServerError] = useState(
+    location.state?.error || (oauthError ? (oauthErrorMessages[oauthError] || oauthError) : '')
+  );
   const [showPassword, setShowPassword] = useState(false);
 
   const { register, handleSubmit, formState: { errors } } = useForm({

@@ -32,6 +32,7 @@ from routes.tracking import router as tracking_router
 from routes.documents import router as documents_router
 from routes.calendar import router as calendar_router
 from routes.auth import get_db as auth_get_db
+from utils.auth import get_db as auth_utils_get_db
 from routes.applications import get_db as app_get_db
 from routes.interviews import get_db as interview_get_db
 from routes.statistics import get_db as stats_get_db
@@ -216,6 +217,7 @@ app.dependency_overrides[reminders_get_db] = override_get_db
 app.dependency_overrides[onboarding_get_db] = override_get_db
 app.dependency_overrides[contact_get_db] = override_get_db
 app.dependency_overrides[search_get_db] = override_get_db
+app.dependency_overrides[auth_utils_get_db] = override_get_db
 
 
 # CORS middleware
