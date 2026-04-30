@@ -10,11 +10,11 @@ import {
   Plus, Search, Star, Trash2, Edit2, ExternalLink,
   ChevronLeft, ChevronRight, X, Loader2, MapPin,
   Calendar, MessageSquare, LayoutGrid, List, Eye, ChevronDown,
-  Clock, Mail, Target, Bell, RefreshCw, FileText, Sparkles, Copy, Check
+  Clock, Mail, Target, Bell, RefreshCw, FileText, Sparkles, Copy, Check, Puzzle
 } from 'lucide-react';
 import { useApplications } from '../hooks/useApplications';
 import { useQueryClient } from '@tanstack/react-query';
-import { api } from '../contexts/AuthContext';
+import { api, useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -858,6 +858,7 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
 };
 
 export default function ApplicationsPage() {
+  const { user } = useAuth();
   const { language } = useLanguage();
   const navigate = useNavigate();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
@@ -1321,8 +1322,46 @@ export default function ApplicationsPage() {
           )}
         </>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-slate-500">{t.noResults}</p>
+        <div className="text-center py-16 px-4 bg-slate-900/30 rounded-2xl border border-slate-800/50 mt-6">
+          <div className="w-16 h-16 rounded-2xl bg-slate-800/50 flex items-center justify-center mx-auto mb-4">
+            <LayoutGrid size={32} className="text-slate-500" />
+          </div>
+          <p className="text-lg font-medium text-white mb-2">{t.noResults}</p>
+          <p className="text-slate-500 max-w-md mx-auto mb-6">
+            {language === 'fr' 
+              ? "Vous n'avez pas encore de candidatures correspondant à ces critères." 
+              : "You don't have any applications matching these criteria yet."}
+          </p>
+          
+          {user && !user.extension_connected && (
+            <div className="max-w-md mx-auto bg-gradient-to-r from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-xl p-5 mt-4">
+              <div className="flex items-center gap-3 mb-3 text-left">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                  <Puzzle size={20} className="text-blue-400" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-white">JobTracker Clipper</h4>
+                  <p className="text-xs text-blue-400/80">
+                    {language === 'fr' ? 'Le moyen le plus rapide d\'ajouter des candidatures' : 'The fastest way to add applications'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-400 mb-4 text-left leading-relaxed">
+                {language === 'fr' 
+                  ? "Installez notre extension Chrome pour capturer des offres d'emploi en 1 clic depuis LinkedIn, Indeed, Welcome to the Jungle, etc." 
+                  : "Install our Chrome extension to capture job offers in 1 click from LinkedIn, Indeed, Welcome to the Jungle, etc."}
+              </p>
+              <a
+                href="https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+              >
+                <Puzzle size={16} />
+                {language === 'fr' ? "Installer l'extension Chrome" : "Install Chrome Extension"}
+              </a>
+            </div>
+          )}
         </div>
       )}
 

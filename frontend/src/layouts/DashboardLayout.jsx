@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
   Settings, LogOut, Menu, X, ChevronRight, User, Sparkles, FolderSync,
-  ShieldCheck, FileText
+  ShieldCheck, FileText, Puzzle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
@@ -130,6 +130,23 @@ const Sidebar = ({ isOpen, onClose }) => {
 
         {/* User & Logout - Fixed at bottom */}
         <div className="flex-shrink-0 p-4 border-t border-slate-800 bg-[#0a0f1a]">
+          {user && !user.extension_connected && (
+            <a
+              href="https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-4 py-3 mb-4 rounded-xl bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/30 text-blue-400 hover:text-white hover:border-blue-500/50 hover:from-blue-600/30 hover:to-purple-600/30 transition-all duration-300 group"
+              title="JobTracker Clipper"
+            >
+              <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+                <Puzzle size={16} className="text-blue-400 group-hover:text-white transition-colors" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm text-white truncate">Clipper</p>
+                <p className="text-xs text-blue-400/80 truncate">{language === 'fr' ? "Installer l'extension" : "Install extension"}</p>
+              </div>
+            </a>
+          )}
           <Link
             to="/dashboard/profile"
             onClick={onClose}

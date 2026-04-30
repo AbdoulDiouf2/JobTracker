@@ -47,6 +47,12 @@ export const AuthProvider = ({ children }) => {
   const isAuthenticated = !!token && !!user;
   const isAdmin = user?.role === 'admin';
 
+  useEffect(() => {
+    if (token) {
+      refreshUser();
+    }
+  }, [token]);
+
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
@@ -160,6 +166,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const response = await api.get('/api/auth/me');
+      localStorage.setItem('user', JSON.stringify(response.data));
+      setUser(response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Failed to refresh user data:', err);
+      return null;
+    }
+  };
+
   const value = {
     user,
     token,
@@ -174,6 +192,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateProfile,
     updateUser,
+    refreshUser,
     api
   };
 

@@ -1,11 +1,12 @@
-import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useRefresh } from '../contexts/RefreshContext';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function RefreshButton() {
   const { language } = useLanguage();
   const { triggerRefresh, isRefreshing } = useRefresh();
+  const { refreshUser } = useAuth();
 
   const t = {
     fr: { tooltip: 'Rafraîchir les données' },
@@ -14,7 +15,10 @@ export default function RefreshButton() {
 
   const handleRefresh = async () => {
     if (isRefreshing) return;
-    await triggerRefresh();
+    await Promise.all([
+      triggerRefresh(),
+      refreshUser()
+    ]);
   };
 
   return (
