@@ -12,6 +12,8 @@ from models import (
     MatchingScoreRequest, MatchingScoreResponse, ApplicationStatus
 )
 from utils.auth import get_current_user
+from utils.crypto import decrypt
+import os
 
 router = APIRouter(prefix="/applications", tags=["Application Tracking"])
 
@@ -353,6 +355,9 @@ Best regards,
 async def calculate_matching_score(
     application_id: str,
     cv_text: Optional[str] = None,
+    cv_id: Optional[str] = None,
+    model_provider: Optional[str] = None,
+    model_name: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -373,14 +378,32 @@ async def calculate_matching_score(
         )
     
     # Utiliser le CV fourni ou récupérer le dernier CV analysé
-    if not cv_text:
-        # Chercher le dernier CV analysé pour cet utilisateur
-        cv_analysis = await db.cv_analyses.find_one(
-            {"user_id": current_user["user_id"]},
-            sort=[("created_at", -1)]
-        )
-        if cv_analysis:
-            cv_text = cv_analysis.get("extracted_text", "")
+    if not cv_text or not cv_text.strip():
+        # Si un ID de document est fourni, chercher son analyse
+        if cv_id:
+            cv_analysis = await db.cv_analyses.find_one(
+                {"user_id": current_user["user_id"], "document_id": cv_id},
+                sort=[("created_at", -1)]
+            )
+            if cv_analysis:
+                cv_text = cv_analysis.get("extracted_text", "")
+        
+        # Sinon, chercher le dernier CV analysé globalement
+        if not cv_text or not cv_text.strip():
+            cv_analysis = await db.cv_analyses.find_one(
+                {"user_id": current_user["user_id"], "extracted_text": {"$exists": True, "$ne": ""}},
+                sort=[("created_at", -1)]
+            )
+            if cv_analysis:
+                cv_text = cv_analysis.get("extracted_text", "")
+            
+    # Fallback sur le CV de l'onboarding si toujours rien
+    if not cv_text or not cv_text.strip():
+        user = await db.users.find_one({"id": current_user["user_id"]})
+        if user:
+            onboarding_steps = user.get("onboarding_steps", {})
+            profile_data = onboarding_steps.get("profile", {}).get("data", {})
+            cv_text = profile_data.get("cv_text", "")
     
     if not cv_text:
         raise HTTPException(
@@ -423,30 +446,98 @@ Score guide:
 """
 
     try:
-        # Try emergentintegrations first
-        try:
-            from emergentintegrations.llm import chat, LlmModel
-            response = await chat(
-                model=LlmModel.GEMINI_2_FLASH,
-                system_message="Tu es un expert en recrutement et en analyse de CV.",
-                user_message=prompt
-            )
-            response_text = response.message if hasattr(response, 'message') else str(response)
-        except ImportError:
-            # Fallback to standard Google AI SDK
-            import google.genai as genai
-            import os
-            
-            api_key = os.environ.get("GOOGLE_AI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        # 1. Récupérer toutes les clés possibles de l'utilisateur
+        user = await db.users.find_one(
+            {"id": current_user["user_id"]}, 
+            {"google_ai_key": 1, "openai_key": 1, "groq_key": 1}
+        )
+        
+        user_keys = {
+            "google": decrypt(user.get("google_ai_key")) if user else None,
+            "openai": decrypt(user.get("openai_key")) if user else None,
+            "groq": decrypt(user.get("groq_key")) if user else None
+        }
+        
+        # 2. Clés d'environnement
+        env_keys = {
+            "google": os.environ.get("GOOGLE_AI_API_KEY") or os.environ.get("GOOGLE_API_KEY"),
+            "openai": os.environ.get("OPENAI_API_KEY"),
+            "groq": os.environ.get("GROQ_API_KEY")
+        }
+        
+        response_text = None
+        last_error = None
+        
+        # 3. Essayer les providers par ordre de priorité
+        # Si un provider est spécifié, on l'essaie en premier
+        providers_to_try = ["groq", "openai", "google"]
+        if model_provider and model_provider.lower() in providers_to_try:
+            providers_to_try.remove(model_provider.lower())
+            providers_to_try.insert(0, model_provider.lower())
+        
+        for provider in providers_to_try:
+            api_key = user_keys.get(provider) or env_keys.get(provider)
             if not api_key:
-                raise Exception("No API key available")
-            
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt
-            )
-            response_text = response.text
+                continue
+                
+            try:
+                # Utiliser le modèle spécifié ou le défaut du provider
+                target_model = model_name if (model_provider and model_provider.lower() == provider) else None
+                
+                if provider == "groq":
+                    try:
+                        from groq import Groq
+                        client = Groq(api_key=api_key)
+                        response = client.chat.completions.create(
+                            model=target_model or "llama-3.3-70b-versatile",
+                            messages=[
+                                {"role": "system", "content": "Tu es un expert en recrutement et en analyse de CV. Tu dois répondre uniquement en JSON."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                        response_text = response.choices[0].message.content
+                    except ImportError:
+                        continue # Groq non installé
+                        
+                elif provider == "openai":
+                    try:
+                        from openai import OpenAI
+                        client = OpenAI(api_key=api_key)
+                        response = client.chat.completions.create(
+                            model=target_model or "gpt-4o-mini",
+                            messages=[
+                                {"role": "system", "content": "Tu es un expert en recrutement et en analyse de CV. Tu dois répondre uniquement en JSON."},
+                                {"role": "user", "content": prompt}
+                            ],
+                            response_format={"type": "json_object"}
+                        )
+                        response_text = response.choices[0].message.content
+                    except ImportError:
+                        continue # OpenAI non installé
+                        
+                elif provider == "google":
+                    try:
+                        import google.genai as genai
+                        client = genai.Client(api_key=api_key)
+                        response = client.models.generate_content(
+                            model=target_model or "gemini-1.5-flash",
+                            contents=prompt
+                        )
+                        response_text = response.text
+                    except ImportError:
+                        continue
+                
+                if response_text:
+                    break # On a une réponse !
+                    
+            except Exception as e:
+                print(f"Matching AI Error with {provider}: {str(e)}")
+                last_error = e
+                continue
+        
+        if not response_text:
+            raise Exception(f"Tous les services IA ont échoué ou aucune clé n'est disponible. Dernière erreur: {last_error}")
         
         # Parser la réponse JSON
         import json

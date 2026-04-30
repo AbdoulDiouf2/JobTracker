@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   Target, CheckCircle, XCircle, Lightbulb, Loader2, RefreshCw,
-  ChevronDown, ChevronUp, FileText, Sparkles
+  ChevronDown, ChevronUp, FileText, Sparkles, Cpu
 } from 'lucide-react';
 import { useTracking } from '../hooks/useTracking';
 import { Button } from './ui/button';
@@ -13,6 +13,13 @@ import {
   DialogTitle,
 } from './ui/dialog';
 import { Textarea } from './ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './ui/select';
 import { toast } from 'sonner';
 
 // Score color based on value
@@ -39,53 +46,60 @@ const getScoreLabel = (score) => {
 
 // Score Circle Component
 const ScoreCircle = ({ score }) => {
-  const circumference = 2 * Math.PI * 45;
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
   return (
-    <div className="relative w-32 h-32">
+    <div className="relative w-24 h-24 flex-shrink-0">
       <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
         {/* Background circle */}
         <circle
           cx="50"
           cy="50"
-          r="45"
+          r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="8"
-          className="text-slate-700"
+          strokeWidth="10"
+          className="text-slate-800/50"
         />
         {/* Progress circle */}
         <motion.circle
           cx="50"
           cy="50"
-          r="45"
+          r={radius}
           fill="none"
           stroke="currentColor"
-          strokeWidth="8"
+          strokeWidth="10"
           strokeLinecap="round"
           className={getScoreColor(score)}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset }}
-          transition={{ duration: 1, ease: "easeOut" }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
           style={{
             strokeDasharray: circumference,
           }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className={`text-3xl font-bold ${getScoreColor(score)}`}>{score}%</span>
-        <span className="text-xs text-slate-400">compatibilité</span>
+        <span className={`text-xl font-bold ${getScoreColor(score)}`}>{score}%</span>
+        <span className="text-[10px] text-slate-400 font-medium">match</span>
       </div>
     </div>
   );
 };
 
 export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
-  const { calculateMatchingScore, getMatchingScore, loading } = useTracking();
+  const { calculateMatchingScore, getMatchingScore, getCVHistory, getCVDocuments, loading: trackingLoading } = useTracking();
   const [matchData, setMatchData] = useState(null);
   const [cvText, setCvText] = useState('');
   const [showCvInput, setShowCvInput] = useState(false);
+  const [cvHistory, setCvHistory] = useState([]);
+  const [cvDocuments, setCvDocuments] = useState([]);
+  const [selectedCvSource, setSelectedCvSource] = useState('last'); // 'last', 'history', 'manual', 'docs'
+  const [selectedCvId, setSelectedCvId] = useState(null);
+  const [availableModels, setAvailableModels] = useState([]);
+  const [selectedModel, setSelectedModel] = useState(null);
   const [calculating, setCalculating] = useState(false);
   const [expanded, setExpanded] = useState({
     strengths: true,
@@ -106,11 +120,49 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
     }
   }, [getMatchingScore, application?.id]);
 
+  const loadHistory = useCallback(async () => {
+    try {
+      const [history, docs] = await Promise.all([
+        getCVHistory(),
+        getCVDocuments()
+      ]);
+      setCvHistory(history || []);
+      setCvDocuments(docs || []);
+    } catch (err) {
+      console.error('Erreur chargement historique CV:', err);
+    }
+  }, [getCVHistory, getCVDocuments]);
+
+  const fetchModels = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const API_URL = process.env.REACT_APP_BACKEND_URL;
+      const response = await fetch(`${API_URL}/api/ai/available-models`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await response.json();
+      const models = data.models || [];
+      setAvailableModels(models);
+      
+      // Set default model if available
+      if (data.default_model) {
+        setSelectedModel(data.default_model);
+      } else if (models.length > 0) {
+        const firstAvailable = models.find(m => m.is_available);
+        if (firstAvailable) setSelectedModel(firstAvailable);
+      }
+    } catch (error) {
+      console.error('Error fetching models:', error);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen && application?.id) {
       loadExistingScore();
+      loadHistory();
+      fetchModels();
     }
-  }, [isOpen, application?.id, loadExistingScore]);
+  }, [isOpen, application?.id, loadExistingScore, loadHistory, fetchModels]);
 
   const handleCalculate = async () => {
     if (!application.description_poste && !cvText?.trim()) {
@@ -119,7 +171,13 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
     }
     setCalculating(true);
     try {
-      const result = await calculateMatchingScore(application.id, cvText || null);
+      const result = await calculateMatchingScore(
+        application.id, 
+        cvText || null, 
+        selectedCvSource === 'docs' ? selectedCvId : null,
+        selectedModel?.provider,
+        selectedModel?.model_id
+      );
       setMatchData(result);
       setShowCvInput(false);
     } catch (err) {
@@ -142,7 +200,7 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 mt-4 pr-2">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 mt-4 pr-2">
           {/* Application Info */}
           <div className="flex items-center gap-4 p-4 bg-slate-800/30 rounded-xl">
             <div className="w-12 h-12 rounded-xl bg-navy flex items-center justify-center text-gold font-bold text-lg">
@@ -174,7 +232,7 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="space-y-4"
+              className="flex flex-col gap-4"
             >
               {/* Main Score */}
               <div className={`p-6 rounded-xl border ${getScoreBgColor(matchData.score)} flex items-center justify-between`}>
@@ -184,7 +242,9 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
                   </h3>
                   <p className="text-slate-400 mt-1">{matchData.summary}</p>
                 </div>
-                <ScoreCircle score={matchData.score} />
+                <div className="flex-shrink-0 ml-4">
+                  <ScoreCircle score={matchData.score} />
+                </div>
               </div>
 
               {/* Strengths */}
@@ -311,32 +371,127 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
 
               {/* Recalculate Button */}
               <Button 
-                onClick={() => setMatchData(null)}
+                onClick={() => {
+                  setMatchData(null);
+                  setSelectedCvSource('last');
+                  setCvText('');
+                }}
                 variant="outline" 
                 className="w-full border-slate-700"
               >
                 <RefreshCw className="mr-2" size={16} />
-                Recalculer le score
+                Recalculer avec un autre CV
               </Button>
             </motion.div>
           )}
 
           {/* Calculate Form */}
           {!matchData && hasJobDescription && (
-            <div className="space-y-4">
-              {/* CV Input Toggle */}
-              <button
-                onClick={() => setShowCvInput(!showCvInput)}
-                className="w-full p-4 bg-slate-800/30 rounded-xl flex items-center justify-between hover:bg-slate-800/50 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <FileText size={18} className="text-slate-400" />
-                  <span className="text-white">Fournir le texte du CV (optionnel)</span>
-                </div>
-                {showCvInput ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-              </button>
+            <div className="flex flex-col gap-6">
+              {/* Analysis Configuration Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* CV Source Selection */}
+                <div className="bg-slate-800/30 rounded-xl p-4 flex flex-col gap-3 border border-slate-700/50 hover:border-slate-600/50 transition-colors">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+                    <FileText size={14} />
+                    <span>Source du CV</span>
+                  </div>
+                  <Select value={selectedCvSource} onValueChange={(val) => {
+                    setSelectedCvSource(val);
+                    if (val !== 'manual') setShowCvInput(false);
+                  }}>
+                    <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white hover:bg-slate-900 transition-colors h-11">
+                      <SelectValue placeholder="Choisir un CV..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectItem value="last">Dernier CV analysé (Auto)</SelectItem>
+                      {cvHistory.length > 0 && (
+                        <SelectItem value="history">Analyses récentes</SelectItem>
+                      )}
+                      {cvDocuments.length > 0 && (
+                        <SelectItem value="docs">Documents uploadés</SelectItem>
+                      )}
+                      <SelectItem value="manual">Texte manuel</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-              {showCvInput && (
+                  {/* Sub-selectors for history or docs */}
+                  {selectedCvSource === 'history' && (
+                    <Select onValueChange={(val) => {
+                      const analysis = cvHistory.find(h => (h.id || h.filename) === val);
+                      if (analysis) setCvText(analysis.extracted_text || '');
+                    }}>
+                      <SelectTrigger className="bg-slate-900/80 border-slate-700 text-white mt-1 h-9 text-xs">
+                        <SelectValue placeholder="Sélectionner une analyse..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {cvHistory.map((h, i) => (
+                          <SelectItem key={h.id || i} value={h.id || h.filename}>
+                            {h.filename} ({new Date(h.created_at).toLocaleDateString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {selectedCvSource === 'docs' && (
+                    <Select onValueChange={(val) => {
+                      setSelectedCvId(val);
+                      const analysis = cvHistory.find(h => h.document_id === val);
+                      if (analysis) {
+                        setCvText(analysis.extracted_text || '');
+                      } else {
+                        setCvText('');
+                      }
+                    }}>
+                      <SelectTrigger className="bg-slate-900/80 border-slate-700 text-white mt-1 h-9 text-xs">
+                        <SelectValue placeholder="Sélectionner un document..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {cvDocuments.map((doc) => (
+                          <SelectItem key={doc.id} value={doc.id}>
+                            {doc.name} {doc.label ? `(${doc.label})` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Model Selection */}
+                {availableModels.length > 0 && (
+                  <div className="bg-slate-800/30 rounded-xl p-4 flex flex-col gap-3 border border-slate-700/50 hover:border-slate-600/50 transition-colors">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-400">
+                      <Cpu size={14} />
+                      <span>Modèle IA</span>
+                    </div>
+                    <Select 
+                      value={selectedModel ? `${selectedModel.provider}:${selectedModel.model_id}` : ''} 
+                      onValueChange={(val) => {
+                        const [provider, modelId] = val.split(':');
+                        const model = availableModels.find(m => m.provider === provider && m.model_id === modelId);
+                        if (model) setSelectedModel(model);
+                      }}
+                    >
+                      <SelectTrigger className="bg-slate-900/50 border-slate-700 text-white hover:bg-slate-900 transition-colors h-11">
+                        <SelectValue placeholder="Choisir un modèle..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-slate-900 border-slate-700">
+                        {availableModels.filter(m => m.is_available).map((m) => (
+                          <SelectItem key={`${m.provider}:${m.model_id}`} value={`${m.provider}:${m.model_id}`}>
+                            <div className="flex flex-col text-left">
+                              <span className="font-medium">{m.display_name}</span>
+                              <span className="text-[10px] text-slate-500 uppercase font-mono tracking-wider">{m.provider}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              {selectedCvSource === 'manual' && (
                 <Textarea
                   value={cvText}
                   onChange={(e) => setCvText(e.target.value)}
@@ -346,9 +501,11 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
               )}
 
               <p className="text-sm text-slate-500">
-                {showCvInput 
+                {selectedCvSource === 'manual' 
                   ? "Le texte fourni sera utilisé pour l'analyse."
-                  : "Si vous ne fournissez pas de CV, le dernier CV analysé sera utilisé."
+                  : selectedCvSource === 'history'
+                    ? "L'analyse sélectionnée sera utilisée comme base."
+                    : "Le système utilisera automatiquement votre CV le plus récent."
                 }
               </p>
 

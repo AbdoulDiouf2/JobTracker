@@ -537,10 +537,10 @@ export default function DashboardPage() {
   const stats = dashboardV2?.stats;
 
   return (
-    <div className="space-y-8" data-testid="dashboard-page">
+    <div className="flex flex-col gap-8" data-testid="dashboard-page">
       {showWelcome && <WelcomeModal onClose={handleCloseWelcome} />}
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="font-heading text-2xl lg:text-3xl font-bold text-white">{t.welcome}</h1>
           <p className="text-slate-400 mt-1">
@@ -611,7 +611,7 @@ export default function DashboardPage() {
 
       {/* Insights & Chart Row */}
       {!statsLoading && (
-        <div className="grid lg:grid-cols-2 gap-6 mt-8">
+        <div className="grid lg:grid-cols-2 gap-6">
           <InsightsCard insights={dashboardV2?.insights} navigate={navigate} />
           <WeeklyChart data={dashboardV2?.weekly_evolution} />
         </div>
@@ -635,7 +635,7 @@ export default function DashboardPage() {
               {t.viewAll} <ArrowRight size={14} className="ml-1" />
             </Link>
           </div>
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             {interviewsLoading ? (
               <>
                 <InterviewCardSkeleton />

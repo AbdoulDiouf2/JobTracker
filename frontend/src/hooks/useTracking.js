@@ -102,13 +102,18 @@ export const useTracking = () => {
   }, [headers]);
 
   // Calculer le score de matching
-  const calculateMatchingScore = useCallback(async (applicationId, cvText = null) => {
+  const calculateMatchingScore = useCallback(async (applicationId, cvText = null, cvId = null, modelProvider = null, modelName = null) => {
     setLoading(true);
     setError(null);
     try {
-      const params = cvText ? `?cv_text=${encodeURIComponent(cvText)}` : '';
+      const params = new URLSearchParams();
+      if (cvText) params.append('cv_text', cvText);
+      if (cvId) params.append('cv_id', cvId);
+      if (modelProvider) params.append('model_provider', modelProvider);
+      if (modelName) params.append('model_name', modelName);
+      
       const response = await axios.post(
-        `${API_URL}/api/applications/${applicationId}/matching/calculate${params}`,
+        `${API_URL}/api/applications/${applicationId}/matching/calculate?${params.toString()}`,
         {},
         { headers }
       );
@@ -134,6 +139,32 @@ export const useTracking = () => {
     }
   }, [headers]);
 
+  // Récupérer l'historique des analyses de CV
+  const getCVHistory = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/import/cv-history`,
+        { headers }
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  }, [headers]);
+
+  // Récupérer les CVs uploadés (documents)
+  const getCVDocuments = useCallback(async () => {
+    try {
+      const response = await axios.get(
+        `${API_URL}/api/documents/cv`,
+        { headers }
+      );
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  }, [headers]);
+
   return {
     loading,
     error,
@@ -143,6 +174,8 @@ export const useTracking = () => {
     markReminderSent,
     generateFollowupEmail,
     calculateMatchingScore,
-    getMatchingScore
+    getMatchingScore,
+    getCVHistory,
+    getCVDocuments
   };
 };

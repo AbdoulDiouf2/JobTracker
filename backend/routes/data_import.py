@@ -44,6 +44,7 @@ except ImportError:
 
 from utils.auth import get_current_user
 from utils.ai_quota import check_and_increment_quota
+from utils.crypto import decrypt
 
 router = APIRouter(prefix="/import", tags=["Import"])
 
@@ -652,26 +653,26 @@ async def analyze_cv(
         
         # Get the appropriate API key for the selected provider
         if provider == "openai":
-            api_key = (user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+            api_key = decrypt(user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
         elif provider == "gemini" or provider == "google":
             provider = "google"
-            api_key = (user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
+            api_key = decrypt(user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
         elif provider == "groq":
-            api_key = (user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
+            api_key = decrypt(user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
     
     # Fallback: auto-detect based on available keys
     if not api_key:
         # Check user's personal keys first
         if user and user.get("openai_key"):
-            api_key = user["openai_key"]
+            api_key = decrypt(user["openai_key"])
             provider = "openai"
             model = "gpt-4o"
         elif user and user.get("google_ai_key"):
-            api_key = user["google_ai_key"]
+            api_key = decrypt(user["google_ai_key"])
             provider = "google"
             model = "gemini-1.5-flash"
         elif user and user.get("groq_key"):
-            api_key = user["groq_key"]
+            api_key = decrypt(user["groq_key"])
             provider = "groq"
             model = "llama-3.3-70b-versatile"
         
@@ -816,6 +817,7 @@ async def analyze_cv(
                 "filename": file.filename,
                 "provider": provider,
                 "model": model_used,
+                "extracted_text": cv_text,
                 "analysis": result,
                 "created_at": datetime.now(timezone.utc).isoformat()
             })
@@ -921,25 +923,25 @@ async def analyze_existing_cv(
         model = model_name
         
         if provider == "openai":
-            api_key = (user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
+            api_key = decrypt(user.get("openai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("OPENAI_API_KEY")
         elif provider == "gemini" or provider == "google":
             provider = "google"
-            api_key = (user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY")
+            api_key = decrypt(user.get("google_ai_key") if user else None) or os.environ.get("EMERGENT_LLM_KEY") or os.environ.get("GOOGLE_API_KEY")
         elif provider == "groq":
-            api_key = (user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
+            api_key = decrypt(user.get("groq_key") if user else None) or os.environ.get("GROQ_API_KEY")
     
     # Fallback
     if not api_key:
         if user and user.get("groq_key"):
-            api_key = user["groq_key"]
+            api_key = decrypt(user["groq_key"])
             provider = "groq"
             model = "llama-3.3-70b-versatile"
         elif user and user.get("openai_key"):
-            api_key = user["openai_key"]
+            api_key = decrypt(user["openai_key"])
             provider = "openai"
             model = "gpt-4o"
         elif user and user.get("google_ai_key"):
-            api_key = user["google_ai_key"]
+            api_key = decrypt(user["google_ai_key"])
             provider = "google"
             model = "gemini-1.5-flash"
         else:
@@ -1055,6 +1057,7 @@ async def analyze_existing_cv(
             "filename": document.get("name"),
             "provider": provider,
             "model": model_used,
+            "extracted_text": cv_text,
             "analysis": result,
             "created_at": datetime.now(timezone.utc).isoformat()
         })

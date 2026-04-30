@@ -785,7 +785,7 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div className="space-y-6" data-testid="admin-users-page">
+    <div className="flex flex-col gap-6" data-testid="admin-users-page">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -919,7 +919,7 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      {activeTab === 'users' && <div className="space-y-6">
+      {activeTab === 'users' && <div className="flex flex-col gap-6 pt-2">
 
       {/* Search & Filters */}
       <div className="flex flex-col sm:flex-row gap-4">

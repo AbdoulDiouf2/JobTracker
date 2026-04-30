@@ -619,7 +619,7 @@ export default function AIAdvisorPage() {
                       ) : cvHistory.length === 0 ? (
                         <p className="text-slate-400 text-sm text-center py-4">{t.noHistory}</p>
                       ) : (
-                        <div className="space-y-2 max-h-60 overflow-y-auto">
+                        <div className="flex flex-col gap-2 max-h-60 overflow-y-auto">
                           {cvHistory.map((analysis, idx) => (
                             <div 
                               key={analysis.id || idx} 
@@ -800,7 +800,7 @@ export default function AIAdvisorPage() {
                         <CheckCircle size={20} />
                         {t.strengths}
                       </h3>
-                      <ul className="space-y-2">
+                      <ul className="flex flex-col gap-2">
                         {cvAnalysis.strengths.map((item, i) => (
                           <li key={i} className="text-slate-300 flex items-start gap-2">
                             <span className="text-green-400 mt-1">•</span>
@@ -817,7 +817,7 @@ export default function AIAdvisorPage() {
                         <AlertCircle size={20} />
                         {t.improvements}
                       </h3>
-                      <ul className="space-y-2">
+                      <ul className="flex flex-col gap-2">
                         {cvAnalysis.improvements.map((item, i) => (
                           <li key={i} className="text-slate-300 flex items-start gap-2">
                             <span className="text-yellow-400 mt-1">•</span>
@@ -836,7 +836,7 @@ export default function AIAdvisorPage() {
                       <Briefcase className="text-gold" size={20} />
                       {t.matchingJobs}
                     </h3>
-                    <div className="space-y-3">
+                    <div className="flex flex-col gap-3">
                       {cvAnalysis.matching_jobs.map((job, i) => (
                         <div key={i} className="p-4 bg-slate-800/50 rounded-xl">
                           <div className="flex items-center justify-between mb-2">

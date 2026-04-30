@@ -19,7 +19,9 @@ from models import (
     GeneratedCoverLetter, ApplicationDocumentLink
 )
 from utils.auth import get_current_user
+from utils.crypto import decrypt
 from utils.ai_quota import check_and_increment_quota
+from xml.sax.saxutils import escape
 
 # Cloudinary configuration
 import cloudinary
@@ -77,7 +79,7 @@ def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_na
         parent=styles['Normal'],
         fontSize=11,
         leading=16,
-        alignment=TA_JUSTIFY,
+        alignment=TA_LEFT,
         spaceAfter=12
     )
     
@@ -100,9 +102,11 @@ def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_na
     paragraphs = content.split('\n\n')
     for para in paragraphs:
         if para.strip():
-            # Replace single newlines with <br/>
-            para = para.replace('\n', '<br/>')
-            story.append(Paragraph(para, body_style))
+            # Escape XML special characters for ReportLab Paragraph
+            clean_para = escape(para.strip())
+            # Replace single newlines with <br/> for line breaks within paragraphs
+            clean_para = clean_para.replace('\n', '<br/>')
+            story.append(Paragraph(clean_para, body_style))
     
     doc.build(story)
     buffer.seek(0)
@@ -112,18 +116,22 @@ def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_na
 async def upload_cover_letter_to_cloudinary(pdf_buffer: io.BytesIO, user_id: str, letter_id: str, filename: str) -> dict:
     """Upload generated cover letter PDF to Cloudinary"""
     try:
+        # Use raw to avoid Cloudinary trying to process it as an image
+        # Adding .pdf to public_id ensures the URL has the correct extension for raw files
         upload_result = cloudinary.uploader.upload(
-            pdf_buffer,
-            public_id=f"jobtracker/{user_id}/cover_letters/{letter_id}",
+            pdf_buffer.getvalue(),
+            public_id=f"jobtracker/{user_id}/cover_letters/{letter_id}.pdf",
             resource_type="raw",
-            format="pdf",
-            use_filename=True,
-            unique_filename=False,
             overwrite=True,
             tags=[user_id, "cover_letter"]
         )
+        # Force attachment/download flag in the URL for raw files
+        url = upload_result.get("secure_url")
+        if url and "/upload/" in url:
+            url = url.replace("/upload/", "/upload/fl_attachment/")
+
         return {
-            "url": upload_result.get("secure_url"),
+            "url": url,
             "public_id": upload_result.get("public_id")
         }
     except Exception as e:
@@ -183,8 +191,8 @@ async def upload_document(
     
     try:
         # Upload to Cloudinary
-        # For PDFs and docs, use resource_type="raw" (auto also works)
-        resource_type = "image" if file.content_type.startswith("image/") else "raw"
+        # Auto will detect images as "image", PDFs as "image" (better for viewing) and docs as "raw"
+        resource_type = "auto"
         
         upload_result = cloudinary.uploader.upload(
             file.file,
@@ -881,7 +889,7 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
     # Check user keys first (priority: groq > openai > google, same as ai.py)
     for p, field in [("groq", "groq_key"), ("openai", "openai_key"), ("google", "google_ai_key")]:
         if user.get(field):
-            api_key = user[field]
+            api_key = decrypt(user[field])
             provider = p
             has_own_key = True
             break

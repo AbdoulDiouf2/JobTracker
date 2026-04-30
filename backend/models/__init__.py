@@ -378,6 +378,7 @@ class MatchingScoreRequest(BaseModel):
     """Demande de calcul du score de matching"""
     application_id: str
     cv_text: Optional[str] = None  # Si non fourni, utilise le dernier CV analysé
+    cv_id: Optional[str] = None    # ID du document CV à utiliser
 
 
 class MatchingScoreResponse(BaseModel):
