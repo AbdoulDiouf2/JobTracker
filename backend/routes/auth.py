@@ -439,7 +439,13 @@ async def verify_extension_code(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Utilisateur non trouvé"
         )
-    
+
+    if not user.get("is_active", True):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Compte désactivé"
+        )
+
     # Créer un token longue durée pour l'extension (30 jours)
     access_token = create_access_token(
         data={"sub": user["id"], "role": user.get("role", "standard"), "source": "extension"},
@@ -589,6 +595,8 @@ async def google_callback(request: Request, db=Depends(get_db)):
     user_id = None
 
     if existing_user:
+        if not existing_user.get("is_active", True):
+            return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?error=account_disabled")
         user_id = existing_user["id"]
         await db.users.update_one(
             {"id": user_id},
