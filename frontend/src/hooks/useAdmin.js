@@ -116,13 +116,43 @@ export const useUpdateQuota = () => {
   });
 };
 
+export const useAdminTemplates = () => useQuery({
+  queryKey: ['admin', 'templates'],
+  queryFn: () => api.get('/api/admin/templates').then(r => r.data),
+  staleTime: 5 * 60 * 1000,
+});
+
+export const useAdminTemplateMutations = () => {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] });
+
+  const createTemplate = useMutation({
+    mutationFn: (data) => api.post('/api/admin/templates', data).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const updateTemplate = useMutation({
+    mutationFn: ({ id, data }) => api.put(`/api/admin/templates/${id}`, data).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const deleteTemplate = useMutation({
+    mutationFn: (id) => api.delete(`/api/admin/templates/${id}`).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  return { createTemplate, updateTemplate, deleteTemplate };
+};
+
 // Barrel hook pour la compatibilité avec les pages admin existantes
 export const useAdmin = () => {
   const { data: dashboardStats, isLoading: loadingDashboard } = useAdminDashboard();
   const { data: userGrowth = [] } = useAdminUserGrowth();
   const { data: activityStats = [] } = useAdminActivityStats();
   const { data: onboardingStats } = useAdminOnboardingStats();
+  const { data: templates = [] } = useAdminTemplates();
   const mutations = useAdminMutations();
+  const templateMutations = useAdminTemplateMutations();
   const queryClient = useQueryClient();
 
   const fetchUsers = (params) => queryClient.invalidateQueries({ queryKey: ['admin', 'users', params] });
@@ -134,11 +164,14 @@ export const useAdmin = () => {
     userGrowth,
     activityStats,
     onboardingStats,
+    templates,
     ...mutations,
+    ...templateMutations,
     fetchDashboardStats: () => queryClient.invalidateQueries({ queryKey: ['admin', 'dashboard'] }),
     fetchUserGrowth: (days) => queryClient.invalidateQueries({ queryKey: ['admin', 'user-growth', days] }),
     fetchActivityStats: (days) => queryClient.invalidateQueries({ queryKey: ['admin', 'activity', days] }),
     fetchUsers,
     fetchOnboardingStats: () => queryClient.invalidateQueries({ queryKey: ['admin', 'onboarding-stats'] }),
+    fetchTemplates: () => queryClient.invalidateQueries({ queryKey: ['admin', 'templates'] }),
   };
 };

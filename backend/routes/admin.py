@@ -5,12 +5,13 @@ Panel admin pour la gestion multi-tenant
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, List
 
 from models import (
     UserResponse, UserAdminResponse, UserRole, AdminDashboardStats,
     AdminUserUpdate, AdminUserCreate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse,
-    SupportTicket, SupportTicketStatus, SupportTicketUpdate
+    SupportTicket, SupportTicketStatus, SupportTicketUpdate,
+    SystemTemplateCreate, SystemTemplateUpdate, SystemTemplateResponse
 )
 from passlib.context import CryptContext
 import uuid
@@ -861,3 +862,77 @@ async def export_admin_stats(
         "users_by_role": {item["_id"] or "standard": item["count"] for item in role_stats},
         "applications_by_status": {item["_id"]: item["count"] for item in app_stats}
     }
+
+# ============================================
+# GESTION DES TEMPLATES SYSTÈME (PREMIUM)
+# ============================================
+
+@router.get("/templates", response_model=List[SystemTemplateResponse])
+async def list_system_templates(
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Liste tous les templates système pour l'admin"""
+    cursor = db.system_templates.find({})
+    templates = await cursor.to_list(length=None)
+    return templates
+
+
+@router.post("/templates", response_model=SystemTemplateResponse)
+async def create_system_template(
+    template_data: SystemTemplateCreate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Crée un nouveau template système HTML"""
+    template_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
+    template_doc = {
+        "id": template_id,
+        **template_data.model_dump(),
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    await db.system_templates.insert_one(template_doc)
+    return template_doc
+
+
+@router.put("/templates/{template_id}", response_model=SystemTemplateResponse)
+async def update_system_template(
+    template_id: str,
+    update_data: SystemTemplateUpdate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Met à jour un template système existant"""
+    template = await db.system_templates.find_one({"id": template_id})
+    if not template:
+        raise HTTPException(status_code=404, detail="Template non trouvé")
+    
+    update_dict = {k: v for k, v in update_data.model_dump().items() if v is not None}
+    update_dict["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.system_templates.update_one(
+        {"id": template_id},
+        {"$set": update_dict}
+    )
+    
+    # Récupérer la version mise à jour
+    updated_template = await db.system_templates.find_one({"id": template_id})
+    return updated_template
+
+
+@router.delete("/templates/{template_id}")
+async def delete_system_template(
+    template_id: str,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Supprime un template système"""
+    result = await db.system_templates.delete_one({"id": template_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Template non trouvé")
+    
+    return {"message": "Template supprimé avec succès"}

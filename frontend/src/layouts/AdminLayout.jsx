@@ -3,7 +3,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Users, BarChart3, Settings, LogOut, Menu,
-  ChevronRight, User, ShieldCheck, ArrowLeft, MessageSquare
+  ChevronRight, User, ShieldCheck, ArrowLeft, MessageSquare, Layout
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import NotificationBell from '../components/NotificationBell';
@@ -21,6 +21,7 @@ const AdminSidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard Admin', exact: true },
     { path: '/admin/users', icon: Users, label: 'Utilisateurs' },
+    { path: '/admin/templates', icon: Layout, label: 'Templates' },
     { path: '/admin/support', icon: MessageSquare, label: 'Support' },
   ];
 

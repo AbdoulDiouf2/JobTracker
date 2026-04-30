@@ -6,12 +6,20 @@ Stockage via Cloudinary pour persistance sur Vercel/Production.
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
 from fastapi.responses import RedirectResponse, FileResponse
-from typing import Optional, List
-from datetime import datetime, timezone
+import re
+import io
 import os
 import uuid
 from pathlib import Path
-import io
+from datetime import datetime, timezone
+from xhtml2pdf import pisa
+from jinja2 import Environment, ChainableUndefined
+
+def _render_jinja(template_str: str, context: dict) -> str:
+    """Rend un template Jinja2 en ignorant silencieusement les variables inconnues."""
+    env = Environment(undefined=ChainableUndefined)
+    return env.from_string(template_str).render(**context)
+from typing import Optional, List
 
 from models import (
     DocumentType, DocumentCreate, DocumentUpdate, DocumentResponse,
@@ -50,65 +58,77 @@ def get_db():
     pass
 
 
-def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_name: str) -> io.BytesIO:
-    """Generate a PDF from cover letter content"""
+def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_name: str, is_html: bool = False) -> io.BytesIO:
+    """Generate a PDF from cover letter content (Text or HTML)"""
     buffer = io.BytesIO()
     
-    doc = SimpleDocTemplate(
-        buffer,
-        pagesize=A4,
-        rightMargin=2*cm,
-        leftMargin=2*cm,
-        topMargin=2*cm,
-        bottomMargin=2*cm
-    )
-    
-    styles = getSampleStyleSheet()
-    
-    # Custom styles
-    title_style = ParagraphStyle(
-        'CustomTitle',
-        parent=styles['Heading1'],
-        fontSize=14,
-        spaceAfter=20,
-        textColor='#1a1a2e'
-    )
-    
-    body_style = ParagraphStyle(
-        'CustomBody',
-        parent=styles['Normal'],
-        fontSize=11,
-        leading=16,
-        alignment=TA_LEFT,
-        spaceAfter=12
-    )
-    
-    meta_style = ParagraphStyle(
-        'Meta',
-        parent=styles['Normal'],
-        fontSize=9,
-        textColor='#666666',
-        spaceAfter=20
-    )
-    
-    story = []
-    
-    # Title
-    story.append(Paragraph(f"Lettre de Motivation - {poste}", title_style))
-    story.append(Paragraph(f"Candidature chez {entreprise} • {user_name}", meta_style))
-    story.append(Spacer(1, 0.5*cm))
-    
-    # Content - split by paragraphs
-    paragraphs = content.split('\n\n')
-    for para in paragraphs:
-        if para.strip():
-            # Escape XML special characters for ReportLab Paragraph
-            clean_para = escape(para.strip())
-            # Replace single newlines with <br/> for line breaks within paragraphs
-            clean_para = clean_para.replace('\n', '<br/>')
-            story.append(Paragraph(clean_para, body_style))
-    
-    doc.build(story)
+    if is_html:
+        # HTML Rendering using xhtml2pdf
+        print(f"[PDF] Generating HTML PDF, content length: {len(content)}")
+        print(f"[PDF] Content preview: {content[:300]}")
+        pisa_status = pisa.CreatePDF(content, dest=buffer)
+        print(f"[PDF] pisa error: {pisa_status.err}, buffer size: {buffer.tell()}")
+        if pisa_status.err:
+            print(f"[PDF] HTML to PDF FAILED, falling back to text")
+            return generate_cover_letter_pdf(content, entreprise, poste, user_name, is_html=False)
+    else:
+        # Legacy Text Rendering using ReportLab
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=2*cm,
+            leftMargin=2*cm,
+            topMargin=2*cm,
+            bottomMargin=2*cm
+        )
+        
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=14,
+            spaceAfter=20,
+            textColor='#1a1a2e'
+        )
+        
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['Normal'],
+            fontSize=11,
+            leading=16,
+            alignment=TA_LEFT,
+            spaceAfter=12
+        )
+        
+        meta_style = ParagraphStyle(
+            'Meta',
+            parent=styles['Normal'],
+            fontSize=9,
+            textColor='#666666',
+            spaceAfter=20
+        )
+        
+        story = []
+        
+        # Title
+        story.append(Paragraph(f"Lettre de Motivation - {poste}", title_style))
+        story.append(Paragraph(f"Candidature chez {entreprise} • {user_name}", meta_style))
+        story.append(Spacer(1, 0.5*cm))
+        
+        # Content - split by paragraphs
+        paragraphs = content.split('\n\n')
+        for para in paragraphs:
+            if para.strip():
+                # Escape XML special characters for ReportLab Paragraph
+                clean_para = escape(para.strip())
+                # Replace single newlines with <br/> for line breaks within paragraphs
+                clean_para = clean_para.replace('\n', '<br/>')
+                story.append(Paragraph(clean_para, body_style))
+        
+        doc.build(story)
+        
     buffer.seek(0)
     return buffer
 
@@ -127,8 +147,6 @@ async def upload_cover_letter_to_cloudinary(pdf_buffer: io.BytesIO, user_id: str
         )
         # Force attachment/download flag in the URL for raw files
         url = upload_result.get("secure_url")
-        if url and "/upload/" in url:
-            url = url.replace("/upload/", "/upload/fl_attachment/")
 
         return {
             "url": url,
@@ -414,6 +432,37 @@ async def create_template(
     }
 
 
+# ============================================
+# SYSTEM TEMPLATES (PREMIUM)
+# ============================================
+
+@router.get("/templates/system")
+async def list_public_system_templates(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Liste les templates système actifs pour les utilisateurs"""
+    cursor = db.system_templates.find({"is_active": True}, {"_id": 0, "html_content": 0})
+    templates = await cursor.to_list(length=None)
+    return templates
+
+
+@router.get("/templates/system/{template_id}/preview")
+async def get_system_template_preview(
+    template_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Retourne le html_content d'un template système pour le preview client-side"""
+    template = await db.system_templates.find_one(
+        {"id": template_id, "is_active": True},
+        {"_id": 0, "id": 1, "name": 1, "html_content": 1}
+    )
+    if not template:
+        raise HTTPException(status_code=404, detail="Template non trouvé")
+    return template
+
+
 @router.get("/templates", response_model=List[dict])
 async def list_templates(
     current_user: dict = Depends(get_current_user),
@@ -523,46 +572,67 @@ async def generate_cover_letter_from_template(
     template_id: str,
     entreprise: str,
     poste: str,
+    custom_content: Optional[str] = None,
     application_id: Optional[str] = None,
-    extra_vars: Optional[dict] = None,
     save_as_pdf: bool = True,
+    is_system_template: bool = False,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Generate a cover letter from a template with variable substitution and save as PDF to Cloudinary"""
+    """Generate a cover letter from a template (User or System) and save as PDF to Cloudinary"""
     user_id = current_user["user_id"]
     
-    template = await db.cover_letter_templates.find_one(
-        {"id": template_id, "user_id": user_id},
-        {"_id": 0}
-    )
-    
-    if not template:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Template non trouvé"
+    if is_system_template:
+        template = await db.system_templates.find_one({"id": template_id})
+        content_field = "html_content"
+        is_html = True
+    else:
+        template = await db.cover_letter_templates.find_one(
+            {"id": template_id, "user_id": user_id}
         )
+        content_field = "content"
+        is_html = False
+        
+    if not template:
+        raise HTTPException(status_code=404, detail="Template non trouvé")
     
-    # Get user info for variables
-    user = await db.users.find_one({"id": user_id}, {"_id": 0, "full_name": 1, "email": 1})
+    raw_content = template[content_field]
     
-    # Variable substitution
-    content = template["content"]
-    variables = {
-        "entreprise": entreprise,
-        "poste": poste,
-        "date": datetime.now().strftime("%d/%m/%Y"),
-        "nom": user.get("full_name", ""),
-        "email": user.get("email", ""),
-        **(extra_vars or {})
-    }
+    # Replace variables using Jinja2 for better robustness
+    try:
+        # If template already uses {{ }}, use as-is; otherwise convert {var} → {{ var }}
+        if "{{" in raw_content:
+            processed_template = raw_content
+        else:
+            processed_template = re.sub(r'\{(\w+)\}', r'{{ \1 }}', raw_content)
+
+        render_context = {
+            "entreprise": entreprise,
+            "poste": poste,
+            "date": datetime.now().strftime("%d/%m/%Y"),
+            "nom": current_user.get("full_name", "Candidat"),
+            "email": current_user.get("email", ""),
+            "telephone": current_user.get("telephone", ""),
+            "content": custom_content or ""
+        }
+        content = _render_jinja(processed_template, render_context)
+    except Exception as e:
+        print(f"Jinja2 rendering error: {e}")
+        # Fallback to simple replace
+        content = raw_content
+        variables = {
+            "{entreprise}": entreprise,
+            "{poste}": poste,
+            "{date}": datetime.now().strftime("%d/%m/%Y"),
+            "{nom}": current_user.get("full_name", ""),
+            "{email}": current_user.get("email", ""),
+        }
+        for var, val in variables.items():
+            content = content.replace(var, val or "")
     
-    for var, value in variables.items():
-        content = content.replace(f"{{{var}}}", str(value))
-    
-    # Generate PDF and upload to Cloudinary
     letter_id = str(uuid.uuid4())
-    cloudinary_data = None
+    cloudinary_url = None
+    cloudinary_public_id = None
     
     if save_as_pdf:
         try:
@@ -570,14 +640,18 @@ async def generate_cover_letter_from_template(
                 content=content,
                 entreprise=entreprise,
                 poste=poste,
-                user_name=user.get("full_name", "Candidat")
+                user_name=current_user.get("full_name", "Candidat"),
+                is_html=is_html
             )
             filename = f"LM_{entreprise}_{poste}_{datetime.now().strftime('%Y%m%d')}.pdf"
             cloudinary_data = await upload_cover_letter_to_cloudinary(
                 pdf_buffer, user_id, letter_id, filename
             )
-        except Exception as e:
-            print(f"Error generating PDF: {e}")
+            if cloudinary_data:
+                cloudinary_url = cloudinary_data.get("url")
+                cloudinary_public_id = cloudinary_data.get("public_id")
+        except Exception as pdf_err:
+            print(f"Error generating PDF from template: {pdf_err}")
     
     # Save generated letter
     letter = {
@@ -585,13 +659,14 @@ async def generate_cover_letter_from_template(
         "user_id": user_id,
         "application_id": application_id,
         "template_id": template_id,
-        "template_name": template.get("name"),
+        "template_name": template["name"],
+        "is_system_template": is_system_template,
         "entreprise": entreprise,
         "poste": poste,
         "content": content,
         "generated_by": "template",
-        "cloudinary_url": cloudinary_data.get("url") if cloudinary_data else None,
-        "cloudinary_public_id": cloudinary_data.get("public_id") if cloudinary_data else None,
+        "cloudinary_url": cloudinary_url,
+        "cloudinary_public_id": cloudinary_public_id,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -603,7 +678,7 @@ async def generate_cover_letter_from_template(
         "entreprise": entreprise,
         "poste": poste,
         "template_name": template.get("name"),
-        "download_url": cloudinary_data.get("url") if cloudinary_data else None,
+        "download_url": cloudinary_url,
         "created_at": letter["created_at"]
     }
 
@@ -827,6 +902,8 @@ async def generate_cover_letter_with_ai(
     job_description: Optional[str] = None,
     tone: str = "professional",  # professional, enthusiastic, formal
     application_id: Optional[str] = None,
+    template_id: Optional[str] = None,
+    is_system_template: bool = True,
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
@@ -917,9 +994,10 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
         )
 
     # Quota check (exempts users with own key and admins)
+    # This raises HTTPException directly if quota exceeded — must be outside the AI try/except
     if not has_own_key:
         await check_and_increment_quota(user_id, db)
-    
+
     # Call AI
     try:
         content = ""
@@ -965,30 +1043,84 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
         cloudinary_data = None
         
         try:
-            pdf_buffer = generate_cover_letter_pdf(
-                content=content,
-                entreprise=entreprise,
-                poste=poste,
-                user_name=user.get("full_name", "Candidat")
-            )
+            # Handle Premium Template Rendering if requested
+            if template_id:
+                if is_system_template:
+                    template = await db.system_templates.find_one({"id": template_id})
+                    raw_template = template.get("html_content")
+                    is_html = True
+                else:
+                    template = await db.cover_letter_templates.find_one({"id": template_id, "user_id": user_id})
+                    raw_template = template.get("content")
+                    is_html = False
+                
+                if template and raw_template:
+                    # Process template with Jinja2
+                    try:
+                        if "{{" in raw_template:
+                            processed_tmpl = raw_template
+                        else:
+                            processed_tmpl = re.sub(r'\{(\w+)\}', r'{{ \1 }}', raw_template)
+                        # Convertit les sauts de ligne en <br/> pour xhtml2pdf (white-space:pre-line non supporté)
+                        content_for_pdf = content.replace('\n', '<br/>')
+                        render_context = {
+                            "entreprise": entreprise,
+                            "poste": poste,
+                            "date": datetime.now().strftime("%d/%m/%Y"),
+                            "nom": user.get("full_name", "Candidat"),
+                            "email": user.get("email", ""),
+                            "telephone": user.get("telephone", ""),
+                            "content": content_for_pdf
+                        }
+                        content_to_render = _render_jinja(processed_tmpl, render_context)
+                    except:
+                        content_to_render = content # Fallback to AI content only if template fails
+                    
+                    pdf_buffer = generate_cover_letter_pdf(
+                        content=content_to_render,
+                        entreprise=entreprise,
+                        poste=poste,
+                        user_name=user.get("full_name", "Candidat"),
+                        is_html=is_html
+                    )
+                else:
+                    # Fallback to basic if template not found
+                    pdf_buffer = generate_cover_letter_pdf(
+                        content=content,
+                        entreprise=entreprise,
+                        poste=poste,
+                        user_name=user.get("full_name", "Candidat")
+                    )
+            else:
+                # Basic Rendering
+                pdf_buffer = generate_cover_letter_pdf(
+                    content=content,
+                    entreprise=entreprise,
+                    poste=poste,
+                    user_name=user.get("full_name", "Candidat")
+                )
+                
             filename = f"LM_AI_{entreprise}_{poste}_{datetime.now().strftime('%Y%m%d')}.pdf"
             cloudinary_data = await upload_cover_letter_to_cloudinary(
                 pdf_buffer, user_id, letter_id, filename
             )
         except Exception as pdf_err:
-            print(f"Error generating PDF: {pdf_err}")
+            import traceback
+            print(f"[PDF] Error generating PDF: {pdf_err}")
+            traceback.print_exc()
         
         # Save generated letter
         letter = {
             "id": letter_id,
             "user_id": user_id,
             "application_id": application_id,
-            "template_id": None,
-            "template_name": None,
+            "template_id": template_id,
+            "template_name": template.get("name") if template_id and 'template' in locals() and template else None,
+            "is_system_template": is_system_template if template_id else False,
             "entreprise": entreprise,
             "poste": poste,
             "content": content,
-            "generated_by": "ai",
+            "generated_by": "ai_premium" if template_id else "ai",
             "tone": tone,
             "cloudinary_url": cloudinary_data.get("url") if cloudinary_data else None,
             "cloudinary_public_id": cloudinary_data.get("public_id") if cloudinary_data else None,
@@ -1002,12 +1134,13 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             "content": content,
             "entreprise": entreprise,
             "poste": poste,
-            "tone": tone,
-            "generated_by": "ai",
-            "download_url": cloudinary_data.get("url") if cloudinary_data else None,
+            "template_name": letter["template_name"],
+            "download_url": letter["cloudinary_url"],
             "created_at": letter["created_at"]
         }
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

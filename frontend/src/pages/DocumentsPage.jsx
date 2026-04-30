@@ -46,20 +46,16 @@ export default function DocumentsPage() {
   const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
   const { language } = useLanguage();
   const [documents, setDocuments] = useState([]);
-  const [templates, setTemplates] = useState([]);
   const [generatedLetters, setGeneratedLetters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingLetters, setLoadingLetters] = useState(true);
   const [activeTab, setActiveTab] = useState('cv');
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
   const [linkModalOpen, setLinkModalOpen] = useState(false);
-  const [templateModalOpen, setTemplateModalOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState(null);
-  const [editingTemplate, setEditingTemplate] = useState(null);
   const [viewingDocument, setViewingDocument] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [generatorModalOpen, setGeneratorModalOpen] = useState(false);
-  const [selectedTemplateForGenerator, setSelectedTemplateForGenerator] = useState(null);
   const fileInputRef = useRef(null);
 
   const t = {
@@ -67,21 +63,17 @@ export default function DocumentsPage() {
       title: 'Mes Documents',
       subtitle: 'Gérez vos CV, lettres de motivation et liens portfolio',
       cvTab: 'CV',
-      coverLettersTab: 'Templates',
       generatedTab: 'Lettres générées',
       portfolioTab: 'Portfolio & Liens',
       uploadCV: 'Uploader un CV',
       addLink: 'Ajouter un lien',
-      addTemplate: 'Créer un template',
       generateLetter: 'Générer une lettre',
       noCVs: 'Aucun CV uploadé',
       noLinks: 'Aucun lien ajouté',
-      noTemplates: 'Aucun template créé',
       noGeneratedLetters: 'Aucune lettre générée',
-      noGeneratedLettersDesc: 'Utilisez un template ou l\'IA pour générer votre première lettre',
+      noGeneratedLettersDesc: 'Utilisez l\'IA pour générer votre première lettre',
       uploadTitle: 'Uploader un document',
       linkTitle: 'Ajouter un lien portfolio',
-      templateTitle: 'Template de lettre de motivation',
       name: 'Nom',
       label: 'Étiquette',
       labelPlaceholder: 'Ex: CV Tech, CV Data, CV Finance...',
@@ -101,8 +93,6 @@ export default function DocumentsPage() {
       default: 'Par défaut',
       size: 'Taille',
       created: 'Créé le',
-      templateContent: 'Contenu du template',
-      templateVariables: 'Variables disponibles: {entreprise}, {poste}, {date}, {nom}, {email}',
       copied: 'Copié !',
       confirmDelete: 'Êtes-vous sûr de vouloir supprimer ce document ?',
       uploadSuccess: 'Document uploadé avec succès',
@@ -126,21 +116,17 @@ export default function DocumentsPage() {
       title: 'My Documents',
       subtitle: 'Manage your CVs, cover letters and portfolio links',
       cvTab: 'CV',
-      coverLettersTab: 'Templates',
       generatedTab: 'Generated Letters',
       portfolioTab: 'Portfolio & Links',
       uploadCV: 'Upload CV',
       addLink: 'Add link',
-      addTemplate: 'Create template',
       generateLetter: 'Generate letter',
       noCVs: 'No CV uploaded',
       noLinks: 'No link added',
-      noTemplates: 'No template created',
       noGeneratedLetters: 'No generated letters',
-      noGeneratedLettersDesc: 'Use a template or AI to generate your first letter',
+      noGeneratedLettersDesc: 'Use AI to generate your first letter',
       uploadTitle: 'Upload document',
       linkTitle: 'Add portfolio link',
-      templateTitle: 'Cover letter template',
       name: 'Name',
       label: 'Label',
       labelPlaceholder: 'Ex: Tech CV, Data CV, Finance CV...',
@@ -160,8 +146,6 @@ export default function DocumentsPage() {
       default: 'Default',
       size: 'Size',
       created: 'Created',
-      templateContent: 'Template content',
-      templateVariables: 'Available variables: {entreprise}, {poste}, {date}, {nom}, {email}',
       copied: 'Copied!',
       confirmDelete: 'Are you sure you want to delete this document?',
       uploadSuccess: 'Document uploaded successfully',
@@ -198,18 +182,6 @@ export default function DocumentsPage() {
       setLoading(false);
     }
   }, [t.error]);
-
-  const fetchTemplates = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents/templates/`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setTemplates(response.data);
-    } catch (error) {
-      console.error('Error fetching templates:', error);
-    }
-  }, []);
 
   const fetchGeneratedLetters = useCallback(async () => {
     try {
@@ -252,9 +224,8 @@ export default function DocumentsPage() {
   // Fetch documents on mount
   useEffect(() => {
     fetchDocuments();
-    fetchTemplates();
     fetchGeneratedLetters();
-  }, [fetchDocuments, fetchTemplates, fetchGeneratedLetters]);
+  }, [fetchDocuments, fetchGeneratedLetters]);
 
   const handleUpload = async (formData) => {
     try {
@@ -290,29 +261,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleCreateTemplate = async (data) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (editingTemplate) {
-        await axios.put(`${API_URL}/api/documents/templates/${editingTemplate.id}`, null, {
-          headers: { Authorization: `Bearer ${token}` },
-          params: data
-        });
-      } else {
-        await axios.post(`${API_URL}/api/documents/templates`, data, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-      }
-      toast.success(t.templateSuccess);
-      setTemplateModalOpen(false);
-      setEditingTemplate(null);
-      fetchTemplates();
-    } catch (error) {
-      console.error('Error with template:', error);
-      toast.error(error.response?.data?.detail || t.error);
-    }
-  };
-
   const handleDelete = async (documentId) => {
     if (!window.confirm(t.confirmDelete)) return;
     
@@ -329,21 +277,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDeleteTemplate = async (templateId) => {
-    if (!window.confirm(t.confirmDelete)) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/documents/templates/${templateId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      toast.success(t.deleteSuccess);
-      fetchTemplates();
-    } catch (error) {
-      console.error('Error deleting template:', error);
-      toast.error(error.response?.data?.detail || t.error);
-    }
-  };
 
   const handleDeleteGeneratedLetter = async (letterId) => {
     if (!window.confirm(t.confirmDelete)) return;
@@ -361,10 +294,6 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleUseTemplate = (templateId) => {
-    setSelectedTemplateForGenerator(templateId);
-    setGeneratorModalOpen(true);
-  };
 
   const handleSetDefault = async (documentId) => {
     try {
@@ -451,25 +380,6 @@ export default function DocumentsPage() {
     </div>
   );
 
-  const TemplateCardSkeleton = () => (
-    <div className="glass-card rounded-xl p-4 border border-slate-800">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center gap-3">
-          <Skeleton className="w-10 h-10 rounded-lg bg-slate-700" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-36 bg-slate-700" />
-            <Skeleton className="h-3 w-16 bg-slate-700" />
-          </div>
-        </div>
-      </div>
-      <Skeleton className="h-20 w-full mb-3 bg-slate-700 rounded" />
-      <Skeleton className="h-3 w-32 mb-3 bg-slate-700" />
-      <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
-        <Skeleton className="h-8 w-20 bg-slate-700 rounded" />
-        <Skeleton className="h-8 w-8 bg-slate-700 rounded ml-auto" />
-      </div>
-    </div>
-  );
 
   const LinkCardSkeleton = () => (
     <div className="glass-card rounded-xl p-4 border border-slate-800">
@@ -532,10 +442,6 @@ export default function DocumentsPage() {
             <TabsTrigger value="cv" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
               <FileText size={16} className="mr-2" />
               {t.cvTab}
-            </TabsTrigger>
-            <TabsTrigger value="templates" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
-              <FileCheck size={16} className="mr-2" />
-              {t.coverLettersTab}
             </TabsTrigger>
             <TabsTrigger value="generated" className="data-[state=active]:bg-gold data-[state=active]:text-[#020817]">
               <Mail size={16} className="mr-2" />
@@ -647,97 +553,11 @@ export default function DocumentsPage() {
           )}
         </TabsContent>
 
-        {/* Templates Tab */}
-        <TabsContent value="templates" className="mt-6">
-          <div className="flex justify-end mb-4">
-            <Button onClick={() => { setEditingTemplate(null); setTemplateModalOpen(true); }} className="bg-gold hover:bg-gold/90 text-[#020817]">
-              <Plus size={16} className="mr-2" />
-              {t.addTemplate}
-            </Button>
-          </div>
-          
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {[1, 2].map((i) => (
-                <TemplateCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : templates.length === 0 ? (
-            <div className="glass-card rounded-xl p-12 text-center border border-slate-800">
-              <FileCheck size={48} className="mx-auto text-slate-600 mb-4" />
-              <p className="text-slate-400">{t.noTemplates}</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {templates.map((template) => (
-                <motion.div
-                  key={template.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="glass-card rounded-xl p-4 border border-slate-800 hover:border-gold/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-green-500/20 rounded-lg">
-                        <FileCheck size={24} className="text-green-400" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-white">{template.name}</h3>
-                        {template.is_default && (
-                          <span className="text-xs bg-gold/20 text-gold px-2 py-0.5 rounded-full">
-                            {t.default}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-slate-400 mb-3 line-clamp-3 font-mono bg-slate-900/50 p-2 rounded">
-                    {template.content.substring(0, 200)}...
-                  </p>
-                  
-                  <div className="text-xs text-slate-500 mb-3">
-                    {t.created}: {new Date(template.created_at).toLocaleDateString()}
-                  </div>
-                  
-                  <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
-                    <Button 
-                      size="sm" 
-                      onClick={() => handleUseTemplate(template.id)}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                    >
-                      <Wand2 size={14} className="mr-1" />
-                      {t.use}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => { setEditingTemplate(template); setTemplateModalOpen(true); }}
-                      className="text-slate-400 hover:text-white"
-                    >
-                      <Edit2 size={14} className="mr-1" />
-                      {t.edit}
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="ghost" 
-                      onClick={() => handleDeleteTemplate(template.id)}
-                      className="text-slate-400 hover:text-red-400 ml-auto"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
         {/* Generated Letters Tab */}
         <TabsContent value="generated" className="mt-6">
           <div className="flex justify-end mb-4">
             <Button 
-              onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }} 
+              onClick={() => setGeneratorModalOpen(true)} 
               className="bg-gold hover:bg-gold/90 text-[#020817] disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={isQuotaReached}
               title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
@@ -759,7 +579,7 @@ export default function DocumentsPage() {
               <p className="text-slate-400">{t.noGeneratedLetters}</p>
               <p className="text-sm text-slate-500 mt-2">{t.noGeneratedLettersDesc}</p>
               <Button 
-                onClick={() => { setSelectedTemplateForGenerator(null); setGeneratorModalOpen(true); }}
+                onClick={() => setGeneratorModalOpen(true)}
                 className="mt-4 bg-gold hover:bg-gold/90 text-[#020817] disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={isQuotaReached}
                 title={isQuotaReached ? (language === 'fr' ? 'Quota journalier atteint' : 'Daily quota reached') : ''}
@@ -965,14 +785,6 @@ export default function DocumentsPage() {
         t={t}
       />
 
-      {/* Template Modal */}
-      <TemplateModal
-        open={templateModalOpen}
-        onClose={() => { setTemplateModalOpen(false); setEditingTemplate(null); }}
-        onSave={handleCreateTemplate}
-        template={editingTemplate}
-        t={t}
-      />
 
       {/* Document Viewer Modal */}
       <DocumentViewerModal
@@ -990,10 +802,8 @@ export default function DocumentsPage() {
         open={generatorModalOpen}
         onClose={() => {
           setGeneratorModalOpen(false);
-          setSelectedTemplateForGenerator(null);
           fetchGeneratedLetters(); // Refresh after closing
         }}
-        preselectedTemplateId={selectedTemplateForGenerator}
         language={language}
       />
     </div>
@@ -1230,113 +1040,6 @@ function LinkModal({ open, onClose, onSave, t }) {
               {t.cancel}
             </Button>
             <Button type="submit" disabled={!name || !url || loading} className="bg-gold hover:bg-gold/90 text-[#020817]">
-              {loading ? '...' : t.save}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Template Modal Component
-function TemplateModal({ open, onClose, onSave, template, t }) {
-  const [name, setName] = useState('');
-  const [content, setContent] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (template) {
-      setName(template.name);
-      setContent(template.content);
-      setIsDefault(template.is_default);
-    } else {
-      resetForm();
-    }
-  }, [template]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!name || !content) return;
-
-    setLoading(true);
-    await onSave({ name, content, is_default: isDefault });
-    setLoading(false);
-    resetForm();
-  };
-
-  const resetForm = () => {
-    setName('');
-    setContent('');
-    setIsDefault(false);
-  };
-
-  const defaultTemplate = `Madame, Monsieur,
-
-Actuellement à la recherche d'un emploi dans le secteur {secteur}, je me permets de vous adresser ma candidature pour le poste de {poste} au sein de {entreprise}.
-
-[Votre parcours et motivations...]
-
-Je reste à votre disposition pour un entretien afin de vous présenter plus en détail mon parcours et mes motivations.
-
-Je vous prie d'agréer, Madame, Monsieur, l'expression de mes salutations distinguées.
-
-{nom}
-{email}
-{date}`;
-
-  return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileCheck size={20} className="text-gold" />
-            {t.templateTitle}
-          </DialogTitle>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label>{t.name} *</Label>
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Template standard, Template tech..."
-              className="bg-slate-800 border-slate-700"
-              required
-            />
-          </div>
-
-          <div>
-            <Label>{t.templateContent} *</Label>
-            <p className="text-xs text-slate-500 mb-2">{t.templateVariables}</p>
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder={defaultTemplate}
-              className="bg-slate-800 border-slate-700 font-mono text-sm"
-              rows={12}
-              required
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="templateDefault"
-              checked={isDefault}
-              onChange={(e) => setIsDefault(e.target.checked)}
-              className="rounded border-slate-700"
-            />
-            <Label htmlFor="templateDefault" className="cursor-pointer">{t.setAsDefault}</Label>
-          </div>
-
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose} className="border-slate-700">
-              {t.cancel}
-            </Button>
-            <Button type="submit" disabled={!name || !content || loading} className="bg-gold hover:bg-gold/90 text-[#020817]">
               {loading ? '...' : t.save}
             </Button>
           </DialogFooter>

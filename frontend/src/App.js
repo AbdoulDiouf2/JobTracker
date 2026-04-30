@@ -39,6 +39,7 @@ const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
 const AdminUsersPage     = lazy(() => import("./pages/admin/AdminUsersPage"));
 const AdminSupportPage   = lazy(() => import("./pages/admin/AdminSupportPage"));
+const AdminTemplatesPage = lazy(() => import("./pages/admin/AdminTemplatesPage"));
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -99,6 +100,7 @@ function AppRouter() {
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminUsersPage />} />
         <Route path="support" element={<AdminSupportPage />} />
+        <Route path="templates" element={<AdminTemplatesPage />} />
       </Route>
 
       {/* Catch-all Route for 404 */}

@@ -920,3 +920,27 @@ class DashboardV2Response(BaseModel):
     last_month_applications: int = 0
     month_over_month_change: float = 0.0
 
+# ============================================
+# SYSTEM TEMPLATES (PREMIUM HTML)
+# ============================================
+
+class SystemTemplateCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    html_content: str
+    is_active: bool = True
+
+class SystemTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    html_content: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class SystemTemplateResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    html_content: str
+    is_active: bool
+    created_at: str
+    updated_at: str
