@@ -20,11 +20,14 @@ import {
   SelectValue,
 } from './ui/select';
 import { useLanguage } from '../i18n';
+import { useAIUsage } from '../hooks/useAIUsage';
 import { toast } from 'sonner';
 
 export const FollowupEmailModal = ({ application, isOpen, onClose, onEmailSent }) => {
   const { generateFollowupEmail, markReminderSent, loading } = useTracking();
   const { language } = useLanguage();
+  const { data: aiUsage } = useAIUsage();
+  const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
   const [email, setEmail] = useState(null);
   const [tone, setTone] = useState('professional');
   const [copied, setCopied] = useState(false);
@@ -145,9 +148,10 @@ export const FollowupEmailModal = ({ application, isOpen, onClose, onEmailSent }
                 </SelectContent>
               </Select>
 
-              <Button 
-                onClick={handleGenerate} 
-                disabled={generating}
+              <Button
+                onClick={handleGenerate}
+                disabled={generating || isQuotaReached}
+                title={isQuotaReached ? 'Quota journalier atteint' : undefined}
                 className="w-full bg-gold hover:bg-gold-light text-[#020817]"
               >
                 {generating ? (

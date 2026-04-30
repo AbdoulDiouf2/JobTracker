@@ -15,6 +15,7 @@ import {
 import { Dialog, DialogContent } from './ui/dialog';
 import { toast } from 'sonner';
 import axios from 'axios';
+import { useAIUsage } from '../hooks/useAIUsage';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 
@@ -79,6 +80,8 @@ export default function CoverLetterGeneratorModal({
   const [copied, setCopied] = useState(false);
 
   const isResult = !!generatedContent;
+  const { data: aiUsage } = useAIUsage();
+  const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
 
   // ── Reset & fetch on open
   useEffect(() => {
@@ -481,7 +484,8 @@ export default function CoverLetterGeneratorModal({
           {!isResult && (
             <Button
               onClick={handleGenerate}
-              disabled={loading || !entreprise || !poste}
+              disabled={loading || !entreprise || !poste || isQuotaReached}
+              title={isQuotaReached ? 'Quota journalier atteint' : undefined}
               className="bg-gold hover:bg-gold/90 text-[#020817] font-bold h-9 shadow-lg shadow-gold/10"
             >
               {loading

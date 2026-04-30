@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { toast } from 'sonner';
+import { useAIUsage } from '../hooks/useAIUsage';
 
 // Score color based on value
 const getScoreColor = (score) => {
@@ -91,6 +92,8 @@ const ScoreCircle = ({ score }) => {
 
 export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
   const { calculateMatchingScore, getMatchingScore, getCVHistory, getCVDocuments, loading: trackingLoading } = useTracking();
+  const { data: aiUsage } = useAIUsage();
+  const isQuotaReached = aiUsage && aiUsage.calls_today >= aiUsage.quota_daily && !aiUsage.has_own_key;
   const [matchData, setMatchData] = useState(null);
   const [cvText, setCvText] = useState('');
   const [showCvInput, setShowCvInput] = useState(false);
@@ -511,7 +514,8 @@ export const MatchingScoreModal = ({ application, isOpen, onClose }) => {
 
               <Button 
                 onClick={handleCalculate}
-                disabled={calculating || !hasJobDescription}
+                disabled={calculating || !hasJobDescription || isQuotaReached}
+                title={isQuotaReached ? 'Quota journalier atteint' : undefined}
                 className="w-full bg-gold hover:bg-gold-light text-[#020817]"
               >
                 {calculating ? (
