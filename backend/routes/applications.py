@@ -130,10 +130,12 @@ async def create_application(
     db = Depends(get_db)
 ):
     """Crée une nouvelle candidature"""
+    app_dict_data = app_data.model_dump()
+    if not app_dict_data.get("source"):
+        app_dict_data["source"] = current_user.get("source", "webapp")
     application = JobApplication(
-        **app_data.model_dump(),
+        **app_dict_data,
         user_id=current_user["user_id"],
-        source=current_user.get("source", "webapp")
     )
     
     app_dict = application.model_dump()
