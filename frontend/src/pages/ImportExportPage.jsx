@@ -197,7 +197,15 @@ export default function ImportExportPage() {
       } else if (lowerKey === 'poste' || lowerKey === 'position' || lowerKey === 'job') {
         mapped.poste = value;
       } else if (lowerKey === 'type' || lowerKey === 'type_poste' || lowerKey === 'contrat') {
-        mapped.type_poste = value;
+        const typeVal = String(value || '').toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+        if (typeVal.includes('mastere') || typeVal.includes('master')) mapped.type_poste = 'mastere';
+        else if (typeVal.includes('alternance') || typeVal.includes('apprentissage')) mapped.type_poste = 'alternance';
+        else if (typeVal.includes('stage') || typeVal.includes('intern')) mapped.type_poste = 'stage';
+        else if (typeVal.includes('freelance') || typeVal.includes('independant')) mapped.type_poste = 'freelance';
+        else if (typeVal.includes('interim')) mapped.type_poste = 'interim';
+        else if (typeVal.includes('cdd')) mapped.type_poste = 'cdd';
+        else if (typeVal.includes('cdi')) mapped.type_poste = 'cdi';
+        else mapped.type_poste = value;
       } else if (lowerKey === 'lieu' || lowerKey === 'location' || lowerKey === 'ville') {
         mapped.lieu = value;
       } else if (lowerKey === 'moyen' || lowerKey === 'source') {
@@ -221,6 +229,19 @@ export default function ImportExportPage() {
         mapped.lien = value;
       } else if (lowerKey === 'commentaire' || lowerKey === 'comment' || lowerKey === 'notes') {
         mapped.commentaire = value;
+      } else if (lowerKey.includes('date') && (lowerKey.includes('reponse') || lowerKey.includes('response'))) {
+        if (value instanceof Date) {
+          mapped.date_reponse = value.toISOString();
+        } else if (typeof value === 'number' && value > 0) {
+          if (value < 100000) {
+            const d = XLSX.SSF.parse_date_code(value);
+            mapped.date_reponse = new Date(d.y, d.m - 1, d.d).toISOString();
+          } else {
+            mapped.date_reponse = new Date(value).toISOString();
+          }
+        } else if (value) {
+          mapped.date_reponse = value;
+        }
       } else if (lowerKey === 'reponse' || lowerKey === 'response' || lowerKey === 'status' || lowerKey === 'statut') {
         // Map response status
         const valStr = String(value || '').toLowerCase();

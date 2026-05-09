@@ -55,6 +55,7 @@ const applicationSchema = z.object({
   lieu: z.string().optional().nullable(),
   moyen: z.string().optional().nullable(),
   date_candidature: z.string(),
+  date_reponse: z.string().optional().nullable(),
   lien: z.string().url().optional().or(z.literal('')).nullable(),
   commentaire: z.string().optional().nullable(),
   salaire_min: z.coerce.number().optional().nullable(),
@@ -112,7 +113,7 @@ const ApplicationCard = ({ app, onEdit, onDelete, onToggleFavorite, onStatusChan
               <DropdownMenuItem 
                 key={opt.value}
                 onClick={(e) => { e.stopPropagation(); onStatusChange(app.id, opt.value); }}
-                className={`${opt.color} cursor-pointer`}
+                className={`${opt.color} cursor-pointer rounded-md mx-1 my-0.5`}
               >
                 {opt.label}
               </DropdownMenuItem>
@@ -304,7 +305,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                       <DropdownMenuItem 
                         key={opt.value}
                         onClick={() => onStatusChange(app.id, opt.value)}
-                        className={`${opt.color} cursor-pointer`}
+                        className={`${opt.color} cursor-pointer rounded-md mx-1 my-0.5`}
                       >
                         {opt.label}
                       </DropdownMenuItem>
@@ -630,7 +631,7 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
   useEffect(() => {
     if (editingApp) {
       Object.entries(editingApp).forEach(([key, value]) => {
-        if (key === 'date_candidature' && value) {
+        if ((key === 'date_candidature' || key === 'date_reponse') && value) {
           setValue(key, value.split('T')[0]);
         } else if (key === 'competences' && Array.isArray(value)) {
           setValue(key, value.join(', '));
@@ -655,6 +656,7 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
     const formattedData = {
       ...data,
       date_candidature: new Date(data.date_candidature).toISOString(),
+      date_reponse: data.date_reponse ? new Date(data.date_reponse).toISOString() : null,
       lien: data.lien || null,
       lieu: data.lieu || null,
       moyen: data.moyen || null,
@@ -748,6 +750,17 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
                 className="bg-slate-900/50 border-slate-700 text-white"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-300 mb-2">
+              {t.responseDate || 'Date de réponse'}
+            </label>
+            <Input
+              {...register('date_reponse')}
+              type="date"
+              className="bg-slate-900/50 border-slate-700 text-white"
+            />
           </div>
 
           <div>
@@ -884,6 +897,13 @@ export default function ApplicationsPage() {
   const [viewMode, setViewMode] = useState('card');
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
   const [responseDateInput, setResponseDateInput] = useState('');
+  const [distinctFields, setDistinctFields] = useState({ type_postes: [], moyens: [] });
+
+  useEffect(() => {
+    api.get('/api/applications/distinct/fields')
+      .then(r => setDistinctFields(r.data))
+      .catch(() => {});
+  }, []);
 
   const queryClient = useQueryClient();
   const currentParams = { page: currentPage, search: searchQuery || undefined, ...filters };
@@ -909,17 +929,21 @@ export default function ApplicationsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, pagination.total_pages, searchQuery, filtersKey]);
 
-  // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
+  // Ouvrir automatiquement les détails si un ID est présent dans l'URL
   useEffect(() => {
-
     const appId = searchParams.get('id');
-    if (appId && applications.length > 0) {
-      const app = applications.find(a => a.id === appId);
-      if (app) {
-        setViewingApp(app);
-      }
+    if (!appId) return;
+    if (viewingApp?.id === appId) return; // déjà ouvert
+
+    const app = applications.find(a => a.id === appId);
+    if (app) {
+      setViewingApp(app);
+    } else {
+      api.get(`/api/applications/${appId}`)
+        .then(r => setViewingApp(r.data))
+        .catch(() => {});
     }
-  }, [searchParams, applications]);
+  }, [searchParams, applications]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const t = {
     fr: {
@@ -934,6 +958,7 @@ export default function ApplicationsPage() {
       location: 'Lieu',
       method: 'Moyen',
       date: 'Date',
+      responseDate: 'Date de réponse',
       link: 'Lien offre',
       comment: 'Commentaire',
       status: 'Statut',
@@ -959,6 +984,7 @@ export default function ApplicationsPage() {
       location: 'Location',
       method: 'Method',
       date: 'Date',
+      responseDate: 'Response date',
       link: 'Job link',
       comment: 'Comment',
       status: 'Status',
@@ -1137,9 +1163,14 @@ export default function ApplicationsPage() {
             </SelectTrigger>
             <SelectContent className="bg-slate-900 border-slate-700">
               <SelectItem value="all">{language === 'fr' ? 'Tous les types' : 'All types'}</SelectItem>
-              {TYPE_OPTIONS.map(opt => (
-                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-              ))}
+              {distinctFields.type_postes.map(val => {
+                const known = TYPE_OPTIONS.find(o => o.value === val);
+                return (
+                  <SelectItem key={val} value={val}>
+                    {known ? known.label : val}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
 

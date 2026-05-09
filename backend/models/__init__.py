@@ -65,6 +65,7 @@ class JobType(str, Enum):
     ALTERNANCE = "alternance"
     FREELANCE = "freelance"
     INTERIM = "interim"
+    MASTERE = "mastere"
 
     @property
     def label_fr(self) -> str:
@@ -74,7 +75,8 @@ class JobType(str, Enum):
             "stage": "Stage",
             "alternance": "Alternance",
             "freelance": "Freelance",
-            "interim": "Intérim"
+            "interim": "Intérim",
+            "mastere": "Mastère"
         }
         return labels.get(self.value, self.value)
 

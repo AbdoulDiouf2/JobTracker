@@ -244,21 +244,33 @@ async def import_data(
             else:
                 date_str = datetime.now(timezone.utc).isoformat()
             
+            # Parse date_reponse from import data
+            date_reponse_val = app_data.get('date_reponse') or app_data.get('Date de réponse') or app_data.get('Date de reponse')
+            date_reponse_str = None
+            if isinstance(date_reponse_val, (int, float)) and date_reponse_val > 0:
+                date_reponse_str = datetime.fromtimestamp(date_reponse_val / 1000, tz=timezone.utc).isoformat()
+            elif date_reponse_val:
+                date_reponse_str = str(date_reponse_val)
+
             # Check for duplicate (same company + position for same user)
             existing = await db.applications.find_one({
                 "user_id": current_user["user_id"],
                 "entreprise": {"$regex": f"^{entreprise}$", "$options": "i"},
                 "poste": {"$regex": f"^{poste}$", "$options": "i"}
             })
-            
+
             app_id = None
-            is_duplicate = False
-            
+
             if existing:
-                # Application exists - use its ID for interviews
                 app_id = existing.get("id")
                 is_duplicate = True
                 duplicates += 1
+                # Upsert date_reponse if existing record has none but import has one
+                if date_reponse_str and not existing.get("date_reponse"):
+                    await db.applications.update_one(
+                        {"id": app_id},
+                        {"$set": {"date_reponse": date_reponse_str, "updated_at": datetime.now(timezone.utc).isoformat()}}
+                    )
             else:
                 # Create new application
                 app_doc = {
@@ -266,13 +278,14 @@ async def import_data(
                     "user_id": current_user["user_id"],
                     "entreprise": entreprise,
                     "poste": poste,
-                    "type_poste": app_data.get('type_poste') or app_data.get('Type') or 'cdi',
+                    "type_poste": (app_data.get('type_poste') or app_data.get('Type') or 'cdi') if (app_data.get('type_poste') or app_data.get('Type', '')) in {"cdi","cdd","stage","alternance","freelance","interim"} else 'cdi',
                     "lieu": app_data.get('lieu') or app_data.get('Lieu'),
-                    "moyen": app_data.get('moyen') or app_data.get('Moyen'),
+                    "moyen": (app_data.get('moyen') or app_data.get('Moyen') or 'other') if (app_data.get('moyen') or app_data.get('Moyen', '')) in {"linkedin","company_website","email","indeed","apec","pole_emploi","welcome_to_jungle","other"} else 'other',
                     "date_candidature": date_str,
                     "lien": app_data.get('lien') or app_data.get('Lien'),
                     "commentaire": app_data.get('commentaire') or app_data.get('Commentaire'),
                     "reponse": app_data.get('reponse', 'pending'),
+                    "date_reponse": date_reponse_str,
                     "is_favorite": False,
                     "created_at": datetime.now(timezone.utc).isoformat(),
                     "updated_at": datetime.now(timezone.utc).isoformat()

@@ -20,6 +20,7 @@ export const TYPE_OPTIONS = [
   { value: 'alternance', label: 'Alternance' },
   { value: 'freelance',  label: 'Freelance' },
   { value: 'interim',    label: 'Intérim' },
+  { value: 'mastere',    label: 'Mastère' },
 ];
 
 export const INTERVIEW_STATUS_OPTIONS = [

@@ -9,7 +9,7 @@ import re
 
 from models import (
     JobApplication, JobApplicationCreate, JobApplicationUpdate,
-    JobApplicationResponse, ApplicationStatus, JobType, ApplicationMethod,
+    JobApplicationResponse, ApplicationStatus,
     BulkUpdateRequest, PaginatedResponse
 )
 from utils.auth import get_current_user
@@ -30,8 +30,8 @@ async def list_applications(
     sort_order: str = Query("desc"),
     search: Optional[str] = None,
     status: Optional[ApplicationStatus] = None,
-    job_type: Optional[JobType] = None,
-    method: Optional[ApplicationMethod] = None,
+    job_type: Optional[str] = None,
+    method: Optional[str] = None,
     is_favorite: Optional[bool] = None,
     date_from: Optional[str] = None,
     date_to: Optional[str] = None,
@@ -55,10 +55,10 @@ async def list_applications(
         filter_query["reponse"] = status.value
     
     if job_type:
-        filter_query["type_poste"] = job_type.value
-    
+        filter_query["type_poste"] = job_type
+
     if method:
-        filter_query["moyen"] = method.value
+        filter_query["moyen"] = method
     
     if is_favorite is not None:
         filter_query["is_favorite"] = is_favorite
@@ -110,6 +110,7 @@ async def list_applications(
         
         app["interviews_count"] = interviews_count
         app["next_interview"] = next_interview["date_entretien"] if next_interview else None
+
         enriched_apps.append(app)
     
     total_pages = (total + per_page - 1) // per_page
@@ -157,7 +158,22 @@ async def create_application(
     return JobApplicationResponse(**application.model_dump(), interviews_count=0, next_interview=None)
 
 
-@router.get("/{application_id}", response_model=JobApplicationResponse)
+@router.get("/distinct/fields")
+async def get_distinct_fields(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Retourne les valeurs distinctes de type_poste et moyen pour l'utilisateur"""
+    user_filter = {"user_id": current_user["user_id"]}
+    type_postes = await db.applications.distinct("type_poste", user_filter)
+    moyens = await db.applications.distinct("moyen", user_filter)
+    return {
+        "type_postes": [v for v in type_postes if v],
+        "moyens": [v for v in moyens if v]
+    }
+
+
+@router.get("/{application_id}")
 async def get_application(
     application_id: str,
     current_user: dict = Depends(get_current_user),
@@ -204,7 +220,15 @@ async def get_application(
             needs_followup = days_since >= days_before_reminder
     
     application["needs_followup"] = needs_followup
-    
+
+    # Sanitize enum fields — old imported data may have invalid values
+    VALID_TYPE_POSTE = {"cdi", "cdd", "stage", "alternance", "freelance", "interim", "mastere"}
+    VALID_MOYEN = {"linkedin", "company_website", "email", "indeed", "apec", "pole_emploi", "welcome_to_jungle", "other"}
+    if application.get("type_poste") not in VALID_TYPE_POSTE:
+        application["type_poste"] = "cdi"
+    if application.get("moyen") not in VALID_MOYEN:
+        application["moyen"] = "other"
+
     return application
 
 

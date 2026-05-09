@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { INTERVIEW_STATUS_OPTIONS as STATUS_OPTIONS, INTERVIEW_STATUS_MAP } from '../constants/application';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom';
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -113,7 +113,7 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
               <DropdownMenuItem 
                 key={opt.value}
                 onClick={(e) => { e.stopPropagation(); onStatusChange(interview.id, opt.value); }}
-                className={`${opt.color} cursor-pointer`}
+                className={`${opt.color} cursor-pointer rounded-md mx-1 my-0.5`}
               >
                 {opt.label}
               </DropdownMenuItem>
@@ -546,8 +546,11 @@ const CalendarView = ({ interviews, currentDate, onDateChange, onDayClick, onInt
 };
 
 // Interview Detail Modal
-const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChange, onSyncCalendar, syncLoading, t, language }) => {
+const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChange, onSyncCalendar, syncLoading, t, language, applications }) => {
+  const navigate = useNavigate();
   if (!interview) return null;
+
+  const linkedApp = applications?.find(a => a.id === interview.candidature_id);
   
   const statusInfo = STATUS_OPTIONS.find(s => s.value === interview.statut) || STATUS_OPTIONS[0];
   const typeInfo = TYPE_OPTIONS.find(t => t.value === interview.type_entretien);
@@ -583,7 +586,7 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
                     <DropdownMenuItem 
                       key={opt.value}
                       onClick={() => onStatusChange(interview.id, opt.value)}
-                      className={`${opt.color} cursor-pointer`}
+                      className={`${opt.color} cursor-pointer rounded-md mx-1 my-0.5`}
                     >
                       {opt.label}
                     </DropdownMenuItem>
@@ -592,13 +595,24 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
               </DropdownMenu>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
+              {linkedApp && (
+                <Button
+                  onClick={() => { onClose(); navigate(`/dashboard/applications?id=${linkedApp.id}`); }}
+                  variant="outline"
+                  className="border-slate-700 text-slate-300 hover:text-gold"
+                  title={language === 'fr' ? 'Voir la candidature' : 'View application'}
+                >
+                  <Eye size={16} className="mr-2" />
+                  {language === 'fr' ? 'Candidature' : 'Application'}
+                </Button>
+              )}
+              <Button
                 onClick={() => onSyncCalendar(interview.id)}
                 disabled={isSynced || isLoading}
-                variant="outline" 
+                variant="outline"
                 className={`border-slate-700 ${
-                  isSynced 
-                    ? 'text-green-400 cursor-not-allowed' 
+                  isSynced
+                    ? 'text-green-400 cursor-not-allowed'
                     : isLoading
                       ? 'text-gold'
                       : 'text-slate-300 hover:text-gold'
@@ -1031,6 +1045,7 @@ export default function InterviewsPage() {
       all: 'Tous',
       planned: 'Planifiés',
       completed: 'Effectués',
+      cancelled: 'Annulés',
       noResults: 'Aucun entretien',
       cardView: 'Vue liste',
       calendarView: 'Vue calendrier'
@@ -1055,6 +1070,7 @@ export default function InterviewsPage() {
       all: 'All',
       planned: 'Planned',
       completed: 'Completed',
+      cancelled: 'Cancelled',
       noResults: 'No interviews',
       cardView: 'List view',
       calendarView: 'Calendar view'
@@ -1186,7 +1202,8 @@ export default function InterviewsPage() {
         {[
           { value: 'all', label: t.all },
           { value: 'planned', label: t.planned },
-          { value: 'completed', label: t.completed }
+          { value: 'completed', label: t.completed },
+          { value: 'cancelled', label: t.cancelled }
         ].map(opt => (
           <button
             key={opt.value}
@@ -1321,6 +1338,7 @@ export default function InterviewsPage() {
         syncLoading={syncCalendarLoading}
         t={t}
         language={language}
+        applications={applications}
       />
 
       {/* Day Interviews Modal */}
