@@ -244,8 +244,11 @@ async def get_response_rate_stats(
         {"$project": {
             "response_time": {
                 "$divide": [
-                    {"$subtract": ["$date_reponse", "$date_candidature"]},
-                    1000 * 60 * 60 * 24  # Convertir en jours
+                    {"$subtract": [
+                        {"$dateFromString": {"dateString": "$date_reponse"}},
+                        {"$dateFromString": {"dateString": "$date_candidature"}}
+                    ]},
+                    1000 * 60 * 60 * 24
                 ]
             }
         }},
