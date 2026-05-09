@@ -76,34 +76,41 @@ const CommandPalette = ({ isOpen, onClose }) => {
     staticPages.push({ id: 'p12', type: 'page', title: 'Admin : Support', icon: MessageSquare, url: '/admin/support' });
   }
 
-  const searchData = useCallback(async (searchQuery) => {
+  const searchData = useCallback(async (searchQuery, signal) => {
     setIsLoading(true);
     try {
-      const baseUrl = process.env.REACT_APP_API_URL || 'https://job-tracker-steel-eight.vercel.app';
-      const url = searchQuery.trim() 
-        ? `${baseUrl}/api/search/global?q=${encodeURIComponent(searchQuery)}`
-        : `${baseUrl}/api/search/global`;
-
+      const baseUrl = process.env.REACT_APP_BACKEND_URL || '';
+      const url = `${baseUrl}/api/search/global?q=${encodeURIComponent(searchQuery)}`;
       const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+        signal,
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
       });
+      if (!response.ok) throw new Error('Search failed');
       const data = await response.json();
       setResults(data);
+      setSelectedIndex(0);
     } catch (error) {
-      console.error('Search error:', error.message || error);
+      if (error.name !== 'AbortError') console.error('Search error:', error.message || error);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    if (!query.trim()) {
+      setResults([]);
+      setSelectedIndex(0);
+      return;
+    }
+    const controller = new AbortController();
     const timer = setTimeout(() => {
-      searchData(query);
-    }, query ? 300 : 0); // Pas de délai si vide (montage)
+      searchData(query, controller.signal);
+    }, 300);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, searchData]);
 
 
