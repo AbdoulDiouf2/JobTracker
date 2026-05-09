@@ -73,13 +73,14 @@ async def global_search(
     }).limit(10)
     
     async for app in apps_cursor:
+        type_poste = app.get("type_poste", "")
+        subtitle = f"{app['poste']} · {type_poste.upper()}" if type_poste else app["poste"]
         results.append({
             "id": app["id"],
             "type": "application",
             "title": app["entreprise"],
-            "subtitle": app["poste"],
+            "subtitle": subtitle,
             "url": f"/dashboard/applications?id={app['id']}",
-
             "status": app.get("reponse", "pending")
         })
 

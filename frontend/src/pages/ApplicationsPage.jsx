@@ -884,7 +884,7 @@ export default function ApplicationsPage() {
   const navigate = useNavigate();
   const { showConfirm, ConfirmDialog } = useConfirmDialog();
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isModalOpen, setIsModalOpen] = useState(searchParams.get('open_modal') === 'true');
   const [editingApp, setEditingApp] = useState(null);
   const [viewingApp, setViewingApp] = useState(null);
@@ -1446,7 +1446,7 @@ export default function ApplicationsPage() {
       <ApplicationDetailModal
         app={viewingApp}
         isOpen={!!viewingApp}
-        onClose={() => setViewingApp(null)}
+        onClose={() => { setViewingApp(null); setSearchParams({}); }}
         onEdit={handleEdit}
         onStatusChange={handleStatusChange}
         onRefresh={() => {}}
