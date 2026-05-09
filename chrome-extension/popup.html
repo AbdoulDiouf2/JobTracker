@@ -55,6 +55,13 @@
         <button type="button" id="logoutBtn" class="logout-btn">Deconnexion</button>
       </div>
 
+      <div class="main-tabs">
+        <button type="button" class="main-tab active" data-main-tab="clipper">Clipper</button>
+        <button type="button" class="main-tab" data-main-tab="links">Portfolio &amp; Liens</button>
+      </div>
+
+      <div id="clipperPanel">
+
       <div class="mode-switch-container">
         <span class="mode-label">Mode :</span>
         <div class="mode-toggle">
@@ -129,10 +136,31 @@
           <textarea id="description" name="description" rows="2" placeholder="Description..."></textarea>
         </div>
 
+        <div class="form-group">
+          <label for="cvSelect">CV associe</label>
+          <select id="cvSelect" name="cvSelect">
+            <option value="">Aucun CV</option>
+          </select>
+        </div>
+
         <button type="submit" id="saveBtn">Ajouter au Tracker</button>
       </form>
 
       <div id="message" class="hidden"></div>
+
+      </div><!-- end clipperPanel -->
+
+      <div id="linksPanel" class="hidden">
+        <div class="links-header">
+          <span class="links-title">Mes liens enregistres</span>
+          <button type="button" id="refreshLinksBtn" class="refresh-btn" title="Actualiser">&#8635;</button>
+        </div>
+        <div id="linksLoading" class="hidden">Chargement...</div>
+        <div id="linksError" class="hidden"></div>
+        <div id="linksList"></div>
+        <p id="linksEmpty" class="hidden links-empty">Aucun lien portfolio enregistre.<br>Ajoutez-en depuis la plateforme.</p>
+      </div>
+
     </div>
 
     <footer>

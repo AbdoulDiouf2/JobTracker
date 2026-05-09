@@ -14,6 +14,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   const messageDiv = document.getElementById("message");
   const extractBtn = document.getElementById("extractBtn");
   const loadingDiv = document.getElementById("loading");
+  const cvSelect = document.getElementById("cvSelect");
+  const mainTabs = document.querySelectorAll(".main-tab");
+  const clipperPanel = document.getElementById("clipperPanel");
+  const linksPanel = document.getElementById("linksPanel");
+  const refreshLinksBtn = document.getElementById("refreshLinksBtn");
   const modeBtns = document.querySelectorAll(".mode-btn");
   const titleInput = document.getElementById("title");
   const companyInput = document.getElementById("company");
@@ -40,6 +45,117 @@ document.addEventListener("DOMContentLoaded", async () => {
   chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
     if (tab?.url) urlInput.value = tab.url;
   });
+
+  mainTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      mainTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const target = tab.dataset.mainTab;
+      clipperPanel.classList.toggle("hidden", target !== "clipper");
+      linksPanel.classList.toggle("hidden", target !== "links");
+      if (target === "links") loadLinks();
+    });
+  });
+
+  refreshLinksBtn.addEventListener("click", () => loadLinks());
+
+  async function loadLinks() {
+    const { apiUrl, token } = await getConfig();
+    const linksLoading = document.getElementById("linksLoading");
+    const linksError = document.getElementById("linksError");
+    const linksList = document.getElementById("linksList");
+    const linksEmpty = document.getElementById("linksEmpty");
+
+    linksLoading.classList.remove("hidden");
+    linksError.classList.add("hidden");
+    linksList.innerHTML = "";
+    linksEmpty.classList.add("hidden");
+
+    try {
+      if (!await ensureApiPermission(apiUrl)) throw new Error("Permission refusee pour l'URL de l'API.");
+      const response = await fetch(`${apiUrl}/api/documents/portfolio-links`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!response.ok) await handleApiFailure(response);
+      const links = await response.json();
+
+      if (!links.length) {
+        linksEmpty.classList.remove("hidden");
+      } else {
+        links.forEach((link) => {
+          const card = buildLinkCard(link);
+          linksList.appendChild(card);
+        });
+      }
+    } catch (error) {
+      linksError.textContent = error.message;
+      linksError.classList.remove("hidden");
+    } finally {
+      linksLoading.classList.add("hidden");
+    }
+  }
+
+  function buildLinkCard(link) {
+    const card = document.createElement("div");
+    card.className = "link-card";
+
+    const top = document.createElement("div");
+    top.className = "link-card-top";
+
+    const name = document.createElement("span");
+    name.className = "link-card-name";
+    name.textContent = link.name;
+    top.appendChild(name);
+
+    if (link.label) {
+      const label = document.createElement("span");
+      label.className = "link-card-label";
+      label.textContent = link.label;
+      top.appendChild(label);
+    }
+
+    card.appendChild(top);
+
+    if (link.description) {
+      const desc = document.createElement("p");
+      desc.className = "link-card-desc";
+      desc.textContent = link.description;
+      card.appendChild(desc);
+    }
+
+    if (link.url) {
+      const urlRow = document.createElement("div");
+      urlRow.className = "link-card-url";
+
+      const openBtn = document.createElement("button");
+      openBtn.type = "button";
+      openBtn.className = "link-open-btn";
+      openBtn.textContent = link.url.replace(/^https?:\/\//, "");
+      openBtn.title = link.url;
+      openBtn.addEventListener("click", () => chrome.tabs.create({ url: link.url }));
+
+      const copyBtn = document.createElement("button");
+      copyBtn.type = "button";
+      copyBtn.className = "link-copy-btn";
+      copyBtn.textContent = "Copier";
+      copyBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(link.url).then(() => {
+          copyBtn.textContent = "✓";
+          copyBtn.classList.add("copied");
+          setTimeout(() => {
+            copyBtn.textContent = "Copier";
+            copyBtn.classList.remove("copied");
+          }, 1500);
+        });
+      });
+
+      urlRow.appendChild(openBtn);
+      urlRow.appendChild(copyBtn);
+      card.appendChild(urlRow);
+    }
+
+    return card;
+  }
 
   modeBtns.forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -163,7 +279,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       date_candidature: new Date().toISOString(),
       reponse: "pending",
       moyen: detectApplicationMethod(urlInput.value),
-      is_favorite: false
+      is_favorite: false,
+      cv_id: cvSelect.value || null
     };
     if (!formData.entreprise || !formData.poste) {
       showMessage("Entreprise et poste sont requis.", "error");
@@ -371,10 +488,34 @@ document.addEventListener("DOMContentLoaded", async () => {
     mainSection.classList.add("hidden");
   }
 
-  function showMainSection(userName) {
+  async function showMainSection(userName) {
     authSection.classList.add("hidden");
     mainSection.classList.remove("hidden");
     userNameSpan.textContent = userName;
+    await loadCvs();
+  }
+
+  async function loadCvs() {
+    const { apiUrl, token } = await getConfig();
+    if (!token) return;
+    try {
+      if (!await ensureApiPermission(apiUrl)) return;
+      const response = await fetch(`${apiUrl}/api/documents/cv`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      if (!response.ok) return;
+      const cvs = await response.json();
+      cvSelect.innerHTML = '<option value="">Aucun CV</option>';
+      cvs.forEach((cv) => {
+        const opt = document.createElement("option");
+        opt.value = cv.id;
+        opt.textContent = cv.label ? `${cv.name} — ${cv.label}` : cv.name;
+        if (cv.is_default) opt.selected = true;
+        cvSelect.appendChild(opt);
+      });
+    } catch {
+      // silencieux — sélecteur reste vide
+    }
   }
 
   function showAuthMessage(text, type) {
