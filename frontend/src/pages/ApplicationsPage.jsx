@@ -466,6 +466,14 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                 </p>
                 <p className="text-slate-500 text-xs mt-1">Il y a {daysSince} jours</p>
               </div>
+              {app.date_reponse && (
+                <div className="p-4 bg-slate-900/30 rounded-xl">
+                  <p className="text-slate-400 text-sm mb-1">{language === 'fr' ? 'Date de réponse' : 'Response date'}</p>
+                  <p className="text-white font-medium">
+                    {format(new Date(app.date_reponse), 'dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Competences */}
@@ -874,6 +882,8 @@ export default function ApplicationsPage() {
   );
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('card');
+  const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [responseDateInput, setResponseDateInput] = useState('');
 
   const queryClient = useQueryClient();
   const currentParams = { page: currentPage, search: searchQuery || undefined, ...filters };
@@ -1006,7 +1016,14 @@ export default function ApplicationsPage() {
     }
   };
 
+  const FINAL_STATUSES = ['positive', 'negative', 'cancelled'];
+
   const handleStatusChange = async (id, newStatus) => {
+    if (FINAL_STATUSES.includes(newStatus)) {
+      setPendingStatusChange({ id, newStatus });
+      setResponseDateInput(format(new Date(), 'yyyy-MM-dd'));
+      return;
+    }
     try {
       await updateApplication.mutateAsync({ id, data: { reponse: newStatus } });
     } catch (err) {
@@ -1015,6 +1032,25 @@ export default function ApplicationsPage() {
     if (viewingApp && viewingApp.id === id) {
       setViewingApp(prev => ({ ...prev, reponse: newStatus }));
     }
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!pendingStatusChange) return;
+    const { id, newStatus } = pendingStatusChange;
+    const payload = { reponse: newStatus };
+    if (responseDateInput) {
+      payload.date_reponse = new Date(responseDateInput).toISOString();
+    }
+    try {
+      await updateApplication.mutateAsync({ id, data: payload });
+      if (viewingApp && viewingApp.id === id) {
+        setViewingApp(prev => ({ ...prev, reponse: newStatus, date_reponse: payload.date_reponse }));
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || (language === 'fr' ? 'Erreur lors du changement de statut' : 'Error updating status'));
+    }
+    setPendingStatusChange(null);
+    setResponseDateInput('');
   };
 
   const handleViewDetails = (app) => {
@@ -1389,6 +1425,37 @@ export default function ApplicationsPage() {
 
       {/* Confirm Dialog */}
       {ConfirmDialog}
+
+      {/* Response Date Dialog */}
+      <Dialog open={!!pendingStatusChange} onOpenChange={(open) => { if (!open) setPendingStatusChange(null); }}>
+        <DialogContent className="bg-slate-900 border border-slate-700 text-white max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="font-heading text-lg">
+              {language === 'fr' ? 'Date de réponse' : 'Response date'}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-400">
+            {language === 'fr'
+              ? 'Quand avez-vous reçu cette réponse ?'
+              : 'When did you receive this response?'}
+          </p>
+          <input
+            type="date"
+            value={responseDateInput}
+            max={format(new Date(), 'yyyy-MM-dd')}
+            onChange={(e) => setResponseDateInput(e.target.value)}
+            className="w-full bg-slate-800 border border-slate-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-[#c4a052] transition-colors"
+          />
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="ghost" onClick={() => setPendingStatusChange(null)} className="text-slate-400 hover:text-white">
+              {language === 'fr' ? 'Annuler' : 'Cancel'}
+            </Button>
+            <Button onClick={handleConfirmStatusChange} className="bg-[#c4a052] hover:bg-[#b8934a] text-[#020817] font-semibold">
+              {language === 'fr' ? 'Confirmer' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

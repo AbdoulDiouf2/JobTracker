@@ -251,6 +251,7 @@ async def update_application(
             "new_value": new_status,
             "details": f"Statut changé de {old_status} à {new_status}"
         }
+
     
     # Convertir les enums et dates
     for key, value in update_data.items():
