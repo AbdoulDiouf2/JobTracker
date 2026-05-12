@@ -1192,10 +1192,24 @@ export default function ApplicationsPage() {
             />
           </div>
 
+          {/* Favorites Filter */}
+          <button
+            onClick={() => setFilters(prev => ({ ...prev, is_favorite: prev.is_favorite ? undefined : true }))}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
+              filters.is_favorite
+                ? 'bg-gold/10 border-gold/40 text-gold'
+                : 'border-slate-700 text-slate-400 hover:text-white hover:border-slate-500'
+            }`}
+            data-testid="filter-favorites-btn"
+          >
+            <Star size={15} className={filters.is_favorite ? 'fill-gold' : ''} />
+            {language === 'fr' ? 'Favoris' : 'Favorites'}
+          </button>
+
           {/* Clear Filters */}
           {(Object.values(filters).some(v => v !== undefined) || searchQuery) && (
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => {
                 setFilters({});
