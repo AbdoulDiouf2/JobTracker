@@ -89,6 +89,13 @@ class ApplicationMethod(str, Enum):
     APEC = "apec"
     POLE_EMPLOI = "pole_emploi"
     WELCOME_TO_JUNGLE = "welcome_to_jungle"
+    JOBTEASER = "jobteaser"
+    HELLO_WORK = "hello_work"
+    METEOJOB = "meteojob"
+    CADREMPLOI = "cadremploi"
+    GLASSDOOR = "glassdoor"
+    WORKABLE = "workable"
+    SPONTANEE = "spontanee"
     AUTRE = "other"
 
     @property
@@ -101,6 +108,13 @@ class ApplicationMethod(str, Enum):
             "apec": "APEC",
             "pole_emploi": "France Travail",
             "welcome_to_jungle": "Welcome to the Jungle",
+            "jobteaser": "JobTeaser",
+            "hello_work": "Hello Work",
+            "meteojob": "Météojob",
+            "cadremploi": "Cadremploi",
+            "glassdoor": "Glassdoor",
+            "workable": "Workable",
+            "spontanee": "Candidature spontanée",
             "other": "Autre"
         }
         return labels.get(self.value, self.value)

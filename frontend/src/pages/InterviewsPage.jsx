@@ -10,10 +10,10 @@ import {
   addDays, subDays, startOfYear, endOfYear, eachMonthOfInterval, addYears, subYears
 } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
-import { 
-  Plus, Calendar, Clock, MapPin, User, Edit2, Trash2, 
+import {
+  Plus, Calendar, Clock, MapPin, User, Edit2, Trash2,
   Phone, Video, Building, Loader2, AlertCircle, Eye,
-  ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, ChevronDown, X, CalendarPlus
+  ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, ChevronDown, X, CalendarPlus, Search
 } from 'lucide-react';
 import { useInterviews } from '../hooks/useInterviews';
 import { useApplications } from '../hooks/useApplications';
@@ -1000,16 +1000,30 @@ export default function InterviewsPage() {
   const [viewingInterview, setViewingInterview] = useState(null);
   const [filter, setFilter] = useState('all');
   const [submitting, setSubmitting] = useState(false);
-  const [viewMode, setViewMode] = useState('calendar');
+  const [viewMode, setViewMode] = useState('card');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarView, setCalendarView] = useState('month');
   const [dayModalData, setDayModalData] = useState({ date: null, interviews: [] });
   const [syncCalendarLoading, setSyncCalendarLoading] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const { interviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
+  const { interviews: allInterviews, loading, createInterview, updateInterview, deleteInterview } = useInterviews(
     filter !== 'all' ? { status: filter } : {}
   );
   const { applications } = useApplications({ per_page: 100 });
+
+  const interviews = searchQuery.trim()
+    ? allInterviews.filter(i => {
+        const q = searchQuery.toLowerCase();
+        return (
+          (i.entreprise || '').toLowerCase().includes(q) ||
+          (i.poste || '').toLowerCase().includes(q) ||
+          (i.lieu_entretien || '').toLowerCase().includes(q) ||
+          (i.interviewer || '').toLowerCase().includes(q) ||
+          (i.commentaire || '').toLowerCase().includes(q)
+        );
+      })
+    : allInterviews;
 
   // Ouvrir automatiquement les détails si un ID est présent dans l'URL (via recherche par exemple)
   useEffect(() => {
@@ -1047,6 +1061,7 @@ export default function InterviewsPage() {
       completed: 'Effectués',
       cancelled: 'Annulés',
       noResults: 'Aucun entretien',
+      search: 'Rechercher entreprise, poste, recruteur...',
       cardView: 'Vue liste',
       calendarView: 'Vue calendrier'
     },
@@ -1072,6 +1087,7 @@ export default function InterviewsPage() {
       completed: 'Completed',
       cancelled: 'Cancelled',
       noResults: 'No interviews',
+      search: 'Search company, position, interviewer...',
       cardView: 'List view',
       calendarView: 'Calendar view'
     }
@@ -1195,6 +1211,29 @@ export default function InterviewsPage() {
             {t.newInterview}
           </Button>
         </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+        <Input
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            if (e.target.value) setViewMode('card');
+          }}
+          placeholder={t.search}
+          className="pl-10 bg-slate-900/50 border-slate-700 text-white"
+          data-testid="interviews-search"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+          >
+            <X size={16} />
+          </button>
+        )}
       </div>
 
       {/* Filters */}

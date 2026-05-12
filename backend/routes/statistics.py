@@ -2,8 +2,8 @@
 JobTracker SaaS - Routes des statistiques
 """
 
-from fastapi import APIRouter, Depends
-from typing import List
+from fastapi import APIRouter, Depends, Query, HTTPException
+from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from collections import defaultdict
 
@@ -269,45 +269,286 @@ async def get_response_rate_stats(
     }
 
 
+@router.get("/by-method-effectiveness")
+async def get_method_effectiveness(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+):
+    """Taux de réponse et d'acceptation par source de candidature"""
+    user_id = current_user["user_id"]
+    base_filter: dict = {"user_id": user_id, "moyen": {"$ne": None}}
+    if date_from or date_to:
+        dr: dict = {}
+        if date_from:
+            dr["$gte"] = date_from
+        if date_to:
+            dr["$lte"] = date_to + "T23:59:59"
+        base_filter["date_candidature"] = dr
+
+    pipeline = [
+        {"$match": base_filter},
+        {"$group": {
+            "_id": {"method": "$moyen", "status": "$reponse"},
+            "count": {"$sum": 1}
+        }},
+        {"$group": {
+            "_id": "$_id.method",
+            "statuses": {"$push": {"status": "$_id.status", "count": "$count"}}
+        }}
+    ]
+    raw = await db.applications.aggregate(pipeline).to_list(50)
+
+    # Normalise une valeur brute vers une clé enum connue
+    def normalize_method(raw_value: str) -> str:
+        if not raw_value:
+            return "other"
+        # Valeur enum déjà valide → retour direct
+        try:
+            ApplicationMethod(raw_value)
+            return raw_value
+        except ValueError:
+            pass
+        v = raw_value.lower().strip()
+        if "linkedin" in v:
+            return "linkedin"
+        if "indeed" in v:
+            return "indeed"
+        if "welcome" in v or "jungle" in v:
+            return "welcome_to_jungle"
+        if "jobteaser" in v or "job teaser" in v:
+            return "jobteaser"
+        if "hello work" in v or "hellowork" in v:
+            return "hello_work"
+        if "meteo" in v or "météo" in v:
+            return "meteojob"
+        if "cadremp" in v:
+            return "cadremploi"
+        if "glassdoor" in v:
+            return "glassdoor"
+        if "workable" in v:
+            return "workable"
+        if "spontan" in v:
+            return "spontanee"
+        if "apec" in v:
+            return "apec"
+        if "pole" in v or "france travail" in v or "pôle" in v or "francetravail" in v:
+            return "pole_emploi"
+        if "email" in v or "@" in v or "courriel" in v:
+            return "email"
+        if "mail" in v and "@" not in v:
+            return "email"
+        if "site" in v or "company" in v or "entreprise" in v or "web" in v or "career" in v:
+            return "company_website"
+        return "other"
+
+    # Fusionner par clé normalisée
+    merged: dict = {}
+    for item in raw:
+        key = normalize_method(item["_id"])
+        statuses = item["statuses"]
+        if key not in merged:
+            merged[key] = {"total": 0, "responded": 0, "positive": 0}
+        merged[key]["total"] += sum(s["count"] for s in statuses)
+        merged[key]["responded"] += sum(s["count"] for s in statuses if s["status"] in ["positive", "negative"])
+        merged[key]["positive"] += sum(s["count"] for s in statuses if s["status"] == "positive")
+
+    result = []
+    for key, counts in merged.items():
+        total = counts["total"]
+        responded = counts["responded"]
+        positive = counts["positive"]
+        try:
+            label = ApplicationMethod(key).label_fr
+        except (ValueError, AttributeError):
+            label = key.replace("_", " ").title()
+        result.append({
+            "method": key,
+            "label": label,
+            "total": total,
+            "responded": responded,
+            "positive": positive,
+            "response_rate": round(responded / total * 100, 1) if total > 0 else 0.0,
+            "positive_rate": round(positive / total * 100, 1) if total > 0 else 0.0,
+        })
+
+    # Minimum 3 candidatures pour être significatif
+    filtered = [r for r in result if r["total"] >= 3]
+    return sorted(filtered, key=lambda x: x["response_rate"], reverse=True)[:10]
+
+
 @router.get("/overview", response_model=StatisticsOverview)
 async def get_statistics_overview(
     current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
+    db = Depends(get_db),
+    date_from: Optional[str] = Query(None, description="ISO date début (YYYY-MM-DD)"),
+    date_to: Optional[str] = Query(None, description="ISO date fin (YYYY-MM-DD)"),
 ):
     """Vue d'ensemble complète des statistiques"""
-    # Dashboard stats
-    dashboard = await get_dashboard_stats(current_user, db)
-    
-    # Timeline
-    timeline = await get_timeline_stats(current_user, db)
-    
-    # Distributions
-    by_status = await get_status_distribution(current_user, db)
-    by_type = await get_type_distribution(current_user, db)
-    by_method = await get_method_distribution(current_user, db)
-    
-    # Response rate
-    response_data = await get_response_rate_stats(current_user, db)
-    
-    # Stats entretiens
     user_id = current_user["user_id"]
-    interviews_total = await db.interviews.count_documents({"user_id": user_id})
-    interviews_planned = await db.interviews.count_documents({"user_id": user_id, "statut": "planned"})
-    interviews_completed = await db.interviews.count_documents({"user_id": user_id, "statut": "completed"})
-    interviews_cancelled = await db.interviews.count_documents({"user_id": user_id, "statut": "cancelled"})
-    
+
+    # Filtre de période appliqué sur date_candidature
+    date_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        date_range: dict = {}
+        if date_from:
+            date_range["$gte"] = date_from
+        if date_to:
+            # Inclure tout le jour de fin
+            date_range["$lte"] = date_to + "T23:59:59"
+        date_filter["date_candidature"] = date_range
+
+    # --- Dashboard stats ---
+    total = await db.applications.count_documents(date_filter)
+    pending = await db.applications.count_documents({**date_filter, "reponse": "pending"})
+    positive = await db.applications.count_documents({**date_filter, "reponse": "positive"})
+    negative = await db.applications.count_documents({**date_filter, "reponse": "negative"})
+    no_response = await db.applications.count_documents({**date_filter, "reponse": "no_response"})
+    cancelled = await db.applications.count_documents({**date_filter, "reponse": "cancelled"})
+    wi_result = await db.applications.aggregate([
+        {"$match": date_filter},
+        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$match": {"_ivs": {"$ne": []}}},
+        {"$count": "count"}
+    ]).to_list(1)
+    with_interview = wi_result[0]["count"] if wi_result else 0
+    favorites_count = await db.applications.count_documents({**date_filter, "is_favorite": True})
+    responded = positive + negative
+    response_rate = round(responded / total * 100, 1) if total > 0 else 0.0
+
+    dashboard = DashboardStats(
+        total_applications=total,
+        pending=pending,
+        with_interview=with_interview,
+        positive=positive,
+        negative=negative,
+        no_response=no_response,
+        cancelled=cancelled,
+        response_rate=response_rate,
+        favorites_count=favorites_count,
+    )
+
+    # --- Timeline ---
+    cursor = db.applications.find(date_filter, {"_id": 0, "date_candidature": 1}).sort("date_candidature", 1)
+    apps = await cursor.to_list(length=10000)
+    date_counts: dict = defaultdict(int)
+    for app in apps:
+        d = app.get("date_candidature", "")[:10]
+        if d:
+            date_counts[d] += 1
+    timeline = []
+    cumulative = 0
+    for date in sorted(date_counts.keys()):
+        cumulative += date_counts[date]
+        timeline.append(TimelineDataPoint(date=date, count=date_counts[date], cumulative=cumulative))
+
+    # --- Distributions ---
+    def add_date_filter(pipeline):
+        pipeline[0]["$match"].update({k: v for k, v in date_filter.items() if k != "user_id"})
+        return pipeline
+
+    status_pipeline = add_date_filter([
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": "$reponse", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ])
+    status_result = await db.applications.aggregate(status_pipeline).to_list(10)
+    status_total = sum(r["count"] for r in status_result)
+    by_status = []
+    for r in status_result:
+        sv = r["_id"]
+        try:
+            label = ApplicationStatus(sv).label_fr
+        except (ValueError, AttributeError):
+            label = sv or "Inconnu"
+        by_status.append(StatusDistribution(
+            status=sv, label=label, count=r["count"],
+            percentage=round(r["count"] / status_total * 100, 1) if status_total > 0 else 0
+        ))
+
+    type_pipeline = add_date_filter([
+        {"$match": {"user_id": user_id}},
+        {"$group": {"_id": "$type_poste", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ])
+    type_result = await db.applications.aggregate(type_pipeline).to_list(10)
+    type_total = sum(r["count"] for r in type_result)
+    by_type = []
+    for r in type_result:
+        tv = r["_id"]
+        try:
+            label = JobType(tv).label_fr
+        except (ValueError, AttributeError):
+            label = tv or "Inconnu"
+        by_type.append(TypeDistribution(
+            type=tv, label=label, count=r["count"],
+            percentage=round(r["count"] / type_total * 100, 1) if type_total > 0 else 0
+        ))
+
+    method_match = {**date_filter, "moyen": {"$ne": None}}
+    method_pipeline = [
+        {"$match": method_match},
+        {"$group": {"_id": "$moyen", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}}
+    ]
+    method_result = await db.applications.aggregate(method_pipeline).to_list(20)
+    method_total = sum(r["count"] for r in method_result)
+    by_method = []
+    for r in method_result:
+        mv = r["_id"]
+        if mv:
+            try:
+                label = ApplicationMethod(mv).label_fr
+            except (ValueError, AttributeError):
+                label = mv
+            by_method.append(MethodDistribution(
+                method=mv, label=label, count=r["count"],
+                percentage=round(r["count"] / method_total * 100, 1) if method_total > 0 else 0
+            ))
+
+    # --- Avg response time ---
+    rt_pipeline = [
+        {"$match": {**date_filter, "date_reponse": {"$ne": None}}},
+        {"$project": {"response_time": {"$divide": [
+            {"$subtract": [
+                {"$dateFromString": {"dateString": "$date_reponse"}},
+                {"$dateFromString": {"dateString": "$date_candidature"}}
+            ]},
+            1000 * 60 * 60 * 24
+        ]}}},
+        {"$group": {"_id": None, "avg": {"$avg": "$response_time"}}}
+    ]
+    rt_result = await db.applications.aggregate(rt_pipeline).to_list(1)
+    avg_response_time = round(rt_result[0]["avg"], 1) if rt_result else None
+
+    # --- Interviews (filtre sur date_entretien si période définie) ---
+    interview_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        dr: dict = {}
+        if date_from:
+            dr["$gte"] = date_from
+        if date_to:
+            dr["$lte"] = date_to + "T23:59:59"
+        interview_filter["date_entretien"] = dr
+
+    interviews_total = await db.interviews.count_documents(interview_filter)
+    interviews_planned = await db.interviews.count_documents({**interview_filter, "statut": "planned"})
+    interviews_completed = await db.interviews.count_documents({**interview_filter, "statut": "completed"})
+    interviews_cancelled = await db.interviews.count_documents({**interview_filter, "statut": "cancelled"})
+
     return StatisticsOverview(
         dashboard=dashboard,
         timeline=timeline,
         by_status=by_status,
         by_type=by_type,
         by_method=by_method,
-        avg_response_time_days=response_data.get("avg_response_time_days"),
+        avg_response_time_days=avg_response_time,
         interviews_stats={
             "total": interviews_total,
             "planned": interviews_planned,
             "completed": interviews_completed,
-            "cancelled": interviews_cancelled
+            "cancelled": interviews_cancelled,
         }
     )
 
@@ -358,17 +599,55 @@ async def update_user_preferences(
 @router.get("/dashboard-v2", response_model=DashboardV2Response)
 async def get_dashboard_v2(
     current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
+    db = Depends(get_db),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
 ):
     """Dashboard V2 avec insights intelligents, score et objectifs"""
     user_id = current_user["user_id"]
-    # Utiliser datetime sans timezone pour correspondre au format stocké
     now = datetime.now()
-    
+
+    # Filtre de période sur date_candidature
+    period_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        dr: dict = {}
+        if date_from:
+            dr["$gte"] = date_from
+        if date_to:
+            dr["$lte"] = date_to + "T23:59:59"
+        period_filter["date_candidature"] = dr
+
     # ============================================
-    # 1. STATS DE BASE
+    # 1. STATS DE BASE (filtrées par période)
     # ============================================
-    basic_stats = await get_dashboard_stats(current_user, db)
+    total_apps = await db.applications.count_documents(period_filter)
+    pending = await db.applications.count_documents({**period_filter, "reponse": "pending"})
+    positive = await db.applications.count_documents({**period_filter, "reponse": "positive"})
+    negative = await db.applications.count_documents({**period_filter, "reponse": "negative"})
+    no_response = await db.applications.count_documents({**period_filter, "reponse": "no_response"})
+    cancelled = await db.applications.count_documents({**period_filter, "reponse": "cancelled"})
+    wi_result = await db.applications.aggregate([
+        {"$match": period_filter},
+        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$match": {"_ivs": {"$ne": []}}},
+        {"$count": "count"}
+    ]).to_list(1)
+    with_interview = wi_result[0]["count"] if wi_result else 0
+    favorites_count = await db.applications.count_documents({**period_filter, "is_favorite": True})
+    responded = positive + negative
+    response_rate = round(responded / total_apps * 100, 1) if total_apps > 0 else 0.0
+
+    basic_stats = DashboardStats(
+        total_applications=total_apps,
+        pending=pending,
+        with_interview=with_interview,
+        positive=positive,
+        negative=negative,
+        no_response=no_response,
+        cancelled=cancelled,
+        response_rate=response_rate,
+        favorites_count=favorites_count,
+    )
     
     # ============================================
     # 2. PRÉFÉRENCES & OBJECTIFS
@@ -449,8 +728,6 @@ async def get_dashboard_v2(
         regularity_score = 0
     
     # 3.2 Taux de réponse (25 pts)
-    total_apps = basic_stats.total_applications
-    responded = basic_stats.positive + basic_stats.negative
     response_rate = (responded / total_apps * 100) if total_apps > 0 else 0
     
     if response_rate >= 40:
@@ -463,7 +740,15 @@ async def get_dashboard_v2(
         response_rate_score = 5 if total_apps > 0 else 0
     
     # 3.3 Ratio entretiens/candidatures (25 pts)
-    interview_count = await db.interviews.count_documents({"user_id": user_id})
+    interview_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        idr: dict = {}
+        if date_from:
+            idr["$gte"] = date_from
+        if date_to:
+            idr["$lte"] = date_to + "T23:59:59"
+        interview_filter["date_entretien"] = idr
+    interview_count = await db.interviews.count_documents(interview_filter)
     interview_ratio = (interview_count / total_apps * 100) if total_apps > 0 else 0
     
     if interview_ratio >= 30:
@@ -479,7 +764,7 @@ async def get_dashboard_v2(
     
     # 3.4 Relances effectuées (20 pts)
     apps_with_followup = await db.applications.count_documents({
-        "user_id": user_id,
+        **period_filter,
         "followup_count": {"$gte": 1}
     })
     followup_rate = (apps_with_followup / total_apps * 100) if total_apps > 0 else 0
@@ -554,11 +839,11 @@ async def get_dashboard_v2(
     
     # Insight sur les candidatures sans réponse
     old_pending_date = (now - timedelta(days=21)).isoformat()
-    old_pending = await db.applications.count_documents({
-        "user_id": user_id,
-        "reponse": "pending",
-        "date_candidature": {"$lt": old_pending_date}
-    })
+    old_pending_filter = {**period_filter, "reponse": "pending"}
+    # Garde la contrainte d'ancienneté seulement si pas de filtre de période
+    if not (date_from or date_to):
+        old_pending_filter["date_candidature"] = {"$lt": old_pending_date}
+    old_pending = await db.applications.count_documents(old_pending_filter)
     if old_pending > 0:
         insights.append(DashboardInsight(
             type="warning",
@@ -568,7 +853,7 @@ async def get_dashboard_v2(
         ))
     
     # Insight sur la régularité
-    if avg_weekly < 2 and total_apps > 5:
+    if avg_weekly < 2 and total_apps > 5 and not (date_from or date_to):
         insights.append(DashboardInsight(
             type="tip",
             icon="💡",
@@ -577,7 +862,7 @@ async def get_dashboard_v2(
         ))
     
     # Insight sur les relances
-    if followup_rate < 20 and total_apps > 10:
+    if followup_rate < 20 and total_apps > 10 and not (date_from or date_to):
         insights.append(DashboardInsight(
             type="tip",
             icon="🔄",
@@ -719,3 +1004,158 @@ async def get_dashboard_v2(
         last_month_applications=last_month_count,
         month_over_month_change=mom_change
     )
+
+
+# ============================================
+# ANALYSE IA DES STATISTIQUES
+# ============================================
+
+@router.get("/ai-analysis")
+async def analyze_statistics_with_ai(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db),
+    date_from: Optional[str] = Query(None),
+    date_to: Optional[str] = Query(None),
+    model_provider: Optional[str] = Query(None),
+    model_name: Optional[str] = Query(None),
+):
+    """Analyse IA complète des statistiques de l'utilisateur"""
+    from routes.ai import get_user_api_keys, select_api_key, call_ai
+
+    user_id = current_user["user_id"]
+
+    # Récupérer les clés API
+    user_keys = await get_user_api_keys(user_id, db)
+
+    # Si l'utilisateur a choisi un provider/modèle spécifique, l'utiliser
+    if model_provider and model_name:
+        api_key = user_keys.get(model_provider) or None
+        # Fallback sur clé env si pas de clé user
+        if not api_key:
+            import os
+            env_map = {
+                "openai": os.environ.get("OPENAI_API_KEY"),
+                "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"),
+                "groq": os.environ.get("GROQ_API_KEY"),
+            }
+            api_key = env_map.get(model_provider)
+        provider = model_provider
+        model = model_name
+        if not api_key:
+            raise HTTPException(status_code=400, detail=f"Aucune clé API pour le provider '{model_provider}'")
+    else:
+        api_key, provider = select_api_key(user_keys)
+        if not api_key:
+            raise HTTPException(status_code=400, detail="Aucune clé API IA configurée")
+        model_map = {
+            "groq": "llama-3.3-70b-versatile",
+            "openai": "gpt-4o-mini",
+            "google": "gemini-2.0-flash",
+        }
+        model = model_map.get(provider, "llama-3.3-70b-versatile")
+
+    # Construire le filtre de période
+    period_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        dr: dict = {}
+        if date_from:
+            dr["$gte"] = date_from
+        if date_to:
+            dr["$lte"] = date_to + "T23:59:59"
+        period_filter["date_candidature"] = dr
+
+    # Collecter toutes les stats
+    total = await db.applications.count_documents(period_filter)
+    pending = await db.applications.count_documents({**period_filter, "reponse": "pending"})
+    positive = await db.applications.count_documents({**period_filter, "reponse": "positive"})
+    negative = await db.applications.count_documents({**period_filter, "reponse": "negative"})
+    no_response = await db.applications.count_documents({**period_filter, "reponse": "no_response"})
+    wi_result = await db.applications.aggregate([
+        {"$match": period_filter},
+        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$match": {"_ivs": {"$ne": []}}},
+        {"$count": "count"}
+    ]).to_list(1)
+    with_interview = wi_result[0]["count"] if wi_result else 0
+    responded = positive + negative
+    response_rate = round(responded / total * 100, 1) if total > 0 else 0
+
+    interview_filter: dict = {"user_id": user_id}
+    if date_from or date_to:
+        idr: dict = {}
+        if date_from:
+            idr["$gte"] = date_from
+        if date_to:
+            idr["$lte"] = date_to + "T23:59:59"
+        interview_filter["date_entretien"] = idr
+
+    interviews_total = await db.interviews.count_documents(interview_filter)
+    interviews_completed = await db.interviews.count_documents({**interview_filter, "statut": "completed"})
+
+    # Top méthodes (par volume)
+    method_pipeline = [
+        {"$match": {**period_filter, "moyen": {"$ne": None}}},
+        {"$group": {"_id": "$moyen", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 5}
+    ]
+    top_methods = await db.applications.aggregate(method_pipeline).to_list(5)
+    methods_str = ", ".join([f"{m['_id']} ({m['count']})" for m in top_methods]) or "N/A"
+
+    # Top types de poste
+    type_pipeline = [
+        {"$match": period_filter},
+        {"$group": {"_id": "$type_poste", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 4}
+    ]
+    top_types = await db.applications.aggregate(type_pipeline).to_list(4)
+    types_str = ", ".join([f"{t['_id']} ({t['count']})" for t in top_types]) or "N/A"
+
+    # Période label
+    period_label = f"du {date_from} au {date_to}" if date_from and date_to else "toute la période"
+
+    # Null-safe funnel rates
+    interview_rate = round(with_interview / total * 100, 1) if total > 0 else 0
+    offer_rate = round(positive / total * 100, 1) if total > 0 else 0
+
+    system_message = """Tu es un expert en recherche d'emploi et coaching de carrière.
+Tu analyses les statistiques de candidature d'un utilisateur de JobTracker.
+Réponds UNIQUEMENT en français, avec un ton bienveillant et direct en tutoyant l'utilisateur.
+Format de réponse OBLIGATOIRE : markdown structuré avec des titres ## pour chaque section.
+Longueur cible : 400 à 600 mots. Utilise des listes à puces pour les points concrets.
+Benchmark de référence : taux de réponse moyen sur le marché = 10-20%, taux d'obtention d'entretien = 5-15%, taux d'offre = 1-5%."""
+
+    user_message = f"""Voici les statistiques de candidature ({period_label}) :
+
+- Total candidatures : {total}
+- En attente : {pending} | Réponses positives : {positive} | Refus : {negative} | Sans réponse : {no_response}
+- Avec au moins un entretien : {with_interview}
+- Taux de réponse global : {response_rate}%
+- Entretiens planifiés/passés : {interviews_total} (dont {interviews_completed} complétés)
+- Funnel : {total} candidatures → {with_interview} entretiens ({interview_rate}%) → {positive} offres ({offer_rate}%)
+- Top sources : {methods_str}
+- Types de postes visés : {types_str}
+
+Analyse avec ces sections exactes :
+## Résumé global
+## Points forts
+## Points à améliorer
+## Analyse du funnel
+## Recommandations concrètes
+## Benchmark marché"""
+
+    try:
+        analysis = await call_ai(api_key, provider, model, system_message, user_message)
+        return {"analysis": analysis, "provider": provider, "model": model, "period": period_label}
+    except HTTPException:
+        raise
+    except Exception as e:
+        err = str(e).lower()
+        if any(kw in err for kw in ["api key", "invalid_api_key", "unauthorized", "401", "authentication"]):
+            raise HTTPException(status_code=401, detail="Clé API invalide ou manquante. Vérifie tes paramètres IA.")
+        if any(kw in err for kw in ["rate", "429", "quota", "too many"]):
+            raise HTTPException(status_code=429, detail="Limite de requêtes IA atteinte, réessaie dans quelques secondes.")
+        if any(kw in err for kw in ["timeout", "connect", "network", "503"]):
+            raise HTTPException(status_code=503, detail="Service IA indisponible, réessaie plus tard.")
+        raise HTTPException(status_code=500, detail=f"Erreur IA : {str(e)}")

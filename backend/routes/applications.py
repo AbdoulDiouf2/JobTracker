@@ -44,11 +44,16 @@ async def list_applications(
     filter_query = {"user_id": current_user["user_id"]}
     
     if search:
-        # Recherche dans entreprise et poste
         search_regex = {"$regex": re.escape(search), "$options": "i"}
         filter_query["$or"] = [
             {"entreprise": search_regex},
-            {"poste": search_regex}
+            {"poste": search_regex},
+            {"lieu": search_regex},
+            {"contact_name": search_regex},
+            {"contact_email": search_regex},
+            {"description_poste": search_regex},
+            {"competences": search_regex},
+            {"experience_requise": search_regex},
         ]
     
     if status:

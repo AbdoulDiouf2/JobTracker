@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../contexts/AuthContext';
 
-export const useStatisticsDashboardV2 = () => useQuery({
-  queryKey: ['statistics', 'dashboard-v2'],
-  queryFn: () => api.get('/api/statistics/dashboard-v2').then(r => r.data),
+export const useStatisticsDashboardV2 = (params = {}) => useQuery({
+  queryKey: ['statistics', 'dashboard-v2', params],
+  queryFn: () => api.get('/api/statistics/dashboard-v2', { params }).then(r => r.data),
 });
 
 export const useStatisticsDashboard = () => useQuery({
@@ -11,9 +11,15 @@ export const useStatisticsDashboard = () => useQuery({
   queryFn: () => api.get('/api/statistics/dashboard').then(r => r.data),
 });
 
-export const useStatisticsOverview = () => useQuery({
-  queryKey: ['statistics', 'overview'],
-  queryFn: () => api.get('/api/statistics/overview').then(r => r.data),
+export const useStatisticsOverview = (params = {}) => useQuery({
+  queryKey: ['statistics', 'overview', params],
+  queryFn: () => api.get('/api/statistics/overview', { params }).then(r => r.data),
+});
+
+export const useMethodEffectiveness = (params = {}) => useQuery({
+  queryKey: ['statistics', 'method-effectiveness', params],
+  queryFn: () => api.get('/api/statistics/by-method-effectiveness', { params }).then(r => r.data),
+  placeholderData: [],
 });
 
 export const useStatisticsTimeline = () => useQuery({
