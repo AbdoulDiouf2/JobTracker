@@ -5,6 +5,7 @@
 
 export const STATUS_OPTIONS = [
   { value: 'pending',     label: 'En attente',      color: 'bg-yellow-500/20 text-yellow-400', textColor: 'text-yellow-400', dotColor: 'bg-yellow-400' },
+  { value: 'contacted',  label: 'Contacté(e)',      color: 'bg-blue-500/20 text-blue-400',    textColor: 'text-blue-400',   dotColor: 'bg-blue-400' },
   { value: 'positive',    label: 'Positive',         color: 'bg-green-500/20 text-green-400',  textColor: 'text-green-400',  dotColor: 'bg-green-400' },
   { value: 'negative',    label: 'Négative',         color: 'bg-red-500/20 text-red-400',      textColor: 'text-red-400',    dotColor: 'bg-red-400' },
   { value: 'no_response', label: 'Pas de réponse',   color: 'bg-slate-500/20 text-slate-400',  textColor: 'text-slate-400',  dotColor: 'bg-slate-400' },

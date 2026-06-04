@@ -30,6 +30,7 @@ class UserRole(str, Enum):
 
 class ApplicationStatus(str, Enum):
     PENDING = "pending"
+    CONTACTED = "contacted"
     POSITIVE = "positive"
     NEGATIVE = "negative"
     NO_RESPONSE = "no_response"
@@ -39,6 +40,7 @@ class ApplicationStatus(str, Enum):
     def label_fr(self) -> str:
         labels = {
             "pending": "⏳ En attente",
+            "contacted": "📞 Contacté(e)",
             "positive": "✅ Réponse positive",
             "negative": "❌ Réponse négative",
             "no_response": "🔇 Pas de réponse",
@@ -50,6 +52,7 @@ class ApplicationStatus(str, Enum):
     def label_en(self) -> str:
         labels = {
             "pending": "⏳ Pending",
+            "contacted": "📞 Contacted",
             "positive": "✅ Positive response",
             "negative": "❌ Negative response",
             "no_response": "🔇 No response",
