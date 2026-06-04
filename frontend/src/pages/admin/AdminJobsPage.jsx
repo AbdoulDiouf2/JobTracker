@@ -40,6 +40,16 @@ function formatRelative(isoString) {
   return `il y a ${Math.floor(diff / 86400)}j`;
 }
 
+function formatNextRun(isoString) {
+  if (!isoString) return '—';
+  const diff = Math.floor((new Date(isoString) - Date.now()) / 1000);
+  if (diff <= 0) return 'imminent';
+  if (diff < 60) return `dans ${diff}s`;
+  if (diff < 3600) return `dans ${Math.floor(diff / 60)}min`;
+  if (diff < 86400) return `dans ${Math.floor(diff / 3600)}h`;
+  return `dans ${Math.floor(diff / 86400)}j`;
+}
+
 function StatBadge({ label, value, highlight }) {
   return (
     <div className={`px-3 py-1.5 rounded-lg text-sm ${highlight ? 'bg-gold/10 text-gold' : 'bg-slate-800 text-slate-300'}`}>
@@ -118,7 +128,7 @@ function JobCard({ job, onTrigger, triggering }) {
           <div className="bg-slate-800/50 rounded-lg p-3">
             <p className="text-xs text-slate-500 mb-1">Prochaine exécution</p>
             <p className="text-sm text-white font-medium">
-              {job.next_run ? formatRelative(job.next_run).replace('il y a', 'dans') : '—'}
+              {job.next_run ? formatNextRun(job.next_run) : '—'}
             </p>
             <p className="text-xs text-slate-600 mt-0.5">
               {job.next_run ? new Date(job.next_run).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : ''}
