@@ -15,6 +15,23 @@ logger = logging.getLogger(__name__)
 # Instance globale du scheduler
 scheduler = AsyncIOScheduler()
 
+# Log d'exécution en mémoire — dernières 10 exécutions par job
+_job_logs: dict = {}
+
+def record_job_run(job_id: str, stats: dict, success: bool = True):
+    """Enregistre le résultat d'une exécution de job."""
+    if job_id not in _job_logs:
+        _job_logs[job_id] = []
+    _job_logs[job_id].insert(0, {
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "success": success,
+        "stats": stats,
+    })
+    _job_logs[job_id] = _job_logs[job_id][:10]
+
+def get_job_logs(job_id: str) -> list:
+    return _job_logs.get(job_id, [])
+
 # VAPID Config
 VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "")
 VAPID_CLAIMS_EMAIL = os.environ.get("VAPID_CLAIMS_EMAIL", "contact@maadec.com")
@@ -224,7 +241,109 @@ async def process_interview_reminders(db):
         
     except Exception as e:
         logger.error(f"[Scheduler] Erreur: {str(e)}")
-    
+        record_job_run("interview_reminders", {"error": str(e)}, success=False)
+        return stats
+
+    record_job_run("interview_reminders", stats)
+    return stats
+
+
+async def process_onboarding_reminders(db):
+    """
+    Envoie des rappels aux utilisateurs qui ont commencé l'onboarding sans le terminer.
+    - Rappel 1 : 24h après la création du compte
+    - Rappel 2 : 72h après la création du compte
+    Appelé automatiquement par le scheduler 1x/jour.
+    """
+    from utils.email import send_onboarding_reminder_email
+    import os
+
+    frontend_url = os.environ.get("FRONTEND_URL", "https://jobtracker.maadec.com")
+    onboarding_url = f"{frontend_url}/onboarding"
+
+    now = datetime.now(timezone.utc)
+    stats = {"checked": 0, "sent": 0, "skipped": 0}
+
+    try:
+        users = await db.users.find({
+            "onboarding_completed": False,
+            "is_active": True,
+        }).to_list(1000)
+
+        for user in users:
+            stats["checked"] += 1
+
+            steps = user.get("onboarding_steps", {})
+            started = any(
+                s.get("completed") or s.get("skipped")
+                for s in steps.values()
+                if isinstance(s, dict)
+            )
+            if not started:
+                stats["skipped"] += 1
+                continue
+
+            created_at = user.get("created_at")
+            if isinstance(created_at, str):
+                created_at = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            if not created_at:
+                stats["skipped"] += 1
+                continue
+
+            hours_since = (now - created_at).total_seconds() / 3600
+            # Ne pas relancer des comptes inactifs depuis plus de 30 jours
+            if hours_since > 30 * 24:
+                stats["skipped"] += 1
+                continue
+
+            reminder_count = user.get("onboarding_reminder_count", 0)
+            last_sent = user.get("onboarding_reminder_sent_at")
+            if isinstance(last_sent, str):
+                last_sent = datetime.fromisoformat(last_sent.replace("Z", "+00:00"))
+
+            # Rappel 1 : dès 24h après inscription, pas encore envoyé
+            send_reminder = False
+            reminder_num = 0
+            if reminder_count == 0 and hours_since >= 24:
+                send_reminder = True
+                reminder_num = 1
+            # Rappel 2 : au moins 48h après rappel 1
+            elif reminder_count == 1:
+                if last_sent and (now - last_sent).total_seconds() >= 48 * 3600:
+                    send_reminder = True
+                    reminder_num = 2
+
+            if not send_reminder:
+                stats["skipped"] += 1
+                continue
+
+            email = user.get("email")
+            full_name = user.get("full_name", "")
+            if not email:
+                stats["skipped"] += 1
+                continue
+
+            success = send_onboarding_reminder_email(email, full_name, onboarding_url, reminder_num)
+            if success:
+                await db.users.update_one(
+                    {"id": user["id"]},
+                    {"$set": {
+                        "onboarding_reminder_count": reminder_count + 1,
+                        "onboarding_reminder_sent_at": now.isoformat(),
+                    }}
+                )
+                stats["sent"] += 1
+                logger.info(f"[Scheduler] Rappel onboarding #{reminder_num} → {email}")
+            else:
+                stats["skipped"] += 1
+
+    except Exception as e:
+        logger.error(f"[Scheduler] Erreur onboarding reminders: {str(e)}")
+        record_job_run("onboarding_reminders", {"error": str(e)}, success=False)
+        return stats
+
+    logger.info(f"[Scheduler] Onboarding reminders — checked: {stats['checked']}, sent: {stats['sent']}, skipped: {stats['skipped']}")
+    record_job_run("onboarding_reminders", stats)
     return stats
 
 
@@ -237,8 +356,11 @@ def setup_scheduler(db):
     async def job_wrapper():
         """Wrapper pour passer la DB au job"""
         await process_interview_reminders(db)
-    
-    # Ajouter le job de rappels (toutes les 15 minutes)
+
+    async def onboarding_reminder_wrapper():
+        await process_onboarding_reminders(db)
+
+    # Rappels entretiens (toutes les 15 minutes)
     scheduler.add_job(
         job_wrapper,
         trigger=IntervalTrigger(minutes=15),
@@ -247,10 +369,20 @@ def setup_scheduler(db):
         replace_existing=True,
         max_instances=1
     )
-    
+
+    # Rappels onboarding incomplet (1x/jour)
+    scheduler.add_job(
+        onboarding_reminder_wrapper,
+        trigger=IntervalTrigger(hours=24),
+        id='onboarding_reminders',
+        name='Rappels onboarding incomplet',
+        replace_existing=True,
+        max_instances=1
+    )
+
     # Démarrer le scheduler
     scheduler.start()
-    logger.info("[Scheduler] ✅ Scheduler démarré - Rappels toutes les 15 minutes")
+    logger.info("[Scheduler] ✅ Scheduler démarré - Rappels entretiens 15min, Onboarding 24h")
 
 
 def shutdown_scheduler():

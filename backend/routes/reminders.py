@@ -354,33 +354,29 @@ async def clear_sent_reminders(
 
 
 @router.get("/scheduler-status")
-async def get_scheduler_status():
-    """
-    Récupère le statut du scheduler de rappels automatiques.
-    Endpoint public pour monitoring.
-    """
+async def get_scheduler_status(current_user: dict = Depends(get_current_user)):
+    """Statut du scheduler + historique d'exécution des jobs."""
     try:
-        from utils.scheduler import scheduler
-        
+        from utils.scheduler import scheduler, get_job_logs
+
         jobs = []
         for job in scheduler.get_jobs():
+            logs = get_job_logs(job.id)
             jobs.append({
                 "id": job.id,
                 "name": job.name,
                 "next_run": job.next_run_time.isoformat() if job.next_run_time else None,
-                "trigger": str(job.trigger)
+                "trigger": str(job.trigger),
+                "last_run": logs[0] if logs else None,
+                "recent_logs": logs,
             })
-        
+
         return {
             "scheduler_running": scheduler.running,
             "jobs": jobs,
-            "message": "Le scheduler traite les rappels toutes les 15 minutes automatiquement"
         }
     except Exception as e:
-        return {
-            "scheduler_running": False,
-            "error": str(e)
-        }
+        return {"scheduler_running": False, "error": str(e)}
 
 
 @router.post("/trigger-now")
@@ -388,16 +384,19 @@ async def trigger_reminders_now(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """
-    Déclenche manuellement le traitement des rappels.
-    Utile pour tester ou forcer un traitement immédiat.
-    """
+    """Déclenche manuellement les rappels entretiens."""
     from utils.scheduler import process_interview_reminders
-    
     stats = await process_interview_reminders(db)
-    
-    return {
-        "triggered": True,
-        "stats": stats
-    }
+    return {"triggered": True, "job": "interview_reminders", "stats": stats}
+
+
+@router.post("/trigger-onboarding")
+async def trigger_onboarding_reminders_now(
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db)
+):
+    """Déclenche manuellement les rappels onboarding incomplet."""
+    from utils.scheduler import process_onboarding_reminders
+    stats = await process_onboarding_reminders(db)
+    return {"triggered": True, "job": "onboarding_reminders", "stats": stats}
 

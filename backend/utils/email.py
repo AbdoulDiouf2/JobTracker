@@ -72,6 +72,49 @@ def send_password_reset_email(to: str, full_name: str, reset_url: str) -> bool:
     return _send_email(to, subject, html)
 
 
+def send_onboarding_reminder_email(to: str, full_name: str, onboarding_url: str, reminder_num: int = 1) -> bool:
+    subject = "Vous avez presque terminé votre configuration JobTracker 🎯" if reminder_num == 1 else "Votre espace JobTracker vous attend — finalisez votre profil"
+    html = f"""
+    <html><body style="font-family: 'Plus Jakarta Sans', sans-serif; background: #020817; color: #e2e8f0; padding: 32px;">
+      <div style="max-width: 520px; margin: 0 auto; background: #0f172a; border: 1px solid #1e293b; border-radius: 16px; padding: 40px;">
+        <div style="text-align: center; margin-bottom: 32px;">
+          <h1 style="color: #c4a052; font-size: 24px; margin: 0;">JobTracker</h1>
+        </div>
+        <h2 style="color: #f1f5f9; font-size: 20px; margin-bottom: 8px;">Votre agent de carrière vous attend</h2>
+        <p style="color: #94a3b8; margin-bottom: 24px;">Bonjour {full_name},</p>
+        <p style="color: #94a3b8; margin-bottom: 24px;">
+          Vous avez commencé à configurer votre espace JobTracker mais n'avez pas encore terminé.
+          Il ne vous reste que quelques étapes pour profiter pleinement de votre agent de carrière personnel.
+        </p>
+        <div style="background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <p style="color: #c4a052; font-weight: 700; margin: 0 0 12px 0;">Ce qui vous attend :</p>
+          <ul style="color: #94a3b8; margin: 0; padding-left: 20px; line-height: 1.8;">
+            <li>Suivi centralisé de toutes vos candidatures</li>
+            <li>Matching IA entre votre CV et les offres</li>
+            <li>Rappels automatiques de relance</li>
+            <li>Extension Chrome pour clipper les offres en 1 clic</li>
+          </ul>
+        </div>
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="{onboarding_url}"
+             style="background: #c4a052; color: #020817; padding: 14px 32px; border-radius: 10px;
+                    text-decoration: none; font-weight: 700; font-size: 16px; display: inline-block;">
+            Finaliser ma configuration
+          </a>
+        </div>
+        <p style="color: #64748b; font-size: 13px; margin-top: 24px;">
+          Cela ne prend que 2 minutes. Si vous avez déjà terminé, ignorez cet email.
+        </p>
+        <hr style="border-color: #1e293b; margin: 24px 0;" />
+        <p style="color: #475569; font-size: 12px; text-align: center;">
+          JobTracker — Votre agent de carrière personnel
+        </p>
+      </div>
+    </body></html>
+    """
+    return _send_email(to, subject, html)
+
+
 def send_email_verification(to: str, full_name: str, verify_url: str) -> bool:
     subject = "Vérifiez votre adresse email — JobTracker"
     html = f"""

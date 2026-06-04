@@ -144,6 +144,29 @@ export const useAdminTemplateMutations = () => {
   return { createTemplate, updateTemplate, deleteTemplate };
 };
 
+export const useSchedulerStatus = () => useQuery({
+  queryKey: ['admin', 'scheduler-status'],
+  queryFn: () => api.get('/api/reminders/scheduler-status').then(r => r.data),
+  refetchInterval: 30 * 1000,
+});
+
+export const useJobTriggers = () => {
+  const queryClient = useQueryClient();
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['admin', 'scheduler-status'] });
+
+  const triggerInterviews = useMutation({
+    mutationFn: () => api.post('/api/reminders/trigger-now').then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const triggerOnboarding = useMutation({
+    mutationFn: () => api.post('/api/reminders/trigger-onboarding').then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  return { triggerInterviews, triggerOnboarding };
+};
+
 // Barrel hook pour la compatibilité avec les pages admin existantes
 export const useAdmin = () => {
   const { data: dashboardStats, isLoading: loadingDashboard } = useAdminDashboard();

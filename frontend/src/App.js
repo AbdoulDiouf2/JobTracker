@@ -40,6 +40,7 @@ const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage")
 const AdminUsersPage     = lazy(() => import("./pages/admin/AdminUsersPage"));
 const AdminSupportPage   = lazy(() => import("./pages/admin/AdminSupportPage"));
 const AdminTemplatesPage = lazy(() => import("./pages/admin/AdminTemplatesPage"));
+const AdminJobsPage      = lazy(() => import("./pages/admin/AdminJobsPage"));
 
 // Layout
 import DashboardLayout from "./layouts/DashboardLayout";
@@ -99,6 +100,7 @@ function AppRouter() {
       <Route path="/admin" element={<AdminLayout />}>
         <Route index element={<AdminDashboardPage />} />
         <Route path="users" element={<AdminUsersPage />} />
+        <Route path="jobs" element={<AdminJobsPage />} />
         <Route path="support" element={<AdminSupportPage />} />
         <Route path="templates" element={<AdminTemplatesPage />} />
       </Route>
