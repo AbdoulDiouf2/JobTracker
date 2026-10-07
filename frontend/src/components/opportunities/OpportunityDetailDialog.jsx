@@ -47,7 +47,7 @@ export const OpportunityDetailDialog = ({ opportunity, isOpen, onClose, ...actio
           <DialogDescription className="text-gold text-base break-words">{opportunity.company}</DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-4 pr-1 -mr-1">
+        <div className="flex-1 overflow-y-auto flex flex-col gap-4 pr-1 -mr-1">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label={t.status}><OpportunityStatusBadge status={opportunity.status} /></Field>
             <Field label={t.location}>{formatLocation(opportunity) || '—'}</Field>

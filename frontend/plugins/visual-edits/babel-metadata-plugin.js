@@ -932,8 +932,10 @@ const babelMetadataPlugin = ({ types: t }) => {
           }
           if (!localName) return;
 
-          // Search for usages of this component
-          importPath.parentPath.parentPath.traverse({
+          // Search for usages of this component.
+          // importPath.parentPath = Program (toujours défini) ; son parent peut être null
+          // quand l'AST mis en cache est traversé depuis le Program -> crash "reading 'traverse'".
+          (importPath.parentPath.parentPath || importPath.parentPath).traverse({
             JSXOpeningElement(jsxPath) {
               if (result) return;
 

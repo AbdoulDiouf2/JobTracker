@@ -57,7 +57,7 @@ export const SentDateDialog = ({ isOpen, onCancel, onConfirm, loading = false })
         className="bg-slate-900 border border-slate-700 text-white w-[calc(100%-2rem)] max-w-sm rounded-xl"
         data-testid="sent-date-dialog"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <DialogHeader className="text-left pr-6">
             <DialogTitle className="font-heading text-lg flex items-center gap-2">
               <Send size={18} className="text-gold" aria-hidden="true" />
@@ -65,7 +65,7 @@ export const SentDateDialog = ({ isOpen, onCancel, onConfirm, loading = false })
             </DialogTitle>
             <DialogDescription className="text-slate-400">{t.question}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="sent-date-input" className="text-slate-300">{t.label}</Label>
             <input
               id="sent-date-input"

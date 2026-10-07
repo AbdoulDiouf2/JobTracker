@@ -141,7 +141,7 @@ const SecretDialog = ({ secret, onClose, t }) => {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <p id="agent-token-secret-label" className="text-xs text-slate-500">{t.secretLabel}</p>
           <code
             aria-labelledby="agent-token-secret-label"
@@ -196,13 +196,13 @@ const CreateTokenDialog = ({ isOpen, onClose, onCreate, t, language }) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open && !submitting) onClose(); }}>
       <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white w-[calc(100%-2rem)] max-w-md rounded-xl">
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <DialogHeader className="text-left pr-6">
             <DialogTitle className="font-heading text-lg">{t.createTitle}</DialogTitle>
             <DialogDescription className="text-slate-400">{t.createText}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             <Label htmlFor="agent-token-name" className="text-slate-300">{t.nameLabel}</Label>
             <Input
               id="agent-token-name"
@@ -219,7 +219,7 @@ const CreateTokenDialog = ({ isOpen, onClose, onCreate, t, language }) => {
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <p className="text-sm text-slate-300">{t.scopeLabel}</p>
             <p className="text-sm text-slate-400 flex items-center gap-2">
               <Check size={14} className="text-green-400" aria-hidden="true" />
@@ -294,7 +294,7 @@ export const AgentTokensSection = () => {
         {t.title}
       </h2>
 
-      <div className="glass-card rounded-xl p-4 sm:p-6 border border-slate-800 space-y-4">
+      <div className="glass-card rounded-xl p-4 sm:p-6 border border-slate-800 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
           <p className="text-slate-400 text-sm">{t.description}</p>
           <Button
@@ -321,7 +321,7 @@ export const AgentTokensSection = () => {
             <p className="text-slate-400 text-sm mt-1">{t.emptyText}</p>
           </div>
         ) : (
-          <ul className="space-y-3" data-testid="agent-tokens-list">
+          <ul className="flex flex-col gap-3" data-testid="agent-tokens-list">
             {sorted.map(token => (
               <li
                 key={token.id}
@@ -329,7 +329,7 @@ export const AgentTokensSection = () => {
                 data-testid={`agent-token-${token.id}`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 justify-between">
-                  <div className="min-w-0 space-y-1">
+                  <div className="min-w-0 flex flex-col gap-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="text-white font-medium break-words">{token.name}</p>
                       <span className={`px-2 py-0.5 rounded-full text-xs border ${token.is_active
