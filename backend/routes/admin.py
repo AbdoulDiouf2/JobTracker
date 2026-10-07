@@ -11,7 +11,8 @@ from models import (
     UserResponse, UserAdminResponse, UserRole, AdminDashboardStats,
     AdminUserUpdate, AdminUserCreate, UserGrowthDataPoint, ActivityDataPoint, PaginatedResponse,
     SupportTicket, SupportTicketStatus, SupportTicketUpdate,
-    SystemTemplateCreate, SystemTemplateUpdate, SystemTemplateResponse
+    SystemTemplateCreate, SystemTemplateUpdate, SystemTemplateResponse,
+    sent_applications_filter
 )
 from passlib.context import CryptContext
 import uuid
@@ -366,9 +367,9 @@ async def get_user_detail(
     ai_total_res = await db.ai_usage.aggregate(ai_total_pipeline).to_list(length=1)
     ai_total_calls = ai_total_res[0]["total"] if ai_total_res else 0
 
-    # Dernière candidature
+    # Dernière candidature réellement envoyée (exclut to_apply)
     last_app = await db.applications.find_one(
-        {"user_id": user_id},
+        sent_applications_filter(user_id),
         sort=[("date_candidature", -1)]
     )
     last_app_date = last_app["date_candidature"] if last_app else None

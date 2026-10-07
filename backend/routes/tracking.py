@@ -176,6 +176,9 @@ async def get_pending_reminders(
     }
 
 
+TO_APPLY_NO_FOLLOWUP = "Candidature pas encore envoyée (statut « À postuler ») : relance impossible."
+
+
 @router.post("/{application_id}/reminder/mark-sent")
 async def mark_reminder_sent(
     application_id: str,
@@ -183,6 +186,14 @@ async def mark_reminder_sent(
     db = Depends(get_db)
 ):
     """Marque un rappel comme envoyé"""
+    app = await db.applications.find_one(
+        {"id": application_id, "user_id": current_user["user_id"]}, {"_id": 0, "reponse": 1}
+    )
+    if not app:
+        raise HTTPException(status_code=404, detail="Candidature non trouvée")
+    if app.get("reponse") == ApplicationStatus.TO_APPLY.value:
+        raise HTTPException(status_code=422, detail=TO_APPLY_NO_FOLLOWUP)
+
     result = await db.applications.update_one(
         {"id": application_id, "user_id": current_user["user_id"]},
         {
@@ -223,7 +234,10 @@ async def generate_followup_email(
     
     if not app:
         raise HTTPException(status_code=404, detail="Candidature non trouvée")
-    
+    # Sa date_candidature est technique : jamais de « envoyée il y a X jours »
+    if app.get("reponse") == ApplicationStatus.TO_APPLY.value:
+        raise HTTPException(status_code=422, detail=TO_APPLY_NO_FOLLOWUP)
+
     # Récupérer les infos utilisateur
     user = await db.users.find_one({"id": current_user["user_id"]})
     user_name = user.get("full_name", "Candidat")

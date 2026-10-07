@@ -56,6 +56,12 @@ class Settings(BaseSettings):
     # Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     ENCRYPTION_KEY: Optional[str] = os.environ.get('ENCRYPTION_KEY')
 
+    # Agent tokens (API d'ingestion externe)
+    AGENT_RATE_LIMIT: str = os.environ.get('AGENT_RATE_LIMIT', '30/minute')  # burst, par token
+    AGENT_DAILY_CREATE_QUOTA: int = int(os.environ.get('AGENT_DAILY_CREATE_QUOTA', '500'))  # créations/jour/token
+    AGENT_MAX_ACTIVE_TOKENS: int = int(os.environ.get('AGENT_MAX_ACTIVE_TOKENS', '10'))  # par utilisateur
+    AGENT_LAST_USED_THROTTLE_SECONDS: int = int(os.environ.get('AGENT_LAST_USED_THROTTLE_SECONDS', '300'))
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'

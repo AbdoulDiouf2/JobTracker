@@ -3,8 +3,9 @@ const path = require("path");
 require("dotenv").config();
 
 // Check if we're in development/preview mode (not production build)
-// Craco sets NODE_ENV=development for start, NODE_ENV=production for build
-const isDevServer = process.env.NODE_ENV !== "production";
+// Craco sets NODE_ENV=development for start, NODE_ENV=production for build, NODE_ENV=test for test
+// (visual edits uniquement pour le dev server : son plugin Babel casse la transformation Jest)
+const isDevServer = process.env.NODE_ENV === "development";
 
 // Environment variable overrides
 const config = {
@@ -76,6 +77,21 @@ if (config.enableVisualEdits && babelMetadataPlugin) {
     plugins: [babelMetadataPlugin],
   };
 }
+
+// Jest (craco test) : même alias "@/" que webpack
+webpackConfig.jest = {
+  configure: (jestConfig) => {
+    jestConfig.moduleNameMapper = {
+      ...jestConfig.moduleNameMapper,
+      '^@/(.*)$': '<rootDir>/src/$1',
+      // Jest 27 ignore le champ "exports" ; le "main" de react-router-dom v7 pointe vers un fichier absent
+      '^react-router-dom$': '<rootDir>/node_modules/react-router-dom/dist/index.js',
+      '^react-router/dom$': '<rootDir>/node_modules/react-router/dist/development/dom-export.js',
+      '^date-fns/locale$': '<rootDir>/node_modules/date-fns/locale.cjs',
+    };
+    return jestConfig;
+  },
+};
 
 webpackConfig.devServer = (devServerConfig) => {
   // Allow all hosts for preview environment

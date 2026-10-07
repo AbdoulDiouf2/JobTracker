@@ -51,9 +51,18 @@ from routes.onboarding import get_db as onboarding_get_db
 from routes.contact import router as contact_router
 from routes.contact import get_db as contact_get_db
 from routes.search import get_db as search_get_db
+from routes.opportunities import router as opportunities_router
+from routes.opportunities import get_db as opportunities_get_db
+from routes.agent_tokens import router as agent_tokens_router
+from routes.agent_tokens import get_db as agent_tokens_get_db
+from routes.agent import router as agent_router
+from routes.agent import get_db as agent_get_db
+from utils.agent_auth import get_db as agent_auth_get_db
 from utils.auth import get_current_user, security
 
 from utils.scheduler import setup_scheduler, shutdown_scheduler
+from services.opportunity_service import ensure_indexes as ensure_opportunity_indexes
+from services.agent_token_service import ensure_indexes as ensure_agent_token_indexes
 
 # Configure logging
 logging.basicConfig(
@@ -104,7 +113,10 @@ async def lifespan(app: FastAPI):
     await db.support_tickets.create_index("id", unique=True)
     await db.support_tickets.create_index("status")
     await db.support_tickets.create_index("created_at")
-    
+    # Opportunities indexes (aussi créés paresseusement par le service : lifespan ne tourne pas sur Vercel)
+    await ensure_opportunity_indexes(db)
+    await ensure_agent_token_indexes(db)
+
     logger.info(f"Connecté à MongoDB: {settings.DB_NAME}")
     
     # Démarrer le scheduler pour les rappels automatiques
@@ -195,6 +207,9 @@ api_router.include_router(reminders_router)
 api_router.include_router(onboarding_router)
 api_router.include_router(contact_router)
 api_router.include_router(search_router)
+api_router.include_router(opportunities_router)
+api_router.include_router(agent_tokens_router)
+api_router.include_router(agent_router)
 
 
 # Include main router
@@ -217,6 +232,10 @@ app.dependency_overrides[reminders_get_db] = override_get_db
 app.dependency_overrides[onboarding_get_db] = override_get_db
 app.dependency_overrides[contact_get_db] = override_get_db
 app.dependency_overrides[search_get_db] = override_get_db
+app.dependency_overrides[opportunities_get_db] = override_get_db
+app.dependency_overrides[agent_tokens_get_db] = override_get_db
+app.dependency_overrides[agent_get_db] = override_get_db
+app.dependency_overrides[agent_auth_get_db] = override_get_db
 app.dependency_overrides[auth_utils_get_db] = override_get_db
 
 

@@ -46,7 +46,9 @@ import {
 import { toast } from 'sonner';
 import { Skeleton } from '../components/ui/skeleton';
 import axios from 'axios';
-import { STATUS_OPTIONS, STATUS_MAP, TYPE_OPTIONS, METHOD_OPTIONS } from '../constants/application';
+import { STATUS_OPTIONS, STATUS_MAP, TYPE_OPTIONS, METHOD_OPTIONS, TO_APPLY, isToApply, getStatusOptionsFor } from '../constants/application';
+import { SentDateDialog, sentDateToIso } from '../components/applications/SentDateDialog';
+import { ApplicationSentDate } from '../components/applications/ApplicationSentDate';
 
 const applicationSchema = z.object({
   entreprise: z.string().min(1, 'Entreprise requise'),
@@ -109,7 +111,7 @@ const ApplicationCard = ({ app, onEdit, onDelete, onToggleFavorite, onStatusChan
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-slate-900 border-slate-700">
-            {STATUS_OPTIONS.map(opt => (
+            {getStatusOptionsFor(app.reponse).map(opt => (
               <DropdownMenuItem 
                 key={opt.value}
                 onClick={(e) => { e.stopPropagation(); onStatusChange(app.id, opt.value); }}
@@ -134,7 +136,7 @@ const ApplicationCard = ({ app, onEdit, onDelete, onToggleFavorite, onStatusChan
       <div className="flex items-center justify-between text-sm text-slate-500">
         <span className="flex items-center gap-1">
           <Calendar size={14} />
-          {format(new Date(app.date_candidature), 'dd MMM yyyy', { locale: language === 'fr' ? fr : enUS })}
+          <ApplicationSentDate app={app} pattern="dd MMM yyyy" />
         </span>
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {app.lien && (
@@ -221,7 +223,7 @@ const ApplicationTableRow = ({ app, onEdit, onDelete, onToggleFavorite, onStatus
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-slate-900 border-slate-700">
-            {STATUS_OPTIONS.map(opt => (
+            {getStatusOptionsFor(app.reponse).map(opt => (
               <DropdownMenuItem 
                 key={opt.value}
                 onClick={() => onStatusChange(app.id, opt.value)}
@@ -238,7 +240,7 @@ const ApplicationTableRow = ({ app, onEdit, onDelete, onToggleFavorite, onStatus
       </td>
       <td className="py-3 px-4 text-slate-400">{app.lieu || '-'}</td>
       <td className="py-3 px-4 text-slate-400">
-        {format(new Date(app.date_candidature), 'dd/MM/yyyy', { locale: language === 'fr' ? fr : enUS })}
+        <ApplicationSentDate app={app} pattern="dd/MM/yyyy" showAdded={false} />
       </td>
       <td className="py-3 px-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-1">
@@ -301,7 +303,7 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="bg-slate-900 border-slate-700">
-                    {STATUS_OPTIONS.map(opt => (
+                    {getStatusOptionsFor(app.reponse).map(opt => (
                       <DropdownMenuItem 
                         key={opt.value}
                         onClick={() => onStatusChange(app.id, opt.value)}
@@ -386,15 +388,19 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                 <Clock size={16} className="mr-2" />
                 Historique
               </Button>
-              <Button
-                onClick={() => setShowFollowupModal(true)}
-                variant="outline"
-                className="border-slate-700"
-                size="sm"
-              >
-                <Mail size={16} className="mr-2" />
-                Relance
-              </Button>
+              {/* Pas de relance pour une candidature pas encore envoyée */}
+              {!isToApply(app) && (
+                <Button
+                  onClick={() => setShowFollowupModal(true)}
+                  variant="outline"
+                  className="border-slate-700"
+                  size="sm"
+                  data-testid="followup-quick-action"
+                >
+                  <Mail size={16} className="mr-2" />
+                  Relance
+                </Button>
+              )}
               <Button
                 onClick={() => setShowCoverLetterModal(true)}
                 variant="outline"
@@ -460,13 +466,27 @@ const ApplicationDetailModal = ({ app, isOpen, onClose, onEdit, onStatusChange, 
                   {METHOD_OPTIONS.find(m => m.value === app.moyen)?.label || app.moyen || '-'}
                 </p>
               </div>
-              <div className="p-4 bg-slate-900/30 rounded-xl">
-                <p className="text-slate-400 text-sm mb-1">{t.date}</p>
-                <p className="text-white font-medium">
-                  {format(new Date(app.date_candidature), 'dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
-                </p>
-                <p className="text-slate-500 text-xs mt-1">Il y a {daysSince} jours</p>
-              </div>
+              {isToApply(app) ? (
+                <div className="p-4 bg-violet-500/10 border border-violet-500/20 rounded-xl" data-testid="to-apply-date-block">
+                  <p className="text-slate-400 text-sm mb-1">{language === 'fr' ? 'Candidature' : 'Application'}</p>
+                  <p className="text-white font-medium">
+                    <ApplicationSentDate app={app} pattern="dd MMMM yyyy" />
+                  </p>
+                  <p className="text-slate-500 text-xs mt-1">
+                    {language === 'fr'
+                      ? "Changez le statut en « En attente » une fois la candidature envoyée."
+                      : 'Change the status to "Pending" once the application is sent.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-900/30 rounded-xl">
+                  <p className="text-slate-400 text-sm mb-1">{t.date}</p>
+                  <p className="text-white font-medium">
+                    {format(new Date(app.date_candidature), 'dd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })}
+                  </p>
+                  <p className="text-slate-500 text-xs mt-1">Il y a {daysSince} jours</p>
+                </div>
+              )}
               {app.date_reponse && (
                 <div className="p-4 bg-slate-900/30 rounded-xl">
                   <p className="text-slate-400 text-sm mb-1">{language === 'fr' ? 'Date de réponse' : 'Response date'}</p>
@@ -743,12 +763,20 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, editingApp, loading, 
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-2">{t.date}</label>
+              <label htmlFor="application-date-candidature" className="block text-sm font-medium text-slate-300 mb-2">
+                {isToApply(editingApp) ? t.addedDate : t.date}
+              </label>
               <Input
+                id="application-date-candidature"
                 {...register('date_candidature')}
                 type="date"
-                className="bg-slate-900/50 border-slate-700 text-white"
+                readOnly={isToApply(editingApp)}
+                aria-describedby={isToApply(editingApp) ? 'application-date-help' : undefined}
+                className={`bg-slate-900/50 border-slate-700 text-white ${isToApply(editingApp) ? 'opacity-60 cursor-not-allowed' : ''}`}
               />
+              {isToApply(editingApp) && (
+                <p id="application-date-help" className="text-xs text-violet-300 mt-1">{t.addedDateHelp}</p>
+              )}
             </div>
           </div>
 
@@ -896,6 +924,8 @@ export default function ApplicationsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('card');
   const [pendingStatusChange, setPendingStatusChange] = useState(null);
+  const [sentDateChange, setSentDateChange] = useState(null);
+  const [savingSentDate, setSavingSentDate] = useState(false);
   const [responseDateInput, setResponseDateInput] = useState('');
   const [distinctFields, setDistinctFields] = useState({ type_postes: [], moyens: [] });
 
@@ -958,6 +988,8 @@ export default function ApplicationsPage() {
       location: 'Lieu',
       method: 'Moyen',
       date: 'Date',
+      addedDate: "Date d'ajout",
+      addedDateHelp: "Candidature pas encore envoyée : ce n'est pas une date d'envoi. Changez le statut en « En attente » pour indiquer l'envoi.",
       responseDate: 'Date de réponse',
       link: 'Lien offre',
       comment: 'Commentaire',
@@ -984,6 +1016,8 @@ export default function ApplicationsPage() {
       location: 'Location',
       method: 'Method',
       date: 'Date',
+      addedDate: 'Date added',
+      addedDateHelp: 'Application not sent yet: this is not a sending date. Change the status to "Pending" to record the sending.',
       responseDate: 'Response date',
       link: 'Job link',
       comment: 'Comment',
@@ -1045,6 +1079,18 @@ export default function ApplicationsPage() {
   const FINAL_STATUSES = ['positive', 'negative', 'cancelled'];
 
   const handleStatusChange = async (id, newStatus) => {
+    // Sortie de to_apply : jamais de date inventée, la vraie date d'envoi est demandée
+    const current = applications.find(a => a.id === id) || (viewingApp?.id === id ? viewingApp : null);
+    if (isToApply(current) && newStatus !== TO_APPLY) {
+      if (newStatus === 'pending') {
+        setSentDateChange({ id });
+      } else {
+        toast.info(language === 'fr'
+          ? "Marquez d'abord la candidature comme envoyée (statut « En attente »)."
+          : 'First mark the application as sent ("Pending" status).');
+      }
+      return;
+    }
     if (FINAL_STATUSES.includes(newStatus)) {
       setPendingStatusChange({ id, newStatus });
       setResponseDateInput(format(new Date(), 'yyyy-MM-dd'));
@@ -1077,6 +1123,26 @@ export default function ApplicationsPage() {
     }
     setPendingStatusChange(null);
     setResponseDateInput('');
+  };
+
+  const handleConfirmSentDate = async (yyyyMmDd) => {
+    if (!sentDateChange) return;
+    const { id } = sentDateChange;
+    const payload = { reponse: 'pending', date_candidature: sentDateToIso(yyyyMmDd) };
+    setSavingSentDate(true);
+    try {
+      await updateApplication.mutateAsync({ id, data: payload });
+      if (viewingApp && viewingApp.id === id) {
+        setViewingApp(prev => ({ ...prev, ...payload }));
+      }
+      toast.success(language === 'fr' ? 'Candidature marquée comme envoyée' : 'Application marked as sent');
+      setSentDateChange(null);
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : (language === 'fr' ? 'Erreur lors du changement de statut' : 'Error updating status'));
+    } finally {
+      setSavingSentDate(false);
+    }
   };
 
   const handleViewDetails = (app) => {
@@ -1470,6 +1536,14 @@ export default function ApplicationsPage() {
 
       {/* Confirm Dialog */}
       {ConfirmDialog}
+
+      {/* Sent Date Dialog (to_apply -> pending) */}
+      <SentDateDialog
+        isOpen={!!sentDateChange}
+        onCancel={() => setSentDateChange(null)}
+        onConfirm={handleConfirmSentDate}
+        loading={savingSentDate}
+      />
 
       {/* Response Date Dialog */}
       <Dialog open={!!pendingStatusChange} onOpenChange={(open) => { if (!open) setPendingStatusChange(null); }}>

@@ -8,11 +8,14 @@ from datetime import datetime, timezone, timedelta
 import re
 
 from models import (
-    JobApplication, JobApplicationCreate, JobApplicationUpdate,
+    JobApplicationCreate, JobApplicationUpdate,
     JobApplicationResponse, ApplicationStatus,
     BulkUpdateRequest, PaginatedResponse
 )
 from utils.auth import get_current_user
+from services.application_service import (
+    create_application_record, check_to_apply_exit, ApplicationTransitionError
+)
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -136,29 +139,12 @@ async def create_application(
     db = Depends(get_db)
 ):
     """Crée une nouvelle candidature"""
-    app_dict_data = app_data.model_dump()
-    if not app_dict_data.get("source"):
-        app_dict_data["source"] = current_user.get("source", "webapp")
-    application = JobApplication(
-        **app_dict_data,
-        user_id=current_user["user_id"],
+    application = await create_application_record(
+        db,
+        current_user["user_id"],
+        app_data,
+        default_source=current_user.get("source", "webapp"),
     )
-    
-    app_dict = application.model_dump()
-    # Convertir les datetimes en ISO strings
-    app_dict['date_candidature'] = app_dict['date_candidature'].isoformat() if app_dict['date_candidature'] else None
-    app_dict['created_at'] = app_dict['created_at'].isoformat()
-    app_dict['updated_at'] = app_dict['updated_at'].isoformat()
-    if app_dict.get('date_reponse'):
-        app_dict['date_reponse'] = app_dict['date_reponse'].isoformat()
-    
-    # Convertir les enums en valeurs
-    app_dict['reponse'] = app_dict['reponse'].value if hasattr(app_dict['reponse'], 'value') else app_dict['reponse']
-    app_dict['type_poste'] = app_dict['type_poste'].value if hasattr(app_dict['type_poste'], 'value') else app_dict['type_poste']
-    if app_dict.get('moyen'):
-        app_dict['moyen'] = app_dict['moyen'].value if hasattr(app_dict['moyen'], 'value') else app_dict['moyen']
-    
-    await db.applications.insert_one(app_dict)
     
     return JobApplicationResponse(**application.model_dump(), interviews_count=0, next_interview=None)
 
@@ -281,7 +267,15 @@ async def update_application(
             "details": f"Statut changé de {old_status} à {new_status}"
         }
 
-    
+        # Sortie de to_apply : la vraie date d'envoi doit être fournie
+        try:
+            check_to_apply_exit(old_status, new_status, update_data.get("date_candidature"))
+        except ApplicationTransitionError as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(e)
+            )
+
     # Convertir les enums et dates
     for key, value in update_data.items():
         if hasattr(value, 'value'):
@@ -362,11 +356,22 @@ async def bulk_update_applications(
     db = Depends(get_db)
 ):
     """Met à jour le statut de plusieurs candidatures"""
+    bulk_filter = {
+        "id": {"$in": bulk_data.application_ids},
+        "user_id": current_user["user_id"]
+    }
+
+    # Sortie de to_apply impossible en masse : aucune vraie date d'envoi n'est fournie.
+    # Les candidatures to_apply sont laissées intactes et signalées.
+    skipped_to_apply = 0
+    if bulk_data.reponse != ApplicationStatus.TO_APPLY:
+        skipped_to_apply = await db.applications.count_documents(
+            {**bulk_filter, "reponse": ApplicationStatus.TO_APPLY.value}
+        )
+        bulk_filter["reponse"] = {"$ne": ApplicationStatus.TO_APPLY.value}
+
     result = await db.applications.update_many(
-        {
-            "id": {"$in": bulk_data.application_ids},
-            "user_id": current_user["user_id"]
-        },
+        bulk_filter,
         {
             "$set": {
                 "reponse": bulk_data.reponse.value,
@@ -377,6 +382,7 @@ async def bulk_update_applications(
     
     return {
         "modified_count": result.modified_count,
+        "skipped_to_apply": skipped_to_apply,
         "message": f"{result.modified_count} candidature(s) mise(s) à jour"
     }
 

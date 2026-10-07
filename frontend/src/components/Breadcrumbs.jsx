@@ -12,6 +12,7 @@ const Breadcrumbs = () => {
   const t = {
     fr: {
       dashboard: 'Tableau de bord',
+      opportunities: 'Opportunités',
       applications: 'Candidatures',
       interviews: 'Entretiens',
       statistics: 'Statistiques',
@@ -26,6 +27,7 @@ const Breadcrumbs = () => {
     },
     en: {
       dashboard: 'Dashboard',
+      opportunities: 'Opportunities',
       applications: 'Applications',
       interviews: 'Interviews',
       statistics: 'Statistics',

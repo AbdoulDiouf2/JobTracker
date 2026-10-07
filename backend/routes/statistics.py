@@ -14,7 +14,8 @@ from models import (
     # Dashboard V2
     DashboardV2Response, GoalProgress, JobSearchScore,
     DashboardInsight, PriorityAction, WeeklyEvolution,
-    UserPreferences, UserPreferencesUpdate
+    UserPreferences, UserPreferencesUpdate,
+    sent_applications_filter
 )
 from utils.auth import get_current_user
 
@@ -35,7 +36,7 @@ async def get_dashboard_stats(
     user_id = current_user["user_id"]
     
     # Total candidatures
-    total = await db.applications.count_documents({"user_id": user_id})
+    total = await db.applications.count_documents(sent_applications_filter(user_id))
     
     # Par statut
     pending = await db.applications.count_documents({"user_id": user_id, "reponse": "pending"})
@@ -46,7 +47,7 @@ async def get_dashboard_stats(
     
     # Avec entretien (au moins un entretien associé)
     pipeline = [
-        {"$match": {"user_id": user_id}},
+        {"$match": sent_applications_filter(user_id)},
         {"$lookup": {
             "from": "interviews",
             "localField": "id",
@@ -60,7 +61,7 @@ async def get_dashboard_stats(
     with_interview = result[0]["count"] if result else 0
     
     # Favoris
-    favorites_count = await db.applications.count_documents({"user_id": user_id, "is_favorite": True})
+    favorites_count = await db.applications.count_documents({**sent_applications_filter(user_id), "is_favorite": True})
     
     # Taux de réponse
     responded = positive + negative + no_response
@@ -86,7 +87,7 @@ async def get_timeline_stats(
 ):
     """Évolution temporelle des candidatures (cumul)"""
     cursor = db.applications.find(
-        {"user_id": current_user["user_id"]},
+        sent_applications_filter(current_user["user_id"]),
         {"_id": 0, "date_candidature": 1}
     ).sort("date_candidature", 1)
     
@@ -122,7 +123,7 @@ async def get_status_distribution(
 ):
     """Répartition par statut"""
     pipeline = [
-        {"$match": {"user_id": current_user["user_id"]}},
+        {"$match": sent_applications_filter(current_user["user_id"])},
         {"$group": {"_id": "$reponse", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
@@ -156,7 +157,7 @@ async def get_type_distribution(
 ):
     """Répartition par type de poste"""
     pipeline = [
-        {"$match": {"user_id": current_user["user_id"]}},
+        {"$match": sent_applications_filter(current_user["user_id"])},
         {"$group": {"_id": "$type_poste", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
@@ -190,7 +191,7 @@ async def get_method_distribution(
 ):
     """Répartition par moyen de candidature"""
     pipeline = [
-        {"$match": {"user_id": current_user["user_id"], "moyen": {"$ne": None}}},
+        {"$match": {**sent_applications_filter(current_user["user_id"]), "moyen": {"$ne": None}}},
         {"$group": {"_id": "$moyen", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ]
@@ -227,7 +228,7 @@ async def get_response_rate_stats(
     user_id = current_user["user_id"]
     
     # Total et réponses
-    total = await db.applications.count_documents({"user_id": user_id})
+    total = await db.applications.count_documents(sent_applications_filter(user_id))
     responded = await db.applications.count_documents({
         "user_id": user_id,
         "reponse": {"$in": ["positive", "negative"]}
@@ -238,7 +239,7 @@ async def get_response_rate_stats(
     # Temps moyen de réponse (pour celles qui ont date_reponse)
     pipeline = [
         {"$match": {
-            "user_id": user_id,
+            **sent_applications_filter(user_id),
             "date_reponse": {"$ne": None}
         }},
         {"$project": {
@@ -278,7 +279,7 @@ async def get_method_effectiveness(
 ):
     """Taux de réponse et d'acceptation par source de candidature"""
     user_id = current_user["user_id"]
-    base_filter: dict = {"user_id": user_id, "moyen": {"$ne": None}}
+    base_filter: dict = {**sent_applications_filter(user_id), "moyen": {"$ne": None}}
     if date_from or date_to:
         dr: dict = {}
         if date_from:
@@ -389,7 +390,7 @@ async def get_statistics_overview(
     user_id = current_user["user_id"]
 
     # Filtre de période appliqué sur date_candidature
-    date_filter: dict = {"user_id": user_id}
+    date_filter: dict = sent_applications_filter(user_id)
     if date_from or date_to:
         date_range: dict = {}
         if date_from:
@@ -449,7 +450,7 @@ async def get_statistics_overview(
         return pipeline
 
     status_pipeline = add_date_filter([
-        {"$match": {"user_id": user_id}},
+        {"$match": sent_applications_filter(user_id)},
         {"$group": {"_id": "$reponse", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ])
@@ -468,7 +469,7 @@ async def get_statistics_overview(
         ))
 
     type_pipeline = add_date_filter([
-        {"$match": {"user_id": user_id}},
+        {"$match": sent_applications_filter(user_id)},
         {"$group": {"_id": "$type_poste", "count": {"$sum": 1}}},
         {"$sort": {"count": -1}}
     ])
@@ -608,7 +609,7 @@ async def get_dashboard_v2(
     now = datetime.now()
 
     # Filtre de période sur date_candidature
-    period_filter: dict = {"user_id": user_id}
+    period_filter: dict = sent_applications_filter(user_id)
     if date_from or date_to:
         dr: dict = {}
         if date_from:
@@ -669,19 +670,19 @@ async def get_dashboard_v2(
     
     # Candidatures ce mois
     this_month_count = await db.applications.count_documents({
-        "user_id": user_id,
+        **sent_applications_filter(user_id),
         "date_candidature": {"$gte": start_of_month_str}
     })
     
     # Candidatures mois dernier
     last_month_count = await db.applications.count_documents({
-        "user_id": user_id,
+        **sent_applications_filter(user_id),
         "date_candidature": {"$gte": start_of_last_month_str, "$lt": start_of_month_str}
     })
     
     # Candidatures cette semaine
     this_week_count = await db.applications.count_documents({
-        "user_id": user_id,
+        **sent_applications_filter(user_id),
         "date_candidature": {"$gte": start_of_week_str}
     })
     
@@ -712,7 +713,7 @@ async def get_dashboard_v2(
         week_start = start_of_week - timedelta(weeks=i)
         week_end = week_start + timedelta(weeks=1)
         week_count = await db.applications.count_documents({
-            "user_id": user_id,
+            **sent_applications_filter(user_id),
             "date_candidature": {"$gte": week_start.isoformat(), "$lt": week_end.isoformat()}
         })
         weeks_data.append(week_count)
@@ -962,12 +963,12 @@ async def get_dashboard_v2(
         week_end_str = week_end.isoformat()
         
         apps_count = await db.applications.count_documents({
-            "user_id": user_id,
+            **sent_applications_filter(user_id),
             "date_candidature": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
         responses_count = await db.applications.count_documents({
-            "user_id": user_id,
+            **sent_applications_filter(user_id),
             "date_reponse": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
@@ -1055,7 +1056,7 @@ async def analyze_statistics_with_ai(
         model = model_map.get(provider, "llama-3.3-70b-versatile")
 
     # Construire le filtre de période
-    period_filter: dict = {"user_id": user_id}
+    period_filter: dict = sent_applications_filter(user_id)
     if date_from or date_to:
         dr: dict = {}
         if date_from:

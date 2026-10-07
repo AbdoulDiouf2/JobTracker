@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   LayoutDashboard, Briefcase, Calendar, BarChart3, 
   Settings, LogOut, Menu, X, ChevronRight, User, Sparkles, FolderSync,
-  ShieldCheck, FileText, Puzzle
+  ShieldCheck, FileText, Puzzle, Inbox
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../i18n';
@@ -17,6 +17,7 @@ import { useAIUsage } from '../hooks/useAIUsage';
 import { Sparkles as SparklesIcon, Search, Command } from 'lucide-react';
 import Breadcrumbs from '../components/Breadcrumbs';
 import CommandPalette from '../components/CommandPalette';
+import { OpportunitiesNavBadge } from '../components/opportunities/OpportunitiesNavBadge';
 
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -27,6 +28,7 @@ const Sidebar = ({ isOpen, onClose }) => {
   const t = {
     fr: {
       dashboard: 'Tableau de bord',
+      opportunities: 'Opportunités',
       applications: 'Candidatures',
       interviews: 'Entretiens',
       statistics: 'Statistiques',
@@ -39,6 +41,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
     en: {
       dashboard: 'Dashboard',
+      opportunities: 'Opportunities',
       applications: 'Applications',
       interviews: 'Interviews',
       statistics: 'Statistics',
@@ -53,6 +56,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const navItems = [
     { path: '/dashboard', icon: LayoutDashboard, label: t.dashboard },
+    { path: '/dashboard/opportunities', icon: Inbox, label: t.opportunities, badge: <OpportunitiesNavBadge /> },
     { path: '/dashboard/applications', icon: Briefcase, label: t.applications },
     { path: '/dashboard/interviews', icon: Calendar, label: t.interviews },
     { path: '/dashboard/statistics', icon: BarChart3, label: t.statistics },
@@ -123,7 +127,12 @@ const Sidebar = ({ isOpen, onClose }) => {
             >
               <item.icon size={20} />
               <span className="font-medium">{item.label}</span>
-              {isActive(item.path) && <ChevronRight size={16} className="ml-auto" />}
+              {(item.badge || isActive(item.path)) && (
+                <span className="ml-auto flex items-center gap-2">
+                  {item.badge}
+                  {isActive(item.path) && <ChevronRight size={16} />}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

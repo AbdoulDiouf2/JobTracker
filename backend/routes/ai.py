@@ -42,6 +42,8 @@ except ImportError:
 
 from utils.auth import get_current_user
 from utils.ai_quota import check_and_increment_quota, get_usage_today
+from utils.job_urls import detect_platform
+from models import sent_applications_filter
 
 router = APIRouter(prefix="/ai", tags=["AI"])
 
@@ -183,13 +185,14 @@ async def get_user_context(user_id: str, db) -> str:
         {"_id": 0}
     ).sort("date_entretien", -1).limit(10).to_list(10)
     
-    total = await db.applications.count_documents({"user_id": user_id})
+    # Total = candidatures réellement envoyées (exclut to_apply)
+    total = await db.applications.count_documents(sent_applications_filter(user_id))
     pending = await db.applications.count_documents({"user_id": user_id, "reponse": "pending"})
     positive = await db.applications.count_documents({"user_id": user_id, "reponse": "positive"})
     negative = await db.applications.count_documents({"user_id": user_id, "reponse": "negative"})
-    
+
     response_rate = ((positive + negative) / total * 100) if total > 0 else 0
-    
+
     context = f"""
 Contexte du candidat:
 - Total candidatures: {total}
@@ -202,6 +205,7 @@ Dernières candidatures:
 """
     for app in applications[:10]:
         status_label = {
+            'to_apply': 'À postuler (pas encore envoyée)',
             'pending': 'En attente',
             'positive': 'Positive',
             'negative': 'Négative',
@@ -602,19 +606,8 @@ async def extract_job_from_page(
         return AI_MODELS[p][0]["model_id"]
 
     # Detect platform from URL
-    url = request.page_url.lower()
-    moyen = "other"
-    if "linkedin" in url:
-        moyen = "linkedin"
-    elif "indeed" in url:
-        moyen = "indeed"
-    elif "welcometothejungle" in url:
-        moyen = "welcome_to_jungle"
-    elif "apec" in url:
-        moyen = "apec"
-    elif "pole-emploi" in url or "francetravail" in url:
-        moyen = "pole_emploi"
-    
+    moyen = detect_platform(request.page_url)
+
     # Truncate content to avoid token limits
     page_content = request.page_content[:15000] if len(request.page_content) > 15000 else request.page_content
     

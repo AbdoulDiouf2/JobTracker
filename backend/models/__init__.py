@@ -2,10 +2,11 @@
 JobTracker SaaS - Modèles Pydantic
 """
 
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator
 from typing import Optional, List, Literal
 from datetime import datetime, timezone
 from enum import Enum
+import json
 import uuid
 
 
@@ -29,6 +30,10 @@ class UserRole(str, Enum):
 
 
 class ApplicationStatus(str, Enum):
+    # TO_APPLY = offre que l'utilisateur veut poursuivre, candidature PAS encore envoyée.
+    # Tant qu'une candidature est to_apply, date_candidature n'est qu'une valeur
+    # technique (date de création) et ne doit jamais être comptée comme date d'envoi.
+    TO_APPLY = "to_apply"
     PENDING = "pending"
     CONTACTED = "contacted"
     POSITIVE = "positive"
@@ -39,6 +44,7 @@ class ApplicationStatus(str, Enum):
     @property
     def label_fr(self) -> str:
         labels = {
+            "to_apply": "📝 À postuler",
             "pending": "⏳ En attente",
             "contacted": "📞 Contacté(e)",
             "positive": "✅ Réponse positive",
@@ -51,6 +57,7 @@ class ApplicationStatus(str, Enum):
     @property
     def label_en(self) -> str:
         labels = {
+            "to_apply": "📝 To apply",
             "pending": "⏳ Pending",
             "contacted": "📞 Contacted",
             "positive": "✅ Positive response",
@@ -59,6 +66,20 @@ class ApplicationStatus(str, Enum):
             "cancelled": "❌ Cancelled"
         }
         return labels.get(self.value, self.value)
+
+
+# Statuts d'une candidature qui n'a pas encore été réellement envoyée.
+# Toute métrique basée sur l'envoi (stats, score, taux de réponse, relances,
+# délais de réponse) doit exclure ces statuts.
+NOT_SENT_APPLICATION_STATUSES = [ApplicationStatus.TO_APPLY.value]
+
+
+def sent_applications_filter(user_id: Optional[str] = None) -> dict:
+    """Filtre MongoDB des candidatures réellement envoyées."""
+    query: dict = {"reponse": {"$nin": NOT_SENT_APPLICATION_STATUSES}}
+    if user_id is not None:
+        query["user_id"] = user_id
+    return query
 
 
 class JobType(str, Enum):
@@ -963,3 +984,216 @@ class SystemTemplateResponse(BaseModel):
     is_active: bool
     created_at: str
     updated_at: str
+
+
+# ============================================
+# OPPORTUNITIES (offres découvertes, pas encore candidatées)
+# ============================================
+# Une Opportunity est distincte d'une Application : elle n'entre dans aucune
+# statistique de candidature tant qu'elle n'est pas convertie.
+# Champs futurs (matching_score, selected_cv_id, ...) ajoutables sans migration.
+
+class OpportunityStatus(str, Enum):
+    NEW = "new"
+    IGNORED = "ignored"
+    CONVERTED = "converted"
+
+
+# Sources connues. `source` reste un slug libre pour ne pas bloquer
+# de futures intégrations.
+KNOWN_OPPORTUNITY_SOURCES = ["chatgpt_watch", "chrome_extension", "manual", "external_agent", "other"]
+OPPORTUNITY_SOURCE_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,49}$"
+OPPORTUNITY_DESCRIPTION_MAX_LENGTH = 10000
+OPPORTUNITY_METADATA_MAX_BYTES = 10000
+
+
+def _check_metadata_keys(value, depth: int = 0) -> None:
+    if depth > 5:
+        raise ValueError("metadata : imbrication trop profonde (max 5)")
+    if isinstance(value, dict):
+        for k, v in value.items():
+            if not isinstance(k, str) or k.startswith("$") or "." in k:
+                raise ValueError("metadata : clés '$...' ou contenant '.' interdites")
+            _check_metadata_keys(v, depth + 1)
+    elif isinstance(value, list):
+        for v in value:
+            _check_metadata_keys(v, depth + 1)
+
+
+class OpportunityCreate(BaseModel):
+    """
+    Payload de création (UI ou agent externe).
+    extra=forbid : un `user_id` (ou tout champ inconnu) dans le payload est rejeté.
+    Le propriétaire est toujours déterminé côté serveur.
+    """
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: str = Field(..., min_length=1, max_length=200)
+    company: str = Field(..., min_length=1, max_length=200)
+    url: str = Field(..., min_length=1)  # longueur/format vérifiés par validate_http_url
+    location: Optional[str] = Field(None, max_length=200)
+    country: Optional[str] = Field(None, max_length=100)
+    contract_type: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = Field(None, max_length=OPPORTUNITY_DESCRIPTION_MAX_LENGTH)
+    source: str = Field(default="manual", pattern=OPPORTUNITY_SOURCE_PATTERN)
+    external_id: Optional[str] = Field(None, min_length=1, max_length=200)
+    discovered_at: Optional[datetime] = None
+    metadata: dict = Field(default_factory=dict)
+
+    @field_validator("url")
+    @classmethod
+    def _validate_url(cls, v: str) -> str:
+        # Import local : utils/__init__ importe models (import circulaire)
+        from utils.job_urls import validate_http_url
+        return validate_http_url(v)
+
+    @field_validator("source", mode="before")
+    @classmethod
+    def _lower_source(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("metadata")
+    @classmethod
+    def _validate_metadata(cls, v: dict) -> dict:
+        _check_metadata_keys(v)
+        if len(json.dumps(v, default=str).encode("utf-8")) > OPPORTUNITY_METADATA_MAX_BYTES:
+            raise ValueError(f"metadata trop volumineux (max {OPPORTUNITY_METADATA_MAX_BYTES} octets)")
+        return v
+
+
+class OpportunityUpdate(BaseModel):
+    """
+    PATCH utilisateur. L'URL n'est pas modifiable (clé de dédoublonnage).
+    Le statut ne peut basculer qu'entre new et ignored ; `converted` passe
+    exclusivement par la conversion.
+    """
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    company: Optional[str] = Field(None, min_length=1, max_length=200)
+    location: Optional[str] = Field(None, max_length=200)
+    country: Optional[str] = Field(None, max_length=100)
+    contract_type: Optional[str] = Field(None, max_length=50)
+    description: Optional[str] = Field(None, max_length=OPPORTUNITY_DESCRIPTION_MAX_LENGTH)
+    status: Optional[Literal["new", "ignored"]] = None
+
+
+class Opportunity(BaseModel):
+    """Document stocké dans la collection `opportunities`."""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    title: str
+    company: str
+    url: str
+    url_normalized: str
+    location: Optional[str] = None
+    country: Optional[str] = None
+    contract_type: Optional[str] = None
+    description: Optional[str] = None
+    source: str = "manual"
+    external_id: Optional[str] = None
+    status: OpportunityStatus = OpportunityStatus.NEW
+    discovered_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    converted_application_id: Optional[str] = None
+    converted_at: Optional[datetime] = None
+    metadata: dict = Field(default_factory=dict)
+
+
+class OpportunityResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    title: str
+    company: str
+    url: str
+    location: Optional[str] = None
+    country: Optional[str] = None
+    contract_type: Optional[str] = None
+    description: Optional[str] = None
+    source: str
+    external_id: Optional[str] = None
+    status: OpportunityStatus
+    discovered_at: datetime
+    created_at: datetime
+    updated_at: datetime
+    converted_application_id: Optional[str] = None
+    converted_at: Optional[datetime] = None
+    metadata: dict = Field(default_factory=dict)
+
+
+class OpportunityIngestResult(BaseModel):
+    """Résultat idempotent d'une ingestion."""
+    created: bool
+    duplicate: bool
+    opportunity_id: str
+    duplicate_reason: Optional[Literal["external_id", "url"]] = None
+
+
+class OpportunityListResponse(BaseModel):
+    items: List[OpportunityResponse]
+    total: int
+    page: int
+    per_page: int
+    total_pages: int
+
+
+class OpportunityCountResponse(BaseModel):
+    new: int
+
+
+class OpportunityConversionResponse(BaseModel):
+    success: bool = True
+    opportunity_id: str
+    application_id: str
+    created: bool  # False si la candidature existait déjà (appel idempotent)
+
+
+# ============================================
+# AGENT TOKENS (authentification machine-to-machine)
+# ============================================
+
+AGENT_TOKEN_PREFIX = "jt_agent_"
+
+
+class AgentScope(str, Enum):
+    """
+    Permissions d'un token agent. Deny by default : un endpoint agent exige
+    explicitement son scope. Pour ajouter un scope (ex: opportunities:read),
+    l'ajouter ici puis protéger l'endpoint avec require_agent_scope().
+    """
+    OPPORTUNITIES_CREATE = "opportunities:create"
+
+
+class AgentTokenCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    name: str = Field(..., min_length=1, max_length=100)
+    scopes: List[AgentScope] = Field(
+        default_factory=lambda: [AgentScope.OPPORTUNITIES_CREATE], min_length=1
+    )
+
+    @field_validator("scopes")
+    @classmethod
+    def _dedupe_scopes(cls, v: List[AgentScope]) -> List[AgentScope]:
+        return list(dict.fromkeys(v))
+
+
+class AgentTokenResponse(BaseModel):
+    """Métadonnées d'un token. Ne contient JAMAIS le token ni son hash."""
+    model_config = ConfigDict(extra="ignore")
+
+    id: str
+    name: str
+    token_prefix: str
+    scopes: List[str]
+    created_at: datetime
+    last_used_at: Optional[datetime] = None
+    revoked_at: Optional[datetime] = None
+    is_active: bool
+
+
+class AgentTokenCreatedResponse(AgentTokenResponse):
+    """Réponse de création : le token brut n'est retourné qu'ici, une seule fois."""
+    token: str

@@ -20,6 +20,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 // Pages chargées à la demande (code splitting)
 const DashboardPage    = lazy(() => import("./pages/DashboardPage"));
 const ApplicationsPage = lazy(() => import("./pages/ApplicationsPage"));
+const OpportunitiesPage = lazy(() => import("./pages/OpportunitiesPage"));
 const InterviewsPage   = lazy(() => import("./pages/InterviewsPage"));
 const StatisticsPage   = lazy(() => import("./pages/StatisticsPage"));
 const SettingsPage     = lazy(() => import("./pages/SettingsPage"));
@@ -86,6 +87,7 @@ function AppRouter() {
       {/* Protected Routes */}
       <Route path="/dashboard" element={<DashboardLayout />}>
         <Route index element={<DashboardPage />} />
+        <Route path="opportunities" element={<OpportunitiesPage />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="interviews" element={<InterviewsPage />} />
         <Route path="statistics" element={<StatisticsPage />} />

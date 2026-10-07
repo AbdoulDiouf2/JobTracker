@@ -11,6 +11,7 @@ import csv
 import io
 
 from utils.auth import get_current_user
+from models import sent_applications_filter
 
 router = APIRouter(prefix="/export", tags=["Export"])
 
@@ -243,7 +244,9 @@ async def export_statistics_excel(
     ws1 = wb.active
     ws1.title = "Stats Générales"
     
-    total = await db.applications.count_documents({"user_id": user_id})
+    # Statistiques = candidatures réellement envoyées (exclut to_apply)
+    sent_filter = sent_applications_filter(user_id)
+    total = await db.applications.count_documents(sent_filter)
     pending = await db.applications.count_documents({"user_id": user_id, "reponse": "pending"})
     positive = await db.applications.count_documents({"user_id": user_id, "reponse": "positive"})
     negative = await db.applications.count_documents({"user_id": user_id, "reponse": "negative"})
@@ -263,7 +266,7 @@ async def export_statistics_excel(
     # Sheet 2: Par statut
     ws2 = wb.create_sheet("Par Statut")
     pipeline = [
-        {"$match": {"user_id": user_id}},
+        {"$match": sent_filter},
         {"$group": {"_id": "$reponse", "count": {"$sum": 1}}}
     ]
     status_data = await db.applications.aggregate(pipeline).to_list(10)
@@ -277,7 +280,7 @@ async def export_statistics_excel(
     # Sheet 3: Par type
     ws3 = wb.create_sheet("Par Type")
     pipeline = [
-        {"$match": {"user_id": user_id}},
+        {"$match": sent_filter},
         {"$group": {"_id": "$type_poste", "count": {"$sum": 1}}}
     ]
     type_data = await db.applications.aggregate(pipeline).to_list(10)

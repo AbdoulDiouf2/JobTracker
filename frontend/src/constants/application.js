@@ -10,9 +10,29 @@ export const STATUS_OPTIONS = [
   { value: 'negative',    label: 'Négative',         color: 'bg-red-500/20 text-red-400',      textColor: 'text-red-400',    dotColor: 'bg-red-400' },
   { value: 'no_response', label: 'Pas de réponse',   color: 'bg-slate-500/20 text-slate-400',  textColor: 'text-slate-400',  dotColor: 'bg-slate-400' },
   { value: 'cancelled',   label: 'Annulé',           color: 'bg-red-500/20 text-red-400',      textColor: 'text-red-400',    dotColor: 'bg-red-400' },
+  // Candidature pas encore envoyée (ex: issue d'une Opportunité). Gardée en fin de liste :
+  // STATUS_OPTIONS[0] sert de fallback pour les statuts inconnus.
+  { value: 'to_apply',    label: 'À postuler',       color: 'bg-violet-500/20 text-violet-400', textColor: 'text-violet-400', dotColor: 'bg-violet-400' },
 ];
 
 export const STATUS_MAP = Object.fromEntries(STATUS_OPTIONS.map(s => [s.value, s]));
+
+/**
+ * `to_apply` = « je souhaite candidater, mais la candidature n'est PAS encore envoyée ».
+ * Sa date_candidature est technique : ne jamais l'afficher comme date de candidature.
+ */
+export const TO_APPLY = 'to_apply';
+export const isToApply = (app) => app?.reponse === TO_APPLY;
+
+/**
+ * Statuts proposés dans le menu rapide.
+ * Depuis to_apply, seul le passage « envoyée » (pending, avec date réelle) est proposé :
+ * parcours normal to_apply → pending + date → réponse.
+ */
+export const getStatusOptionsFor = (currentStatus) =>
+  currentStatus === TO_APPLY
+    ? STATUS_OPTIONS.filter(s => s.value === TO_APPLY || s.value === 'pending')
+    : STATUS_OPTIONS;
 
 export const TYPE_OPTIONS = [
   { value: 'cdi',        label: 'CDI' },
