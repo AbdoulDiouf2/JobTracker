@@ -8,7 +8,7 @@ les sujets. Chacun mérite un correctif dédié, testé à part.
 |---|-------|---------|---------|
 | S1 | Contournement du quota IA par l'en-tête `Origin` | Élevée | `backend/routes/ai.py` |
 | S2 | `is_admin` toujours faux dans les routes IA | Moyenne | `backend/routes/ai.py`, `backend/utils/auth.py` |
-| S3 | Secrets JWT / session avec valeur par défaut | Élevée (si variable absente en prod) | `backend/config.py` |
+| S3 | Secrets JWT / session avec valeur par défaut | **CRITIQUE — confirmée en production (8 oct. 2026)** : le `JWT_SECRET` de Vercel reprend la valeur d'exemple publiée dans `.env.example` (dépôt public). Correction préparée en local, rotation en attente : voir [S3-CORRECTION-ET-ROTATION.md](./S3-CORRECTION-ET-ROTATION.md) | `backend/config.py` |
 
 ---
 

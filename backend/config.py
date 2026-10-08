@@ -3,12 +3,97 @@ JobTracker SaaS - Configuration
 """
 
 from pydantic_settings import BaseSettings
-from typing import Optional
+from typing import Optional, Tuple, List
 from dotenv import load_dotenv
+import logging
 import os
+import secrets
 
 # Load .env file
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+
+# ============================================
+# SECRETS DE SIGNATURE (JWT_SECRET, SECRET_KEY)
+# ============================================
+# Environnements où un secret absent/faible est remplacé par un secret ÉPHÉMÈRE
+# aléatoire (jamais une valeur fixe). Tout autre APP_ENV — y compris absent —
+# est traité comme la production : un secret absent ou faible bloque le démarrage.
+NON_PRODUCTION_ENVS = {"development", "test"}
+SECRET_MIN_LENGTH = 32
+SECRET_MIN_DISTINCT_CHARS = 12
+# Marqueurs de valeurs d'exemple ou déjà publiées (anciens défauts du code, .env.example)
+_PLACEHOLDER_MARKERS = (
+    "change", "changer", "votre", "your-", "your_", "example", "exemple", "placeholder",
+    "super-secret", "secret-key", "cle-secrete", "replace", "todo",
+)
+
+
+class InsecureSecretError(RuntimeError):
+    """Secret de signature absent, prévisible ou trop faible en production."""
+
+
+def secret_problems(value: Optional[str]) -> List[str]:
+    """Raisons pour lesquelles un secret est refusé (ne contient jamais la valeur)."""
+    if not value:
+        return ["absent"]
+    problems = []
+    if len(value) < SECRET_MIN_LENGTH:
+        problems.append(f"trop court (< {SECRET_MIN_LENGTH} caractères)")
+    if len(set(value)) < SECRET_MIN_DISTINCT_CHARS:
+        problems.append("trop peu de caractères distincts (non aléatoire)")
+    lowered = value.lower()
+    if any(marker in lowered for marker in _PLACEHOLDER_MARKERS):
+        problems.append("valeur d'exemple ou prévisible")
+    return problems
+
+
+def effective_app_env(app_env: Optional[str], vercel_env: Optional[str] = None) -> str:
+    """
+    Environnement effectif. Sur Vercel Production/Preview (VERCEL_ENV, posé
+    automatiquement par Vercel), les règles de production s'appliquent toujours,
+    même si APP_ENV a été réglé par erreur sur development/test.
+    """
+    if (vercel_env or "").strip().lower() in ("production", "preview"):
+        return "production"
+    return (app_env or "production").strip().lower()
+
+
+def resolve_signing_secrets(jwt_secret: Optional[str], secret_key: Optional[str], app_env: Optional[str]) -> Tuple[str, str]:
+    """
+    Production (APP_ENV absent ou différent de development/test) : refuse tout
+    secret absent, prévisible, trop court, ou identique à l'autre secret.
+    development/test : un secret absent ou faible est remplacé par un secret
+    éphémère aléatoire (les sessions ne survivent pas au redémarrage).
+    """
+    env = (app_env or "production").strip().lower()
+    candidates = {"JWT_SECRET": jwt_secret, "SECRET_KEY": secret_key}
+
+    if env not in NON_PRODUCTION_ENVS:
+        errors = [f"{name}: {', '.join(secret_problems(value))}"
+                  for name, value in candidates.items() if secret_problems(value)]
+        if jwt_secret and secret_key and jwt_secret == secret_key:
+            errors.append("JWT_SECRET et SECRET_KEY doivent être différents")
+        if errors:
+            raise InsecureSecretError(
+                "Démarrage refusé — secrets de signature non conformes (APP_ENV="
+                f"{env}) : " + " ; ".join(errors)
+                + ". Générer : python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+            )
+        return jwt_secret, secret_key
+
+    resolved = {}
+    for name, value in candidates.items():
+        if secret_problems(value):
+            logger.warning(
+                "%s absent ou faible (APP_ENV=%s) : secret éphémère généré pour ce processus.", name, env
+            )
+            resolved[name] = secrets.token_urlsafe(48)
+        else:
+            resolved[name] = value
+    return resolved["JWT_SECRET"], resolved["SECRET_KEY"]
 
 
 class Settings(BaseSettings):
@@ -16,8 +101,11 @@ class Settings(BaseSettings):
     MONGO_URL: str = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
     DB_NAME: str = os.environ.get('DB_NAME', 'jobtracker')
     
-    # JWT
-    JWT_SECRET: str = os.environ.get('JWT_SECRET', 'super-secret-key-change-in-production')
+    # Environnement : "production" par défaut (sûr). "development" ou "test" uniquement en local/CI.
+    APP_ENV: str = os.environ.get('APP_ENV', 'production')
+
+    # JWT — aucune valeur par défaut : validé par resolve_signing_secrets()
+    JWT_SECRET: str = os.environ.get('JWT_SECRET', '')
     JWT_ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
@@ -36,7 +124,8 @@ class Settings(BaseSettings):
     # Google OAuth (Native)
     GOOGLE_CLIENT_ID: Optional[str] = os.environ.get('GOOGLE_CLIENT_ID')
     GOOGLE_CLIENT_SECRET: Optional[str] = os.environ.get('GOOGLE_CLIENT_SECRET')
-    SECRET_KEY: str = os.environ.get('SECRET_KEY', 'super-secret-session-key') # For SessionMiddleware
+    # Signe le state anti-CSRF du login Google — aucune valeur par défaut, validé comme JWT_SECRET
+    SECRET_KEY: str = os.environ.get('SECRET_KEY', '')
     
     # URLs
     BACKEND_URL: str = os.environ.get('BACKEND_URL', 'http://localhost:8001')
@@ -72,3 +161,9 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+# Validation au chargement du module : s'applique aussi sur Vercel (où le lifespan ne tourne pas)
+settings.JWT_SECRET, settings.SECRET_KEY = resolve_signing_secrets(
+    settings.JWT_SECRET, settings.SECRET_KEY,
+    effective_app_env(settings.APP_ENV, os.environ.get("VERCEL_ENV")),
+)

@@ -17,6 +17,10 @@ from urllib.parse import urlsplit
 
 import pytest
 
+# Environnement de test EXPLICITE : un secret absent ou faible y est remplacé par un
+# secret éphémère aléatoire (jamais une valeur fixe). Doit précéder tout import de config.
+os.environ.setdefault("APP_ENV", "test")
+
 # Rendre importables les modules du backend (models, services, routes, utils)
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BACKEND_DIR not in sys.path:
