@@ -96,6 +96,20 @@ def resolve_signing_secrets(jwt_secret: Optional[str], secret_key: Optional[str]
     return resolved["JWT_SECRET"], resolved["SECRET_KEY"]
 
 
+def _bounded_int(name: str, default: int, minimum: int, maximum: int) -> int:
+    """Entier d'environnement borné : une valeur hors bornes bloque le démarrage."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        raise ValueError(f"{name} doit être un entier")
+    if not minimum <= value <= maximum:
+        raise ValueError(f"{name} doit être compris entre {minimum} et {maximum}")
+    return value
+
+
 class Settings(BaseSettings):
     # Database
     MONGO_URL: str = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
@@ -150,6 +164,15 @@ class Settings(BaseSettings):
     AGENT_DAILY_CREATE_QUOTA: int = int(os.environ.get('AGENT_DAILY_CREATE_QUOTA', '500'))  # créations/jour/token
     AGENT_MAX_ACTIVE_TOKENS: int = int(os.environ.get('AGENT_MAX_ACTIVE_TOKENS', '10'))  # par utilisateur
     AGENT_LAST_USED_THROTTLE_SECONDS: int = int(os.environ.get('AGENT_LAST_USED_THROTTLE_SECONDS', '300'))
+
+    # Veille ChatGPT (Lot 2) : bornes vérifiées au chargement (_bounded_int)
+    WATCH_MAX_PER_RUN: int = _bounded_int('WATCH_MAX_PER_RUN', 20, 1, 20)  # créations par run_id
+    WATCH_DAILY_CREATE_QUOTA: int = _bounded_int('WATCH_DAILY_CREATE_QUOTA', 40, 1, 200)  # par utilisateur et jour de Paris
+    WATCH_RUN_WINDOW_PAST_HOURS: int = _bounded_int('WATCH_RUN_WINDOW_PAST_HOURS', 6, 1, 12)  # nouvelle exécution
+    WATCH_RUN_RESUME_HOURS: int = _bounded_int('WATCH_RUN_RESUME_HOURS', 24, 6, 48)  # reprise d'une exécution connue
+    WATCH_RUN_WINDOW_FUTURE_MINUTES: int = _bounded_int('WATCH_RUN_WINDOW_FUTURE_MINUTES', 15, 0, 60)
+    WATCH_ITEM_STALE_SECONDS: int = _bounded_int('WATCH_ITEM_STALE_SECONDS', 60, 10, 600)  # reprise d'un élément pending
+    WATCH_TIMEZONE: str = "Europe/Paris"  # fixe en v1
 
     # App
     APP_NAME: str = "JobTracker SaaS"

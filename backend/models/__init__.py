@@ -257,6 +257,8 @@ class User(UserBase):
     onboarding_completed: bool = False
     onboarding_steps: OnboardingSteps = Field(default_factory=OnboardingSteps)
     welcome_shown: bool = False
+    # Veille ChatGPT (Lot 2) : activée explicitement par un admin. Absent = désactivé.
+    watch_enabled: bool = False
 
 
 class UserResponse(UserBase):
@@ -1002,6 +1004,10 @@ class OpportunityStatus(str, Enum):
 # Sources connues. `source` reste un slug libre pour ne pas bloquer
 # de futures intégrations.
 KNOWN_OPPORTUNITY_SOURCES = ["chatgpt_watch", "chrome_extension", "manual", "external_agent", "other"]
+# Source réservée à la veille ChatGPT (Lot 2) : imposée par le serveur, refusée
+# sur les routes manuelles et agent pour que personne ne se fasse passer pour la veille.
+WATCH_SOURCE = "chatgpt_watch"
+RESERVED_OPPORTUNITY_SOURCES = {WATCH_SOURCE}
 OPPORTUNITY_SOURCE_PATTERN = r"^[a-z0-9][a-z0-9_-]{0,49}$"
 OPPORTUNITY_DESCRIPTION_MAX_LENGTH = 10000
 OPPORTUNITY_METADATA_MAX_BYTES = 10000
@@ -1078,6 +1084,19 @@ class OpportunityUpdate(BaseModel):
     status: Optional[Literal["new", "ignored"]] = None
 
 
+class OpportunityWatchInfo(BaseModel):
+    """Sous-document `watch` : données de pertinence fournies par la veille ChatGPT (D4).
+    Le score est une estimation déclarée par ChatGPT, jamais recalculée ni garantie."""
+    run_id: str
+    relevance_score: int
+    relevance_reasons: List[str] = Field(default_factory=list)
+    source_evidence: Optional[dict] = None
+    uncertain_fields: List[str] = Field(default_factory=list)
+    preferences_version: Optional[int] = None
+    contract_category: Optional[str] = None  # contrat normalisé (permanent, fixed_term...)
+    seniority: Optional[str] = None  # niveau normalisé, si fourni
+
+
 class Opportunity(BaseModel):
     """Document stocké dans la collection `opportunities`."""
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -1099,6 +1118,7 @@ class Opportunity(BaseModel):
     converted_application_id: Optional[str] = None
     converted_at: Optional[datetime] = None
     metadata: dict = Field(default_factory=dict)
+    watch: Optional[OpportunityWatchInfo] = None
 
 
 class OpportunityResponse(BaseModel):
@@ -1121,6 +1141,7 @@ class OpportunityResponse(BaseModel):
     converted_application_id: Optional[str] = None
     converted_at: Optional[datetime] = None
     metadata: dict = Field(default_factory=dict)
+    watch: Optional[OpportunityWatchInfo] = None
 
 
 class OpportunityIngestResult(BaseModel):

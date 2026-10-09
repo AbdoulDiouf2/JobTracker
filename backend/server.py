@@ -57,6 +57,8 @@ from routes.agent_tokens import router as agent_tokens_router
 from routes.agent_tokens import get_db as agent_tokens_get_db
 from routes.agent import router as agent_router
 from routes.agent import get_db as agent_get_db
+from routes.watch import router as watch_router
+from routes.watch import get_db as watch_get_db
 from utils.agent_auth import get_db as agent_auth_get_db
 from utils.auth import get_current_user, security
 
@@ -210,6 +212,7 @@ api_router.include_router(search_router)
 api_router.include_router(opportunities_router)
 api_router.include_router(agent_tokens_router)
 api_router.include_router(agent_router)
+api_router.include_router(watch_router)
 
 
 # Include main router
@@ -235,6 +238,7 @@ app.dependency_overrides[search_get_db] = override_get_db
 app.dependency_overrides[opportunities_get_db] = override_get_db
 app.dependency_overrides[agent_tokens_get_db] = override_get_db
 app.dependency_overrides[agent_get_db] = override_get_db
+app.dependency_overrides[watch_get_db] = override_get_db
 app.dependency_overrides[agent_auth_get_db] = override_get_db
 app.dependency_overrides[auth_utils_get_db] = override_get_db
 

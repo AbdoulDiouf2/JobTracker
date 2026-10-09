@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 from typing import Optional
 
 from models import (
+    RESERVED_OPPORTUNITY_SOURCES,
     OpportunityCreate, OpportunityUpdate, OpportunityStatus,
     OpportunityResponse, OpportunityListResponse, OpportunityCountResponse,
     OpportunityIngestResult, OpportunityConversionResponse,
@@ -68,6 +69,9 @@ async def create_opportunity(
     Crée une opportunité (idempotent).
     201 si créée, 200 si doublon (l'opportunité existante est renvoyée).
     """
+    if data.source in RESERVED_OPPORTUNITY_SOURCES:
+        # Source réservée à la veille ChatGPT (imposée par le serveur, Lot 2)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "source_reserved"})
     result = await opportunity_service.ingest_opportunity(db, current_user["user_id"], data)
     response.status_code = status.HTTP_201_CREATED if result.created else status.HTTP_200_OK
     return result

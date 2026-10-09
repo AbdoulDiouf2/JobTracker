@@ -26,6 +26,10 @@ slowapi>=0.1.9
 cloudinary==1.44.1
 reportlab>=4.2.5
 tzlocal>=5.0
+# Base IANA des fuseaux (zoneinfo Europe/Paris de la veille Lot 2), absente de certains runtimes
+tzdata==2025.3
+# Public Suffix List embarquée (validation des domaines des offres, Lot 2) ; aucune requête réseau
+publicsuffixlist==1.0.2.20261007
 xhtml2pdf==0.2.16
 svglib==1.5.1
 Jinja2>=3.1.3

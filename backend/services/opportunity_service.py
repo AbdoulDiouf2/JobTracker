@@ -156,9 +156,14 @@ async def find_existing_opportunity(db, user_id: str, data: OpportunityCreate) -
     )
 
 
-async def ingest_opportunity(db, user_id: str, data: OpportunityCreate) -> OpportunityIngestResult:
+async def ingest_opportunity(
+    db, user_id: str, data: OpportunityCreate, watch: Optional[dict] = None,
+) -> OpportunityIngestResult:
     """
     Crée une opportunité si elle n'existe pas déjà pour cet utilisateur.
+
+    `watch` (veille ChatGPT, Lot 2) : sous-document de pertinence, écrit uniquement
+    à la création. Absent : document strictement identique au Lot 1.
 
     Dédoublonnage, par priorité :
       1. (user_id, source, external_id) si external_id fourni ;
@@ -186,8 +191,11 @@ async def ingest_opportunity(db, user_id: str, data: OpportunityCreate) -> Oppor
         discovered_at=_utc(data.discovered_at) if data.discovered_at else now,
         created_at=now,
         updated_at=now,
+        watch=watch,
     )
     doc = _to_document(opportunity)
+    if watch is None:
+        doc.pop("watch", None)
 
     try:
         result = await coll.update_one(

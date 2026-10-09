@@ -35,7 +35,7 @@ def offer(**overrides) -> dict:
         "title": "Data Engineer Junior", "company": "Orange",
         "url": f"https://company.com/jobs/{uuid.uuid4().hex[:10]}",
         "location": "Paris", "country": "France", "contract_type": "CDI",
-        "source": "chatgpt_watch",
+        "source": "veille_externe",  # chatgpt_watch est réservée à la veille Lot 2 (P3)
     }
     data.update(overrides)
     return data
@@ -150,7 +150,7 @@ async def test_valid_token_creates_then_duplicate(api):
     mine = (await api.get("/api/opportunities", headers=api.headers_for("a"))).json()
     other = (await api.get("/api/opportunities", headers=api.headers_for("b"))).json()
     assert mine["total"] == 1 and other["total"] == 0
-    assert mine["items"][0]["source"] == "chatgpt_watch"
+    assert mine["items"][0]["source"] == "veille_externe"
     assert (await api.get("/api/opportunities/count", headers=api.headers_for("a"))).json() == {"new": 1}
 
 

@@ -12,7 +12,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from config import settings
-from models import AgentScope, OpportunityCreate, OpportunityIngestResult
+from models import AgentScope, OpportunityCreate, OpportunityIngestResult, RESERVED_OPPORTUNITY_SOURCES
 from services.agent_token_service import (
     AgentQuotaExceeded, hash_token, is_well_formed, ingest_opportunity_as_agent, seconds_until_quota_reset,
 )
@@ -63,6 +63,9 @@ async def ingest_opportunity(
     """
     if "source" not in data.model_fields_set:
         data.source = DEFAULT_AGENT_SOURCE
+    if data.source in RESERVED_OPPORTUNITY_SOURCES:
+        # Source réservée à la veille ChatGPT (imposée par le serveur, Lot 2)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail={"code": "source_reserved"})
 
     log_ctx = {"token_id": principal.token_id, "prefix": principal.token_prefix, "user_id": principal.user_id}
     try:

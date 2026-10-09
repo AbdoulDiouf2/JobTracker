@@ -29,7 +29,7 @@ def offer(**overrides) -> dict:
         "country": "France",
         "contract_type": "CDI",
         "description": "Pipelines Spark / Airflow.",
-        "source": "chatgpt_watch",
+        "source": "veille_externe",  # chatgpt_watch est réservée à la veille Lot 2 (P3)
         "external_id": f"ext-{uuid.uuid4().hex[:6]}",
     }
     data.update(overrides)
@@ -62,7 +62,7 @@ async def test_full_business_workflow(api, db):
     # 5. Lecture via JWT
     r = await api.get(f"/api/opportunities/{opportunity_id}", headers=api.headers_for("a"))
     assert r.status_code == 200
-    assert r.json()["status"] == "new" and r.json()["source"] == "chatgpt_watch"
+    assert r.json()["status"] == "new" and r.json()["source"] == "veille_externe"
 
     # 6. Conversion
     r = await api.post(f"/api/opportunities/{opportunity_id}/convert", headers=api.headers_for("a"))

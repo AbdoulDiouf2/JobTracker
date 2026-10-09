@@ -40,7 +40,9 @@ if [ ${#TESTS[@]} -eq 0 ]; then
   TESTS=(tests/test_job_urls.py tests/test_opportunity_service.py tests/test_to_apply_status.py
          tests/test_opportunity_conversion.py tests/test_opportunity_api.py
          tests/test_agent_token_service.py tests/test_agent_api.py tests/test_lot1_e2e.py
-         tests/test_security_settings.py)
+         tests/test_security_settings.py
+         tests/test_watch_validation.py tests/test_watch_preferences.py tests/test_watch_ingest.py
+         tests/test_watch_api.py)
 fi
 
 MONGO_TEST_URL="mongodb://127.0.0.1:${PORT}" PYTHONIOENCODING=utf-8 "$PY" -m pytest "${TESTS[@]}" -v -p no:cacheprovider

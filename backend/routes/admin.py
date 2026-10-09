@@ -15,7 +15,11 @@ from models import (
     sent_applications_filter
 )
 from passlib.context import CryptContext
+from pydantic import BaseModel, ConfigDict, StrictBool
+import logging
 import uuid
+
+logger = logging.getLogger("jobtracker.admin")
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -535,6 +539,30 @@ async def reactivate_user(
     )
     
     return {"message": "Utilisateur réactivé avec succès"}
+
+
+class WatchAccessUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: StrictBool
+
+
+@router.put("/users/{user_id}/watch")
+async def set_watch_access(
+    user_id: str,
+    data: WatchAccessUpdate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Active ou désactive la veille ChatGPT (Lot 2) pour un compte (D7)."""
+    result = await db.users.update_one({"id": user_id}, {"$set": {"watch_enabled": data.enabled}})
+    if result.matched_count == 0:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur non trouvé"
+        )
+    logger.info("watch_access admin_id=%s user_id=%s enabled=%s", admin_user["id"], user_id, data.enabled)
+    return {"user_id": user_id, "watch_enabled": data.enabled}
 
 
 @router.post("/users", response_model=UserAdminResponse)
