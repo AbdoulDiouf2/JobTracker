@@ -7,6 +7,7 @@ production, c'est une création d'identifiant réel : autorisation explicite req
 Usage (depuis backend/) :
   python scripts/manage_oauth_client.py create --name ChatGPT [--redirect-uri URI ...]
   python scripts/manage_oauth_client.py list
+  python scripts/manage_oauth_client.py add-redirect-uri --client-id jt_oc_... --redirect-uri URI
   python scripts/manage_oauth_client.py rotate-secret --client-id jt_oc_...
   python scripts/manage_oauth_client.py deactivate --client-id jt_oc_...
 
@@ -40,6 +41,9 @@ async def main(args) -> int:
         elif args.command == "list":
             async for c in db[oauth_service.CLIENTS].find({}, {"_id": 0, "secret_hash": 0}):
                 print(f"{c['client_id']}  {c['name']}  actif={c['active']}  redirect_uris={c['redirect_uris']}")
+        elif args.command == "add-redirect-uri":
+            uris = await oauth_service.add_redirect_uri(db, args.client_id, args.redirect_uri)
+            print(f"redirect_uris : {', '.join(uris)}")
         elif args.command == "rotate-secret":
             secret = await oauth_service.rotate_client_secret(db, args.client_id)
             print(f"nouveau client_secret : {secret}   (affiché une seule fois)")
@@ -58,6 +62,9 @@ if __name__ == "__main__":
     create.add_argument("--name", default="ChatGPT")
     create.add_argument("--redirect-uri", action="append", help="URI exacte (répétable)")
     sub.add_parser("list")
+    add_uri = sub.add_parser("add-redirect-uri")
+    add_uri.add_argument("--client-id", required=True)
+    add_uri.add_argument("--redirect-uri", required=True, help="URI exacte, HTTPS")
     for name in ("rotate-secret", "deactivate"):
         sub.add_parser(name).add_argument("--client-id", required=True)
     sys.exit(asyncio.run(main(parser.parse_args())))

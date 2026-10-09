@@ -192,13 +192,43 @@ async def user_is_eligible(db, user_id: str) -> bool:
 # CLIENTS (pré-enregistrés, D1)
 # ============================================
 
-def _validate_redirect_uri(uri: str) -> str:
-    uri = (uri or "").strip()
-    parts = urlsplit(uri)
-    local = parts.hostname in ("localhost", "127.0.0.1") and parts.scheme == "http"
-    if (parts.scheme != "https" and not local) or not parts.hostname or parts.fragment or "*" in uri:
-        raise ValueError("redirect_uri invalide : HTTPS exact, sans fragment ni joker")
+_HOST_RE = re.compile(r"^(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$")
+
+
+def validate_redirect_uri(uri: str, allow_local: bool = False) -> str:
+    """
+    Validation STRICTE d'une adresse de retour enregistrée :
+    HTTPS, nom de domaine valide (pas d'IP), pas d'identifiants, pas de port, pas de requête,
+    pas de fragment, pas de joker, pas d'espace, 512 caractères au plus. `allow_local` : seul
+    cas toléré, http://localhost ou 127.0.0.1 (développement), jamais par défaut.
+    """
+    if not isinstance(uri, str) or uri != uri.strip() or not uri or len(uri) > 512:
+        raise ValueError("redirect_uri invalide : vide, trop longue ou entourée d'espaces")
+    if any(c.isspace() or ord(c) < 32 for c in uri) or "*" in uri or "\\" in uri:
+        raise ValueError("redirect_uri invalide : caractère interdit")
+    try:
+        parts = urlsplit(uri)
+        port = parts.port
+    except ValueError:
+        raise ValueError("redirect_uri invalide")
+    host = parts.hostname or ""
+    local = allow_local and parts.scheme == "http" and host in ("localhost", "127.0.0.1")
+    if parts.scheme != "https" and not local:
+        raise ValueError("redirect_uri invalide : HTTPS obligatoire")
+    if parts.username or parts.password or "@" in parts.netloc:
+        raise ValueError("redirect_uri invalide : identifiants interdits")
+    if parts.query or parts.fragment or uri.endswith(("?", "#")):
+        raise ValueError("redirect_uri invalide : ni requête ni fragment")
+    # netloc brut : urlsplit met hostname en minuscules, mais la comparaison est exacte
+    if not local and (port is not None or not _HOST_RE.match(host) or parts.netloc != parts.netloc.lower()):
+        raise ValueError("redirect_uri invalide : nom de domaine attendu, sans port")
+    if not parts.path.startswith("/"):
+        raise ValueError("redirect_uri invalide : chemin absolu attendu")
     return uri
+
+
+def _validate_redirect_uri(uri: str) -> str:
+    return validate_redirect_uri(uri)
 
 
 async def create_client(db, name: str, redirect_uris: List[str]) -> dict:
@@ -215,6 +245,19 @@ async def create_client(db, name: str, redirect_uris: List[str]) -> dict:
     })
     logger.info("oauth_client_created client_id=%s", client_id)
     return {"client_id": client_id, "client_secret": secret, "redirect_uris": uris}
+
+
+async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
+    """Ajoute une adresse de retour EXACTE à un client existant (validation stricte)."""
+    uri = validate_redirect_uri(uri)
+    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1})
+    if not client:
+        raise ValueError("client inconnu")
+    if uri in client["redirect_uris"]:
+        return client["redirect_uris"]
+    await db[CLIENTS].update_one({"client_id": client_id}, {"$addToSet": {"redirect_uris": uri}})
+    logger.info("oauth_client_redirect_added client_id=%s", client_id)
+    return client["redirect_uris"] + [uri]
 
 
 async def rotate_client_secret(db, client_id: str) -> str:
@@ -605,8 +648,17 @@ KILL_SWITCH_KEY = "mcp_kill_switch"
 
 
 async def kill_switch_active(db) -> bool:
-    doc = await db.platform_settings.find_one({"key": KILL_SWITCH_KEY}, {"value": 1})
-    return bool(doc and doc.get("value") is True)
+    """
+    Interrupteur d'urgence FERMÉ PAR DÉFAUT (sous-lot A0) : le service est coupé tant
+    qu'un administrateur ne l'a pas explicitement ouvert (`value: false`). Réglage absent,
+    valeur inattendue ou base illisible : coupé (sécurité par défaut).
+    """
+    try:
+        doc = await db.platform_settings.find_one({"key": KILL_SWITCH_KEY}, {"value": 1})
+    except Exception:  # noqa: BLE001
+        logger.warning("mcp_kill_switch lecture impossible : service coupé par sécurité")
+        return True
+    return not (doc and doc.get("value") is False)
 
 
 async def set_kill_switch(db, active: bool, admin_id: str) -> None:

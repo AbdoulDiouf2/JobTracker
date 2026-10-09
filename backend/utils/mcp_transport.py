@@ -13,10 +13,11 @@ est donc créé PAR REQUÊTE (mode sans état, réponses JSON). Le serveur MCP, 
 construit une seule fois par instance.
 
 Contrôles à CHAQUE requête (spécification §8 bis.2), dans cet ordre :
-1. MCP actif (`MCP_ENABLED`), sinon réponse identique à une route absente (404). TOUJOURS
-   bloqué en production Vercel (`VERCEL_ENV=production`) : la levée de ce blocage est une
-   décision distincte (palier A3), même maintenant qu'OAuth existe ;
-2. interrupteur d'urgence en base (`platform_settings.mcp_kill_switch`) -> 503 ;
+1. MCP actif (`MCP_ENABLED`), sinon réponse identique à une route absente (404). En
+   production Vercel, il faut EN PLUS `MCP_PRODUCTION_ALLOWED=true` (deux clés cumulatives :
+   une variable posée seule par erreur n'ouvre rien) ;
+2. interrupteur d'urgence en base (`platform_settings.mcp_kill_switch`), FERMÉ par défaut :
+   service coupé (503) tant qu'il n'a pas été explicitement ouvert ;
 3. jeton d'accès OAuth valide (opaque, audience = ressource canonique, grant actif,
    compte actif et `watch_enabled`), sinon 401 + `WWW-Authenticate` (RFC 9728) ;
 4. scope de l'outil appelé, sinon 403 `insufficient_scope` ;
@@ -44,7 +45,8 @@ _server_lock = asyncio.Lock()
 # Nombre de constructions du serveur MCP dans ce processus (contrôlé par les tests)
 build_count = 0
 
-_NOT_FOUND = json.dumps({"detail": "Not Found"}).encode()
+# Corps identique, à l'octet près, à celui d'une route absente de FastAPI
+_NOT_FOUND = json.dumps({"detail": "Not Found"}, separators=(",", ":")).encode()
 MAX_BODY_BYTES = 4 * 1024 * 1024
 # Scope exigé par outil (spécification §3.5)
 TOOL_SCOPES = {PING_TOOL: "watch:read"}
@@ -57,10 +59,13 @@ db_provider = None
 
 
 def mcp_enabled() -> bool:
-    """Actif seulement si demandé explicitement, et jamais en production Vercel avant OAuth."""
-    if (os.environ.get("VERCEL_ENV") or "").strip().lower() == "production":
+    """Actif seulement si demandé explicitement. En production Vercel, deux clés cumulatives :
+    MCP_ENABLED et MCP_PRODUCTION_ALLOWED (sous-lot A0)."""
+    if not settings.MCP_ENABLED:
         return False
-    return settings.MCP_ENABLED
+    if (os.environ.get("VERCEL_ENV") or "").strip().lower() == "production":
+        return settings.MCP_PRODUCTION_ALLOWED
+    return True
 
 
 def allowed_hosts() -> list:
@@ -120,7 +125,7 @@ def reset_for_tests() -> None:
 
 
 async def _send_json(send, status: int, payload: dict, extra_headers: Optional[list] = None) -> None:
-    body = json.dumps(payload).encode()
+    body = json.dumps(payload, separators=(",", ":")).encode()
     headers = [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode()),
                (b"cache-control", b"no-store")] + (extra_headers or [])
     await send({"type": "http.response.start", "status": status, "headers": headers})

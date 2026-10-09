@@ -39,6 +39,12 @@ def oauth_on(monkeypatch):
     limiter.reset()
 
 
+@pytest.fixture(autouse=True)
+async def kill_switch_open(db):
+    """L'interrupteur d'urgence est FERMÉ par défaut (A0) : ces tests l'ouvrent explicitement."""
+    await svc.set_kill_switch(db, False, "tests")
+
+
 def pkce():
     verifier = secrets.token_urlsafe(48)[:64]
     return verifier, svc.pkce_s256(verifier)

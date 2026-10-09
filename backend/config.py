@@ -174,9 +174,12 @@ class Settings(BaseSettings):
     WATCH_ITEM_STALE_SECONDS: int = _bounded_int('WATCH_ITEM_STALE_SECONDS', 60, 10, 600)  # reprise d'un élément pending
     WATCH_TIMEZONE: str = "Europe/Paris"  # fixe en v1
 
-    # MCP (Lot 2, étape 3). Désactivé par défaut. Tant que l'authentification OAuth
-    # n'existe pas, le transport reste BLOQUÉ en production Vercel (cf. utils/mcp_transport.py).
+    # MCP (Lot 2, étape 3). Désactivé par défaut. En production Vercel, il faut DEUX clés
+    # (MCP_ENABLED et MCP_PRODUCTION_ALLOWED), puis l'ouverture explicite de l'interrupteur
+    # d'urgence en base (fermé par défaut). Cf. utils/mcp_transport.mcp_enabled.
     MCP_ENABLED: bool = os.environ.get('MCP_ENABLED', 'false').strip().lower() == 'true'
+    # Production Vercel : seconde clé OBLIGATOIRE en plus de MCP_ENABLED (sous-lot A0)
+    MCP_PRODUCTION_ALLOWED: bool = os.environ.get('MCP_PRODUCTION_ALLOWED', 'false').strip().lower() == 'true'
     # Hôtes acceptés par la protection anti DNS-rebinding du SDK (liste séparée par des virgules)
     MCP_ALLOWED_HOSTS: str = os.environ.get('MCP_ALLOWED_HOSTS', 'jobtracker.maadec.com')
 

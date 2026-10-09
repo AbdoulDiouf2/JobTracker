@@ -64,6 +64,7 @@ async def mcp_on(monkeypatch, client, db):
     monkeypatch.setattr(settings, "OAUTH_ISSUER", "https://" + HOST)
     monkeypatch.delenv("VERCEL_ENV", raising=False)
     mcp_transport.reset_for_tests()
+    await oauth_service.set_kill_switch(db, False, "tests")  # fermé par défaut (A0)
     client.headers["Authorization"] = "Bearer " + await issue_access_token(db)
     yield
     mcp_transport.reset_for_tests()
@@ -84,6 +85,8 @@ async def test_disabled_by_default_answers_like_missing_route(client, monkeypatc
     missing = await client.request(method, "/api/route-inexistante", headers=HEADERS)
     assert r.status_code == missing.status_code == 404
     assert r.json() == missing.json() == NOT_FOUND
+    assert r.content == missing.content  # identique à l'octet près (A0)
+    assert r.headers["content-type"] == missing.headers["content-type"]
 
 
 async def test_blocked_in_vercel_production_even_if_enabled(client, mcp_on, monkeypatch):
@@ -198,6 +201,7 @@ async def main():
              "absolute_expires_at": now + timedelta(days=1)}
     await db[oauth_service.GRANTS].insert_one(dict(grant))
     token = (await oauth_service._issue_tokens(db, grant))["access_token"]
+    await oauth_service.set_kill_switch(db, False, "tests")
     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=server.app), base_url="https://jobtracker.maadec.com") as c:
         await c.get("/api/")
         state["apres_autre_route"] = loaded()
