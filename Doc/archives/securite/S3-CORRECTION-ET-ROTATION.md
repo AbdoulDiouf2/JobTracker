@@ -29,7 +29,7 @@
 - **Historique git complet** : aucun secret réel détecté pour les motifs Mongo avec
   identifiants, OpenAI, Google API, Groq, secret OAuth Google, Fernet, SMTP, token agent et
   Stripe. Deux faux positifs ont été examinés : un fragment d'URL « ri*sk-ana*lyst… » et un
-  gabarit commenté `EMERGENT_LLM_KEY` sans chiffre.
+  gabarit commenté de clé d'API sans chiffre.
 - **`.env` local** : `JWT_SECRET` et `SECRET_KEY` sont différents de `.env.example`, mais le
   `JWT_SECRET` local contient lui aussi un **motif de valeur d'exemple**. La nouvelle
   validation le refuse (§3.3).
@@ -210,7 +210,7 @@ signalées. En attendant, voici les variables **lues par l'application** et leur
 | Sensibilité | Variables | Recommandation |
 |---|---|---|
 | **Secrets critiques** | `JWT_SECRET`, `SECRET_KEY`, `ENCRYPTION_KEY`, `MONGO_URL` (contient des identifiants), `GOOGLE_CLIENT_SECRET`, `GOOGLE_CALENDAR_CLIENT_SECRET`, `CLOUDINARY_API_SECRET`, `SMTP_PASSWORD_APP`, `VAPID_PRIVATE_KEY` | *Sensitive*, valeurs distinctes par environnement, jamais dans le dépôt. Rotation : JWT et SECRET_KEY **maintenant** ; les autres seulement en cas de doute de fuite, car aucune n'a été trouvée dans le dépôt ni dans le bundle |
-| **Clés de fournisseurs (coût)** | `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_AI_API_KEY`, `GROQ_API_KEY`, `EMERGENT_LLM_KEY`, `CLOUDINARY_API_KEY` | *Sensitive* ; surveiller l'usage (§7) ; supprimer celles qui ne servent plus (`EMERGENT_LLM_KEY` ?) |
+| **Clés de fournisseurs (coût)** | `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `GEMINI_API_KEY`, `GOOGLE_AI_API_KEY`, `GROQ_API_KEY`, `CLOUDINARY_API_KEY` | *Sensitive* ; surveiller l'usage (§7) ; supprimer celles qui ne servent plus |
 | **Configuration** | `APP_ENV` (nouveau, facultatif en production), `DB_NAME`, `CORS_ORIGINS`, `BACKEND_URL`, `FRONTEND_URL`, `SMTP_*` (hors mot de passe), `SUPPORT_EMAIL`, `VAPID_PUBLIC_KEY`, `VAPID_CLAIMS_EMAIL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_ID`, `CLOUDINARY_CLOUD_NAME`, `AGENT_*`, `DEBUG` | `DEBUG` doit valoir `false` en production. `CORS_ORIGINS` : éviter `*` (voir la dette S3 connexe) |
 | **Frontend (public par nature)** | `REACT_APP_BACKEND_URL` | Ne jamais y mettre de secret : tout `REACT_APP_*` finit dans le JS public |
 

@@ -75,7 +75,7 @@
 
 | Fichier | Rôle |
 |---|---|
-| `Doc/CORRECTIF-GEMINI-MODELES.patch` (SHA-256 `fe6c8e1b8230073e…`) | Patch de 8 fichiers, **non appliqué** |
+| `Doc/CORRECTIF-GEMINI-MODELES.patch` (SHA-256 `fe6c8e1b8230073e…`) | Patch de 8 fichiers, **non appliqué** (supprimé en P4.0, voir `Doc/archives/gemini/`) |
 | `Doc/CORRECTIF-GEMINI-MODELES.md` | Documentation et vérifications |
 | `Doc/verifier-modeles-gemini.py` | Vérification de l'accès aux modèles, à lancer par toi avec ta clé |
 

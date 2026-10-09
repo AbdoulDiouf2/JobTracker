@@ -16,20 +16,12 @@ import re
 
 load_dotenv()
 
-# Try to import emergentintegrations, fallback to standard SDKs
-USE_EMERGENT = False
 try:
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
-    USE_EMERGENT = True
-    print("✅ Using Emergent integrations for AI")
-except ImportError:
-    print("⚠️ emergentintegrations not available, using standard SDKs")
-    try:
-        from google import genai
-        from openai import OpenAI
-        print("✅ Standard SDKs loaded (openai, google-genai)")
-    except ImportError as e:
-        print(f"⚠️ AI SDKs not fully available: {e}")
+    from google import genai
+    from openai import OpenAI
+    print("✅ Standard SDKs loaded (openai, google-genai)")
+except ImportError as e:
+    print(f"⚠️ AI SDKs not fully available: {e}")
 
 # Try to import Groq
 try:
@@ -226,8 +218,8 @@ def select_api_key(user_keys: dict, provider: Optional[str] = None) -> tuple:
     Priority order: groq > openai > google (groq is free and fast)
     """
     env_keys = {
-        "openai": os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
-        "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
+        "openai": os.environ.get("OPENAI_API_KEY"),
+        "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"),
         "groq": os.environ.get("GROQ_API_KEY")
     }
 
@@ -252,8 +244,8 @@ def select_api_key(user_keys: dict, provider: Optional[str] = None) -> tuple:
 def get_all_api_keys_ordered(user_keys: dict) -> list:
     """Return all available (key, provider) pairs in priority order for fallback"""
     env_keys = {
-        "openai": os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
-        "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"),
+        "openai": os.environ.get("OPENAI_API_KEY"),
+        "google": os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"),
         "groq": os.environ.get("GROQ_API_KEY")
     }
     result = []
@@ -268,41 +260,23 @@ def get_all_api_keys_ordered(user_keys: dict) -> list:
 
 async def call_openai(api_key: str, model: str, system_message: str, user_message: str) -> str:
     """Call OpenAI API"""
-    if USE_EMERGENT:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=str(uuid.uuid4()),
-            system_message=system_message
-        ).with_model("openai", model)
-        response = await chat.send_message(UserMessage(text=user_message))
-        return response
-    else:
-        client = OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_message}
-            ]
-        )
-        return response.choices[0].message.content
+    client = OpenAI(api_key=api_key)
+    response = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_message}
+        ]
+    )
+    return response.choices[0].message.content
 
 
 async def call_google(api_key: str, model: str, system_message: str, user_message: str) -> str:
     """Call Google Gemini API"""
-    if USE_EMERGENT:
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=str(uuid.uuid4()),
-            system_message=system_message
-        ).with_model("gemini", model)
-        response = await chat.send_message(UserMessage(text=user_message))
-        return response
-    else:
-        client = genai.Client(api_key=api_key)
-        full_prompt = f"{system_message}\n\n---\n\nQuestion:\n{user_message}"
-        response = client.models.generate_content(model=model, contents=full_prompt)
-        return response.text
+    client = genai.Client(api_key=api_key)
+    full_prompt = f"{system_message}\n\n---\n\nQuestion:\n{user_message}"
+    response = client.models.generate_content(model=model, contents=full_prompt)
+    return response.text
 
 
 async def call_groq(api_key: str, model: str, system_message: str, user_message: str) -> str:
@@ -580,8 +554,8 @@ async def extract_job_from_page(
     if request.model_provider:
         key = user_keys.get(request.model_provider) or (
             os.environ.get("GROQ_API_KEY") if request.model_provider == "groq" else
-            (os.environ.get("OPENAI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY")) if request.model_provider == "openai" else
-            (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY") or os.environ.get("EMERGENT_LLM_KEY"))
+            os.environ.get("OPENAI_API_KEY") if request.model_provider == "openai" else
+            (os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"))
         )
         if key:
             providers_to_try = [(key, request.model_provider)]

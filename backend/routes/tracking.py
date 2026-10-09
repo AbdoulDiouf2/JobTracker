@@ -280,31 +280,20 @@ Réponds UNIQUEMENT avec un JSON au format:
 
     # Appeler l'IA
     try:
-        # Try emergentintegrations first
-        try:
-            from emergentintegrations.llm import chat, LlmModel
-            response = await chat(
-                model=LlmModel.GEMINI_2_FLASH,
-                system_message="Tu es un expert en communication professionnelle et en recherche d'emploi.",
-                user_message=prompt
-            )
-            response_text = response.message if hasattr(response, 'message') else str(response)
-        except ImportError:
-            # Fallback to standard Google AI SDK
-            import google.genai as genai
-            import os
-            
-            api_key = os.environ.get("GOOGLE_AI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
-            if not api_key:
-                # Fallback to template
-                raise Exception("No API key available")
-            
-            client = genai.Client(api_key=api_key)
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt
-            )
-            response_text = response.text
+        import google.genai as genai
+        import os
+
+        api_key = os.environ.get("GOOGLE_AI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            # Fallback to template
+            raise Exception("No API key available")
+
+        client = genai.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt
+        )
+        response_text = response.text
         
         # Parser la réponse JSON
         import json

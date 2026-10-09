@@ -56,7 +56,7 @@ un journal. Référence : `backend/config.py`. La durée des sessions (7 jours) 
 | `BACKEND_URL`, `FRONTEND_URL` | URL publiques | `localhost:8001` / `:3000` |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Connexion « Continuer avec Google » | — |
 | `GOOGLE_CALENDAR_CLIENT_ID`, `GOOGLE_CALENDAR_CLIENT_SECRET` | Intégration Google Agenda | — |
-| `EMERGENT_LLM_KEY`, `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY` | Clés IA de la plateforme (chaque utilisateur peut aussi saisir les siennes) | — |
+| `GOOGLE_AI_API_KEY`, `OPENAI_API_KEY` | Clés IA de la plateforme (chaque utilisateur peut aussi saisir les siennes) | — |
 | `ENCRYPTION_KEY` | Chiffrement des clés IA des utilisateurs | — |
 | `SMTP_*`, `SUPPORT_EMAIL` | E-mails | — |
 | `AGENT_RATE_LIMIT`, `AGENT_DAILY_CREATE_QUOTA`, `AGENT_MAX_ACTIVE_TOKENS` | Jetons d'API (Lot 1) | 30/minute, 500/jour/jeton, 10 jetons |

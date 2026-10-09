@@ -975,8 +975,8 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
     if not api_key:
         for p, env_vars in [
             ("groq", ["GROQ_API_KEY"]),
-            ("openai", ["OPENAI_API_KEY", "EMERGENT_LLM_KEY"]),
-            ("google", ["GOOGLE_API_KEY", "GEMINI_API_KEY", "EMERGENT_LLM_KEY"]),
+            ("openai", ["OPENAI_API_KEY"]),
+            ("google", ["GOOGLE_API_KEY", "GEMINI_API_KEY"]),
         ]:
             for env in env_vars:
                 val = os.environ.get(env)
@@ -1003,31 +1003,19 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
         content = ""
         
         if provider == "openai":
-            try:
-                from emergentintegrations.llm.chat import LlmChat, UserMessage
-                chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
-                chat = chat.with_model("openai", "gpt-4o-mini")
-                content = await chat.send_message(UserMessage(text=prompt))
-            except ImportError:
-                from openai import OpenAI
-                client = OpenAI(api_key=api_key)
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}]
-                )
-                content = response.choices[0].message.content
-        
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key)
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            content = response.choices[0].message.content
+
         elif provider == "google":
-            try:
-                from emergentintegrations.llm.chat import LlmChat, UserMessage
-                chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
-                chat = chat.with_model("gemini", "gemini-1.5-flash")
-                content = await chat.send_message(UserMessage(text=prompt))
-            except ImportError:
-                from google import genai
-                client = genai.Client(api_key=api_key)
-                response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
-                content = response.text
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
+            content = response.text
         
         elif provider == "groq":
             from groq import Groq

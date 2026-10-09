@@ -1,7 +1,8 @@
 # Dette sécurité — JobTracker
 
 Points relevés pendant l'audit du module « Opportunités » (Lot 1, octobre 2026).
-État au 10 octobre 2026 : **S1 et S2 ouverts** (code inchangé), **S3 corrigé**.
+État au 10 octobre 2026 : **S1 et S2 ouverts** (code inchangé), **S3 corrigé**, **E2 corrigé**
+(audit P4.0).
 Ils sont **volontairement hors périmètre** de ce chantier, pour ne pas mélanger
 les sujets. Chacun mérite un correctif dédié, testé à part.
 
@@ -9,6 +10,7 @@ les sujets. Chacun mérite un correctif dédié, testé à part.
 |---|-------|---------|---------|
 | S1 | Contournement du quota IA par l'en-tête `Origin` | Élevée | `backend/routes/ai.py` |
 | S2 | `is_admin` toujours faux dans les routes IA | Moyenne | `backend/routes/ai.py`, `backend/utils/auth.py` |
+| E2 | Scripts tiers hérités chargés sur toutes les pages | Élevée — **corrigée** (P4.0) | `frontend/public/index.html` |
 | S3 | Secrets JWT / session avec valeur par défaut | **Corrigée** (`ef07ab6`, 8 oct. 2026) : garde au démarrage qui refuse en production un secret absent, faible ou d'exemple. La production démarre avec cette garde, donc ses secrets ne sont plus des valeurs d'exemple. Historique et procédure de rotation : [archives/securite/S3-CORRECTION-ET-ROTATION.md](./archives/securite/S3-CORRECTION-ET-ROTATION.md) | `backend/config.py` |
 
 ---
@@ -53,6 +55,41 @@ claim `role` du JWT pour une décision d'autorisation sans revérifier en base
 
 ---
 
+## E2 — Scripts tiers hérités dans `index.html`
+
+> **Statut : corrigé** (P4.0, octobre 2026).
+
+**Où** : `frontend/public/index.html`, hérité de l'ancienne plateforme de génération du projet.
+
+**Problème** : un script tiers était chargé sans condition sur toutes les pages, y compris la
+connexion et le consentement OAuth. Le jeton de session étant stocké dans `localStorage`, ce
+script pouvait le lire pour chaque utilisateur. Un second bloc, réservé à l'éditeur visuel de
+cette plateforme, chargeait un script de supervision et le CDN Tailwind quand l'application était
+affichée dans un iframe. Aucune politique CSP ne limitait les scripts.
+
+**Correction** : suppression des deux chargements ; titre de l'onglet `JobTracker`. Aucun code
+de `frontend/src` ne dépendait de ces scripts. Dans le même lot, toutes les autres traces de
+cette plateforme ont été retirées du dépôt : plugin d'édition visuelle du serveur de
+développement, branches SDK et clé d'API dédiées dans le backend, fichiers et archives associés.
+
+**Vérifications** :
+
+- tests frontend : 11 suites, 172 tests, tous verts ; `CI=true yarn build` réussi (ESLint au build,
+  avertissements bloquants) ; aucune référence à la plateforme dans `frontend/build` ;
+- Chrome headless sur le build servi localement : accueil, connexion, inscription, support,
+  consentement OAuth, tableau de bord, Opportunités. Aucune requête émise vers le domaine de
+  l'ancienne plateforme (journal réseau, événements `URL_REQUEST_START_JOB`). Contre-essai : avec
+  le script réinjecté, la même mesure détecte bien la requête.
+
+**Reste ouvert** :
+
+- PostHog (`us.i.posthog.com`, clé de projet en dur, enregistrement de session activé) est
+  toujours chargé sur toutes les pages, avec le même accès au `localStorage`. Origine et usage à
+  confirmer avant de le conserver.
+- Pas de politique CSP `script-src`.
+
+---
+
 ## S3 — Secrets avec valeur par défaut
 
 > **Statut : corrigé** (`ef07ab6`). L'extrait ci-dessous montre l'**ancien** code, conservé pour
@@ -83,4 +120,5 @@ préférable d'imposer une liste explicite d'origines en production.
 
 - [ ] S1 corrigé et testé
 - [ ] S2 corrigé et testé
+- [x] E2 corrigé (scripts tiers hérités retirés de `index.html`)
 - [x] S3 corrigé (garde au démarrage, `ef07ab6`) — vérifier les variables de tout nouvel environnement avec `backend/scripts/check_signing_secrets.py`

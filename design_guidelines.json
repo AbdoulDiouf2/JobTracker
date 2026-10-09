@@ -77,7 +77,7 @@
       "hero_dashboard": "https://images.unsplash.com/photo-1762279388988-3f8abcc7dca2?crop=entropy&cs=srgb&fm=jpg&q=85",
       "office_bg": "https://images.unsplash.com/photo-1702726001096-096efcf640b8?crop=entropy&cs=srgb&fm=jpg&q=85",
       "abstract_viz": "https://images.unsplash.com/photo-1762279388956-1c098163a2a8?crop=entropy&cs=srgb&fm=jpg&q=85",
-      "logo": "https://customer-assets.emergentagent.com/job_careernav-3/artifacts/weqttcvo_logo_maadec_copie_bis.png"
+      "logo": "/JobTracker-Logo.png"
     },
     "icons": "lucide-react"
   },

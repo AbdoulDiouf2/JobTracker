@@ -4,8 +4,9 @@
 > correction du défaut « lettre de motivation vide » **dans ce même correctif** ; correctif
 > **indépendant du Lot 2**.
 > **Statut** : **préparé et testé, non appliqué**. Patch
-> [CORRECTIF-GEMINI-MODELES.patch](./CORRECTIF-GEMINI-MODELES.patch), construit sur `ef07ab6`
-> (production actuelle), SHA-256 `fe6c8e1b8230073e…`. Aucun commit, push ni déploiement.
+> `CORRECTIF-GEMINI-MODELES.patch`, construit sur `ef07ab6`, SHA-256 `fe6c8e1b8230073e…`. Ce patch a
+> été **supprimé en P4.0** : il modifiait du code backend retiré depuis et ne s'appliquait plus.
+> Le correctif est à reconstruire sur le code actuel à partir de ce document.
 
 ## 1. Problèmes corrigés
 

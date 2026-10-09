@@ -83,8 +83,8 @@ le venv, est conseillé avant tout test manuel.
 | `routes/tracking.py` (relance, score de correspondance) | Google (`gemini-1.5-flash`), OpenAI et Groq avec **`response_format={"type": "json_object"}`** | Identiques | Identiques, puis analyse JSON |
 
 **Points communs** : uniquement les clients **synchrones**, sans client HTTP personnalisé, sans
-streaming, sans outils ni fonctions, sans API *Responses* ni *Interactions*. Le chemin
-`emergentintegrations` n'est pas installé : ce sont les SDK standard qui servent.
+streaming, sans outils ni fonctions, sans API *Responses* ni *Interactions*. Ce sont les SDK
+standard qui servent.
 
 ### 3.2 Changements des versions majeures et exposition de JobTracker
 

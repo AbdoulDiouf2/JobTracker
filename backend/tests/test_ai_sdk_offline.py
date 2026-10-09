@@ -31,7 +31,7 @@ from openai.types.chat import ChatCompletion as OpenAIChatCompletion
 pytestmark = pytest.mark.anyio
 
 BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AI_KEY_VARS = ("GROQ_API_KEY", "OPENAI_API_KEY", "EMERGENT_LLM_KEY", "GOOGLE_API_KEY",
+AI_KEY_VARS = ("GROQ_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY",
                "GEMINI_API_KEY", "GOOGLE_AI_API_KEY")
 
 # Signatures réelles des méthodes appelées par JobTracker (SDK figés, instanciés hors ligne)
@@ -103,7 +103,6 @@ def ai(monkeypatch):
     import routes.ai as ai_routes
     monkeypatch.setattr(ai_routes, "OpenAI", fake_openai, raising=False)
     monkeypatch.setattr(ai_routes, "Groq", fake_groq, raising=False)
-    monkeypatch.setattr(ai_routes, "USE_EMERGENT", False)
     return rec
 
 
