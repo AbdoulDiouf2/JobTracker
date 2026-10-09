@@ -136,7 +136,7 @@ Authorization: Bearer jt_agent_<43 caractères base64url>
 Content-Type: application/json
 
 {"title": "...", "company": "...", "url": "https://...", "location": "...", "country": "...",
- "contract_type": "CDI", "description": "...", "source": "chatgpt_watch", "external_id": "..."}
+ "contract_type": "CDI", "description": "...", "source": "external_agent", "external_id": "..."}
 ```
 
 | Cas | Réponse |
@@ -149,6 +149,8 @@ Content-Type: application/json
 | Limite par minute ou quota journalier atteint | 429 (`Retry-After` pour le quota) |
 
 - Sans `source`, la valeur `external_agent` est appliquée.
+- **Lot 2** : la source `chatgpt_watch` est **réservée** à la veille ChatGPT (MCP) et refusée ici
+  (`422 source_reserved`).
 - **Un retry de veille est sans risque** : il est idempotent et ne consomme aucun quota.
 
 ### Scopes
