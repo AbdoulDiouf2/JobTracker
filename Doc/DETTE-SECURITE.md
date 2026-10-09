@@ -1,6 +1,7 @@
 # Dette sécurité — JobTracker
 
 Points relevés pendant l'audit du module « Opportunités » (Lot 1, octobre 2026).
+État au 10 octobre 2026 : **S1 et S2 ouverts** (code inchangé), **S3 corrigé**.
 Ils sont **volontairement hors périmètre** de ce chantier, pour ne pas mélanger
 les sujets. Chacun mérite un correctif dédié, testé à part.
 
@@ -8,7 +9,7 @@ les sujets. Chacun mérite un correctif dédié, testé à part.
 |---|-------|---------|---------|
 | S1 | Contournement du quota IA par l'en-tête `Origin` | Élevée | `backend/routes/ai.py` |
 | S2 | `is_admin` toujours faux dans les routes IA | Moyenne | `backend/routes/ai.py`, `backend/utils/auth.py` |
-| S3 | Secrets JWT / session avec valeur par défaut | **CRITIQUE — confirmée en production (8 oct. 2026)** : le `JWT_SECRET` de Vercel reprend la valeur d'exemple publiée dans `.env.example` (dépôt public). Correction préparée en local, rotation en attente : voir [S3-CORRECTION-ET-ROTATION.md](./S3-CORRECTION-ET-ROTATION.md) | `backend/config.py` |
+| S3 | Secrets JWT / session avec valeur par défaut | **Corrigée** (`ef07ab6`, 8 oct. 2026) : garde au démarrage qui refuse en production un secret absent, faible ou d'exemple. La production démarre avec cette garde, donc ses secrets ne sont plus des valeurs d'exemple. Historique et procédure de rotation : [archives/securite/S3-CORRECTION-ET-ROTATION.md](./archives/securite/S3-CORRECTION-ET-ROTATION.md) | `backend/config.py` |
 
 ---
 
@@ -54,6 +55,9 @@ claim `role` du JWT pour une décision d'autorisation sans revérifier en base
 
 ## S3 — Secrets avec valeur par défaut
 
+> **Statut : corrigé** (`ef07ab6`). L'extrait ci-dessous montre l'**ancien** code, conservé pour
+> l'historique ; voir `backend/config.py` pour la garde actuelle.
+
 **Où** : `backend/config.py`
 
 ```python
@@ -79,4 +83,4 @@ préférable d'imposer une liste explicite d'origines en production.
 
 - [ ] S1 corrigé et testé
 - [ ] S2 corrigé et testé
-- [ ] S3 corrigé (et variables vérifiées sur tous les environnements Vercel)
+- [x] S3 corrigé (garde au démarrage, `ef07ab6`) — vérifier les variables de tout nouvel environnement avec `backend/scripts/check_signing_secrets.py`

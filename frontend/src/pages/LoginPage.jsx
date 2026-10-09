@@ -111,9 +111,9 @@ export default function LoginPage() {
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-8">
           <img 
-            src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
-            alt="MAADEC" 
-            className="h-64"
+            src="/JobTracker-Logo.png"
+            alt="JobTracker"
+            className="h-24 w-auto"
           />
         </Link>
 

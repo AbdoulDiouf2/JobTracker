@@ -33,15 +33,18 @@ cd chrome-extension
 **Lien publié** : [JobTracker Clipper - Chrome Web Store](https://chromewebstore.google.com/detail/jobtracker-clipper/ephlbjlapgadbjjpongcmniokflciidl?pli=1)
 
 ## 🧪 Tests & Qualité
-- **Backend** : `cd backend && pytest`
-- **Frontend** : `cd frontend && yarn test`
-- **Linting** : `cd frontend && yarn lint`
+- **Backend** : `cd backend && bash tests/run_mongo_tests.sh` (MongoDB éphémère via Docker ; `pytest` seul ignore les tests qui nécessitent une base)
+- **Frontend** : `cd frontend && CI=true yarn test --watchAll=false`
+- **Linting** : pas de script `yarn lint` ; ESLint (`react-hooks`) est appliqué par `craco` au build
 
 ## 🛠 Stack Technique
-- **Frontend** : React 18, Tailwind CSS, Shadcn UI, Framer Motion, Recharts, Lucide React, Sonner (toasts).
+- **Frontend** : React 19, Tailwind CSS, Shadcn UI, Framer Motion, Recharts, Lucide React, Sonner (toasts).
 - **Backend** : FastAPI, MongoDB (Motor), Pydantic v2, Python 3.10+.
-- **Auth** : JWT, Google OAuth (via Authlib).
+- **Auth** : JWT de session, Google OAuth (connexion utilisateur) ; serveur OAuth 2.1 + MCP pour les agents (voir `Doc/OAUTH.md`).
 - **IA** : Multi-provider (OpenAI, Google Gemini, Groq).
+
+## 📚 Documentation
+Référence : `Doc/README.md` (architecture, MCP, OAuth, veille, sécurité, exploitation). Documents historiques : `Doc/archives/`.
 
 ## 📁 Structure du Projet
 - `backend/` : API FastAPI, modèles Pydantic, services IA.

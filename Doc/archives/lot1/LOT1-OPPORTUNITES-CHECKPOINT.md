@@ -6,8 +6,8 @@
 > une opportunité n'arrive que par un appel HTTP authentifié par un token agent, ou par
 > l'API utilisateur.
 
-Référence : [CDC - JobTracker - Module « Opportunités ».md](./CDC%20-%20JobTracker%20-%20Module%20«%20Opportunités%20».md)
-· Dette sécurité hors périmètre : [DETTE-SECURITE.md](./DETTE-SECURITE.md)
+Référence : [CDC - JobTracker - Module « Opportunités ».md](../../CDC%20-%20JobTracker%20-%20Module%20«%20Opportunités%20».md)
+· Dette sécurité hors périmètre : [DETTE-SECURITE.md](../../DETTE-SECURITE.md)
 
 ---
 
@@ -229,7 +229,7 @@ pas encore envoyée »**.
   - nouvel onglet avec `rel="noopener noreferrer"`.
 - **Requêtes** : modèles Pydantic en `extra=forbid` (un `user_id`, un `status` ou un champ inconnu → 422), limites de taille, `metadata` contrôlé.
 - **Journal d'activité de l'API agent**, sans secret : `agent_ingest endpoint=… result=created|duplicate|quota_exceeded token_id=… prefix=… user_id=… opportunity_id=… duplicate=…`.
-- **Dette existante** ([DETTE-SECURITE.md](./DETTE-SECURITE.md), points S1 à S3) : non corrigée, et **pas aggravée** par ce lot.
+- **Dette existante** ([DETTE-SECURITE.md](../../DETTE-SECURITE.md), points S1 à S3) : non corrigée, et **pas aggravée** par ce lot.
   - Les tokens agent ne dépendent ni de `JWT_SECRET` ni de l'en-tête `Origin`.
   - `get_current_user` n'a pas été modifié.
 
@@ -288,7 +288,7 @@ qui appellent une URL distante. Ils ne doivent pas être lancés avec ce lot ; l
 
 ## 12. Dettes hors périmètre
 
-Voir [DETTE-SECURITE.md](./DETTE-SECURITE.md) :
+Voir [DETTE-SECURITE.md](../../DETTE-SECURITE.md) :
 - S1 : contournement du quota IA par l'en-tête `Origin` ;
 - S2 : `is_admin` toujours faux ;
 - S3 : secrets avec valeur par défaut.

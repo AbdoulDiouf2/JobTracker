@@ -222,15 +222,15 @@ Pour chaque étape :
 
 | Élément | Emplacement | Constat |
 |---|---|---|
-| `JWT_SECRET` | [config.py:20](../backend/config.py) | `os.environ.get('JWT_SECRET', 'super-secret-key-change-in-production')` : **valeur par défaut publique** dans le dépôt |
-| Algorithme | [config.py:21](../backend/config.py) | HS256 (symétrique) ; un seul secret sert à signer et à vérifier |
-| Durée | [config.py:22](../backend/config.py) | 7 jours ; JWT de l'extension Chrome : 30 jours ([auth.py](../backend/routes/auth.py)) |
-| Signature | [utils/auth.py:40](../backend/utils/auth.py) | `jwt.encode(…, settings.JWT_SECRET, "HS256")` |
-| Vérification | [utils/auth.py:47](../backend/utils/auth.py) | `jwt.decode(…, algorithms=["HS256"])`, sans `iss` ni `aud` ; `sub` donne l'utilisateur |
+| `JWT_SECRET` | [config.py:20](../../../backend/config.py) | `os.environ.get('JWT_SECRET', 'super-secret-key-change-in-production')` : **valeur par défaut publique** dans le dépôt |
+| Algorithme | [config.py:21](../../../backend/config.py) | HS256 (symétrique) ; un seul secret sert à signer et à vérifier |
+| Durée | [config.py:22](../../../backend/config.py) | 7 jours ; JWT de l'extension Chrome : 30 jours ([auth.py](../../../backend/routes/auth.py)) |
+| Signature | [utils/auth.py:40](../../../backend/utils/auth.py) | `jwt.encode(…, settings.JWT_SECRET, "HS256")` |
+| Vérification | [utils/auth.py:47](../../../backend/utils/auth.py) | `jwt.decode(…, algorithms=["HS256"])`, sans `iss` ni `aud` ; `sub` donne l'utilisateur |
 | Révocation | — | **Aucune** (pas de liste noire ni de `jti`) : seule une rotation invalide les jetons |
-| Chargement | [config.py](../backend/config.py) | `load_dotenv()` et `pydantic-settings` (`env_file=".env"`, **relatif au dossier courant**). `.env` est ignoré par git ; en production, seules les variables Vercel comptent |
-| `SECRET_KEY` | [config.py:39](../backend/config.py) | Défaut public `super-secret-session-key` ; signe **uniquement** le `state` anti-CSRF du login Google ([auth.py:528, 555](../backend/routes/auth.py)) |
-| Réinitialisation de mot de passe et vérification d'e-mail | [auth.py](../backend/routes/auth.py) | Jetons aléatoires `secrets.token_urlsafe(32)` stockés en base : **ne dépendent pas** de ces secrets |
+| Chargement | [config.py](../../../backend/config.py) | `load_dotenv()` et `pydantic-settings` (`env_file=".env"`, **relatif au dossier courant**). `.env` est ignoré par git ; en production, seules les variables Vercel comptent |
+| `SECRET_KEY` | [config.py:39](../../../backend/config.py) | Défaut public `super-secret-session-key` ; signe **uniquement** le `state` anti-CSRF du login Google ([auth.py:528, 555](../../../backend/routes/auth.py)) |
+| Réinitialisation de mot de passe et vérification d'e-mail | [auth.py](../../../backend/routes/auth.py) | Jetons aléatoires `secrets.token_urlsafe(32)` stockés en base : **ne dépendent pas** de ces secrets |
 | Tokens agent du Lot 1 | `services/agent_token_service.py` | Hash SHA-256 de 256 bits aléatoires : **ne dépendent pas** de `JWT_SECRET` |
 
 ### 4.2 Tests réalisés (en local uniquement, aucun appel à la production, aucune valeur affichée)

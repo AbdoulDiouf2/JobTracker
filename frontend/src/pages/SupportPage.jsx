@@ -67,8 +67,7 @@ export default function SupportPage() {
       <nav className="border-b border-slate-800 bg-[#0a0f1a]/50 backdrop-blur-xl fixed top-0 w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <a href="/" className="flex items-center gap-3">
-             <img src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" alt="JobTracker" className="h-10 w-auto" />
-             <span className="font-heading font-bold text-xl hidden sm:block">JobTracker</span>
+             <img src="/JobTracker-Logo.png" alt="JobTracker" className="h-10 w-auto" />
           </a>
           <a href="/" className="text-slate-400 hover:text-white flex items-center gap-2 text-sm font-medium transition-colors">
             <ArrowLeft size={16} />

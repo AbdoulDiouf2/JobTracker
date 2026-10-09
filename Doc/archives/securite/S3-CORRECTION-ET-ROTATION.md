@@ -40,11 +40,11 @@
 
 | Fichier | Changement |
 |---|---|
-| [backend/config.py](../backend/config.py) | **Suppression des valeurs par défaut publiques**. Nouveau `APP_ENV` (défaut `production`). `resolve_signing_secrets()` est appelé au chargement du module, donc aussi sur Vercel |
-| [backend/.env.example](../backend/.env.example) | `JWT_SECRET=` et `SECRET_KEY=` **vides**, commande de génération en commentaire, `APP_ENV=development` pour un usage local explicite |
-| [backend/tests/conftest.py](../backend/tests/conftest.py) | `APP_ENV=test` explicite pour la suite de tests |
-| [backend/tests/test_security_settings.py](../backend/tests/test_security_settings.py) | **33 tests** de sécurité (nouveau fichier) |
-| [backend/tests/run_mongo_tests.sh](../backend/tests/run_mongo_tests.sh) | Inclut les tests de sécurité |
+| [backend/config.py](../../../backend/config.py) | **Suppression des valeurs par défaut publiques**. Nouveau `APP_ENV` (défaut `production`). `resolve_signing_secrets()` est appelé au chargement du module, donc aussi sur Vercel |
+| [backend/.env.example](../../../backend/.env.example) | `JWT_SECRET=` et `SECRET_KEY=` **vides**, commande de génération en commentaire, `APP_ENV=development` pour un usage local explicite |
+| [backend/tests/conftest.py](../../../backend/tests/conftest.py) | `APP_ENV=test` explicite pour la suite de tests |
+| [backend/tests/test_security_settings.py](../../../backend/tests/test_security_settings.py) | **33 tests** de sécurité (nouveau fichier) |
+| [backend/tests/run_mongo_tests.sh](../../../backend/tests/run_mongo_tests.sh) | Inclut les tests de sécurité |
 
 ### Règles appliquées
 

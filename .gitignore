@@ -36,6 +36,9 @@ dist/
 *token.json*
 *credentials.json*
 
+# Exports de données personnelles (candidatures) : jamais versionnés
+public/candidatures*.json
+
 # Logs and debug files
 npm-debug.log*
 yarn-debug.log*
@@ -240,3 +243,4 @@ frontend/node_modules/.cache/default-development/19.pack
 *.env.*
 .aidesigner/*
 !.aidesigner/.gitkeep
+data/

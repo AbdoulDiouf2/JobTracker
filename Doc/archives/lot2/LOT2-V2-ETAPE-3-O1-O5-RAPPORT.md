@@ -28,7 +28,7 @@
 | 1 | Retirer les éléments spécifiques aux Preview (O1) | `allowed_hosts()` ne lit plus `VERCEL_ENV`, `VERCEL_URL` ni `VERCEL_BRANCH_URL` : uniquement la liste configurée. Le test « hôte de Preview accepté » est remplacé par un test qui vérifie qu'**aucun** hôte de déploiement Vercel n'est jamais accepté (3 cas, 421). Le protocole Preview a été supprimé à l'étape précédente. La règle S3 de `config.py`, qui traite une Preview comme la production pour les secrets, est **conservée** : c'est une protection |
 | 2 | `.python-version` = 3.12 à la racine (O2) | Fichier créé (`3.12`). L'emplacement lu par Vercel avec l'ancien format `builds` sera **confirmé dans le journal du build D1** (checklist A6) |
 | 3 | Tests IA hors ligne (O3) | `tests/test_ai_sdk_offline.py` : 33 tests (§3) ; ajouté aux deux scripts de tests |
-| 4 | Correctif Gemini 1.5 séparé (O4) | Patch + documentation, **non appliqués** : [CORRECTIF-GEMINI-MODELES.md](./CORRECTIF-GEMINI-MODELES.md) |
+| 4 | Correctif Gemini 1.5 séparé (O4) | Patch + documentation, **non appliqués** : [CORRECTIF-GEMINI-MODELES.md](../gemini/CORRECTIF-GEMINI-MODELES.md) |
 | 5 | Checklist avant D1 | [LOT2-V2-CHECKLIST-AVANT-D1.md](./LOT2-V2-CHECKLIST-AVANT-D1.md) |
 
 ## 3. Tests IA hors ligne (O3)

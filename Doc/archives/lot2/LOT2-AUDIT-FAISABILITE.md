@@ -101,7 +101,7 @@ Supprimer la recopie manuelle des offres. Le parcours visé :
   doublon, erreurs.
 - **Aucun connecteur de source d'offres.**
 - **Aucun planificateur actif en production.** APScheduler démarre dans le `lifespan`
-  ([server.py](../backend/server.py)), qui ne s'exécute pas sur Vercel. Les rappels
+  ([server.py](../../../backend/server.py)), qui ne s'exécute pas sur Vercel. Les rappels
   automatiques existants ne tournent probablement que via le déclenchement manuel
   `POST /api/reminders/trigger-now`. *Constat à confirmer dans les logs Vercel.*
 - **Pas de scope `opportunities:read`**, ni de serveur OAuth (nécessaire à l'option B).
@@ -235,7 +235,7 @@ sans écrire une ligne de JobTracker.
 
 ### 7.3 Pré-requis bloquant : dette S3
 
-- **Dans le code** ([config.py](../backend/config.py), l.20) :
+- **Dans le code** ([config.py](../../../backend/config.py), l.20) :
   `JWT_SECRET = os.environ.get('JWT_SECRET', 'super-secret-key-change-in-production')`.
   Même chose pour `SECRET_KEY`.
 - **En production** : **non vérifiable** sans accès Vercel. `.env.example` déclare bien la

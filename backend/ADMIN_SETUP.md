@@ -1,18 +1,20 @@
-# 🔐 Documentation Admin - CONFIDENTIEL
+# Création d'un compte administrateur
 
-> ⚠️ **NE PAS COMMITER CE FICHIER DANS UN REPO PUBLIC**
+> Ce document ne contient aucun secret. Ne jamais y ajouter d'identifiant ni de mot de passe réel.
+> Documentation générale : [Doc/README.md](../Doc/README.md).
 
 ## Initialisation du compte Admin
 
 ### Option 1 : Script seed_admin.py
 
+> **Toujours fournir `--email` et `--password`.** Sans arguments, le script crée un compte
+> administrateur avec des identifiants par défaut **faibles et connus** : à proscrire, surtout
+> sur une base de production.
+
 ```bash
 cd backend
 
-# Créer un admin par défaut
-python seed_admin.py
-
-# Créer avec vos propres identifiants
+# Créer avec vos propres identifiants (mot de passe long et unique)
 python seed_admin.py create --email votre@email.com --password votremotdepasse --name "Votre Nom"
 
 # Promouvoir un utilisateur existant
@@ -67,8 +69,12 @@ asyncio.run(promote_admin("votre@email.com"))
 | Rôle | Permissions |
 |------|-------------|
 | `admin` | Accès complet + Panel admin |
-| `premium` | Fonctionnalités avancées (futur) |
+| `premium` | Rôle défini dans le modèle, sans fonctionnalité dédiée à ce jour |
 | `standard` | Accès basique (défaut) |
+
+La **veille** (agents MCP) est un droit distinct du rôle : un admin l'active compte par compte
+avec `PUT /api/admin/users/{id}/watch` (`{"enabled": true}`). Voir
+[Doc/DEPLOIEMENT-ET-EXPLOITATION.md](../Doc/DEPLOIEMENT-ET-EXPLOITATION.md).
 
 ## Variables d'environnement
 

@@ -101,9 +101,9 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex-shrink-0 p-6 border-b border-slate-800 flex justify-center">
           <Link to="/" className="flex items-center gap-3">
             <img 
-              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
-              alt="MAADEC" 
-              className="h-32"
+              src="/JobTracker-Logo.png"
+              alt="JobTracker"
+              className="w-full h-auto"
             />
           </Link>
         </div>
@@ -293,9 +293,9 @@ export default function DashboardLayout() {
           </button>
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <img 
-              src="/Tech-driven_job_tracking_logo_design-removebg-preview.png" 
-              alt="MAADEC" 
-              className="h-12"
+              src="/JobTracker-Logo.png"
+              alt="JobTracker"
+              className="h-10 w-auto"
             />
           </Link>
           <div className="flex items-center gap-2">

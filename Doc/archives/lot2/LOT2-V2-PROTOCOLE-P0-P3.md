@@ -38,7 +38,7 @@ preuve.
 | # | Action | Qui |
 |---|---|---|
 | Q1 | Noter le **nom exact de ton plan ChatGPT** (Paramètres → Compte) | Toi |
-| Q2 | Lire la fiche [lot2-mcp-poc/README.md](../../lot2-mcp-poc/README.md) : hébergement, durée de vie, authentification, nettoyage. **À lire avant toute exposition publique** | Toi |
+| Q2 | Lire la fiche [lot2-mcp-poc/README.md](../../../../lot2-mcp-poc/README.md) : hébergement, durée de vie, authentification, nettoyage. **À lire avant toute exposition publique** | Toi |
 | Q3 | Installer `cloudflared` : `winget install --id Cloudflare.cloudflared` | Toi |
 | Q4 | Lancer `smoke_test.py` : **13/13** attendu | Toi (ou moi, sur ta demande) |
 | Q5 | Démarrer le serveur et le tunnel (README §5), puis noter l'**URL MCP** `https://<sous-domaine>.trycloudflare.com/<jeton>/mcp`. **Ne la publie nulle part** | Toi |
