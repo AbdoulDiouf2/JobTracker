@@ -42,6 +42,8 @@ async def issue_access_token(db, scopes=("watch:read", "opportunities:write")) -
     grant = {"id": str(uuid.uuid4()), "user_id": user_id, "client_id": "jt_oc_test", "scopes": list(scopes),
              "resource": oauth_service.canonical_resource(), "status": "active", "created_at": now,
              "absolute_expires_at": now + timedelta(days=90)}
+    # Client enregistré et actif : un jeton d'un client inconnu ou désactivé est refusé
+    await db[oauth_service.CLIENTS].update_one({"client_id": grant["client_id"]}, {"$set": {"active": True, "name": "ChatGPT", "redirect_uris": []}}, upsert=True)
     await db[oauth_service.GRANTS].insert_one(dict(grant))
     return (await oauth_service._issue_tokens(db, grant))["access_token"]
 
@@ -199,6 +201,8 @@ async def main():
     grant = {"id": str(uuid.uuid4()), "user_id": uid, "client_id": "jt_oc_test", "scopes": ["watch:read"],
              "resource": oauth_service.canonical_resource(), "status": "active", "created_at": now,
              "absolute_expires_at": now + timedelta(days=1)}
+    # Client enregistré et actif : un jeton d'un client inconnu ou désactivé est refusé
+    await db[oauth_service.CLIENTS].update_one({"client_id": grant["client_id"]}, {"$set": {"active": True, "name": "ChatGPT", "redirect_uris": []}}, upsert=True)
     await db[oauth_service.GRANTS].insert_one(dict(grant))
     token = (await oauth_service._issue_tokens(db, grant))["access_token"]
     await oauth_service.set_kill_switch(db, False, "tests")

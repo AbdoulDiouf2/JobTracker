@@ -3,7 +3,7 @@ JobTracker SaaS - Routes Administration
 Panel admin pour la gestion multi-tenant
 """
 
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List
 
@@ -588,6 +588,171 @@ async def set_mcp_kill_switch(
     from services.oauth_service import set_kill_switch
     await set_kill_switch(db, data.active, admin_user["id"])
     return {"active": data.active}
+
+
+# ============================================
+# CONNEXIONS OAUTH / MCP (A1.3)
+# Indépendantes de l'activation du MCP et de l'interrupteur : toujours accessibles à l'admin.
+# ============================================
+
+# Réponses contenant un secret : jamais mises en cache (navigateur, proxy, CDN)
+NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
+CHATGPT_CLIENT_NAME = "ChatGPT"
+
+
+async def get_webapp_admin(
+    current_user: dict = Depends(get_current_user),
+    admin_user: dict = Depends(get_admin_user),
+):
+    """Admin connecté à la webapp : le JWT longue durée de l'extension Chrome est refusé."""
+    if current_user.get("source") == "extension":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Gestion OAuth non autorisée depuis l'extension"
+        )
+    return admin_user
+
+
+class OAuthRedirectUriAdd(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    redirect_uri: str
+
+
+class OAuthClientActiveUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    active: StrictBool
+
+
+async def _oauth_client_or_404(db, client_id: str) -> dict:
+    from services.oauth_service import list_clients
+    for client in await list_clients(db):
+        if client["client_id"] == client_id:
+            return client
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Client OAuth non trouvé")
+
+
+@router.get("/oauth/status")
+async def get_oauth_status(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """État du service MCP/OAuth : booléens uniquement, aucune valeur de configuration."""
+    import os
+    from services.oauth_service import kill_switch_active, canonical_resource
+    from utils.mcp_transport import mcp_enabled
+    from config import settings
+    enabled = mcp_enabled()
+    cut = await kill_switch_active(db)
+    return {
+        "service": "unavailable" if not enabled else ("cut" if cut else "open"),
+        "mcp_enabled": enabled,
+        "kill_switch_active": cut,
+        "production": (os.environ.get("VERCEL_ENV") or "").strip().lower() == "production",
+        "keys": {"mcp_enabled": bool(settings.MCP_ENABLED),
+                 "production_allowed": bool(settings.MCP_PRODUCTION_ALLOWED)},
+        "owner_watch_enabled": admin_user.get("watch_enabled") is True,
+        "mcp_url": canonical_resource(),
+    }
+
+
+@router.get("/oauth/clients")
+async def get_oauth_clients(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """Clients OAuth enregistrés. Jamais de secret ni de haché."""
+    from services.oauth_service import list_clients
+    return {"items": await list_clients(db)}
+
+
+@router.post("/oauth/clients", status_code=status.HTTP_201_CREATED)
+async def create_oauth_client(
+    response: Response,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """
+    Crée LE client ChatGPT (adresse de retour par défaut). Le secret n'est renvoyé QU'UNE fois.
+    Refus si un client ChatGPT existe déjà, actif ou non : le réactiver plutôt que créer un doublon.
+    """
+    from services.oauth_service import create_client, list_clients, CHATGPT_DEFAULT_REDIRECT
+    if any(c["name"].strip().lower() == CHATGPT_CLIENT_NAME.lower() for c in await list_clients(db)):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Un client ChatGPT existe déjà : réactivez-le ou régénérez son secret"
+        )
+    created = await create_client(db, CHATGPT_CLIENT_NAME, [CHATGPT_DEFAULT_REDIRECT])
+    response.headers.update(NO_STORE)
+    logger.info("oauth_client_created_by_admin admin_id=%s client_id=%s", admin_user["id"], created["client_id"])
+    return {"client_id": created["client_id"], "client_secret": created["client_secret"],
+            "redirect_uris": created["redirect_uris"]}
+
+
+@router.post("/oauth/clients/{client_id}/redirect-uris")
+async def add_oauth_redirect_uri(
+    client_id: str,
+    data: OAuthRedirectUriAdd,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Ajoute une adresse de retour EXACTE (validation stricte du service OAuth)."""
+    from services.oauth_service import add_redirect_uri
+    await _oauth_client_or_404(db, client_id)
+    try:
+        uris = await add_redirect_uri(db, client_id, data.redirect_uri)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    logger.info("oauth_redirect_added_by_admin admin_id=%s client_id=%s", admin_user["id"], client_id)
+    return {"client_id": client_id, "redirect_uris": uris}
+
+
+@router.put("/oauth/clients/{client_id}/active")
+async def set_oauth_client_active(
+    client_id: str,
+    data: OAuthClientActiveUpdate,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Active ou désactive un client. La désactivation révoque toutes ses connexions et jetons."""
+    from services.oauth_service import activate_client, deactivate_client
+    await _oauth_client_or_404(db, client_id)
+    revoked = 0
+    if data.active:
+        await activate_client(db, client_id)
+    else:
+        revoked = await deactivate_client(db, client_id)
+    logger.warning("oauth_client_active admin_id=%s client_id=%s active=%s revoked_grants=%s",
+                   admin_user["id"], client_id, data.active, revoked)
+    return {"client": await _oauth_client_or_404(db, client_id), "revoked_grants": revoked}
+
+
+@router.post("/oauth/clients/{client_id}/rotate-secret")
+async def rotate_oauth_client_secret(
+    client_id: str,
+    response: Response,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Nouveau secret, affiché UNE fois ; l'ancien est refusé immédiatement."""
+    from services.oauth_service import rotate_client_secret
+    await _oauth_client_or_404(db, client_id)
+    secret = await rotate_client_secret(db, client_id)
+    response.headers.update(NO_STORE)
+    logger.warning("oauth_client_secret_rotated admin_id=%s client_id=%s", admin_user["id"], client_id)
+    return {"client_id": client_id, "client_secret": secret}
+
+
+@router.get("/oauth/grants")
+async def get_oauth_grants(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """Toutes les connexions OAuth (vue admin). Aucun jeton ni haché."""
+    from services.oauth_service import list_all_grants
+    return {"items": await list_all_grants(db)}
+
+
+@router.delete("/oauth/grants/{grant_id}")
+async def revoke_oauth_grant(grant_id: str, admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """Révoque une connexion et tous ses jetons (effet immédiat)."""
+    from services.oauth_service import admin_revoke_grant
+    if not await admin_revoke_grant(db, grant_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connexion non trouvée")
+    logger.warning("oauth_grant_revoked_by_admin admin_id=%s grant=%s", admin_user["id"], grant_id[:8])
+    return {"revoked": True}
 
 
 @router.post("/users", response_model=UserAdminResponse)

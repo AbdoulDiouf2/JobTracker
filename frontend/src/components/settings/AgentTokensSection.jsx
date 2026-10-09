@@ -253,7 +253,11 @@ const CreateTokenDialog = ({ isOpen, onClose, onCreate, t, language }) => {
   );
 };
 
-export const AgentTokensSection = () => {
+/**
+ * `embedded` : rendu dans l'onglet « Tokens API » de la section API / Agents (titre porté
+ * par le conteneur). Par défaut, rendu autonome inchangé.
+ */
+export const AgentTokensSection = ({ embedded = false } = {}) => {
   const { language } = useLanguage();
   const t = T[language];
   const { tokens, isLoading, isError, refetch, createToken, revokeToken } = useAgentTokens();
@@ -289,10 +293,12 @@ export const AgentTokensSection = () => {
 
   return (
     <section data-testid="agent-tokens-section">
-      <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
-        <Bot size={20} className="text-gold" aria-hidden="true" />
-        {t.title}
-      </h2>
+      {!embedded && (
+        <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
+          <Bot size={20} className="text-gold" aria-hidden="true" />
+          {t.title}
+        </h2>
+      )}
 
       <div className="glass-card rounded-xl p-4 sm:p-6 border border-slate-800 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">

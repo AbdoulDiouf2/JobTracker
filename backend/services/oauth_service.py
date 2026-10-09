@@ -279,6 +279,29 @@ async def deactivate_client(db, client_id: str) -> int:
     return count
 
 
+async def activate_client(db, client_id: str) -> bool:
+    """Réactive un client désactivé. Les grants révoqués à la désactivation le restent :
+    une nouvelle connexion (consentement) est nécessaire."""
+    result = await db[CLIENTS].update_one({"client_id": client_id}, {"$set": {"active": True}})
+    if result.matched_count:
+        logger.info("oauth_client_activated client_id=%s", client_id)
+    return bool(result.matched_count)
+
+
+async def list_clients(db) -> List[dict]:
+    """Clients enregistrés, SANS le haché du secret, avec le nombre de connexions utilisables."""
+    items = []
+    async for c in db[CLIENTS].find({}, {"_id": 0, "secret_hash": 0}).sort("created_at", 1).limit(50):
+        active_grants = await db[GRANTS].count_documents(
+            {"client_id": c["client_id"], "status": {"$in": list(USABLE_STATUSES)}})
+        items.append({
+            "client_id": c["client_id"], "name": c.get("name", ""), "redirect_uris": list(c.get("redirect_uris", [])),
+            "active": c.get("active") is True, "created_at": _aware(c.get("created_at")),
+            "secret_rotated_at": _aware(c.get("secret_rotated_at")), "active_grants": active_grants,
+        })
+    return items
+
+
 async def get_active_client(db, client_id: Optional[str]) -> Optional[dict]:
     if not client_id or not isinstance(client_id, str) or len(client_id) > 100:
         return None
@@ -590,6 +613,10 @@ async def validate_access_token(db, raw_token: Optional[str]) -> tuple:
     grant = await db[GRANTS].find_one({"id": token["grant_id"]}, {"_id": 0})
     if not grant or grant["status"] not in USABLE_STATUSES:
         return None, "invalid"
+    # Défense en profondeur : client désactivé -> jeton refusé, même si un grant a échappé
+    # à la révocation (échange de code concurrent de la désactivation)
+    if not await get_active_client(db, grant["client_id"]):
+        return None, "invalid"
     now = _now()
     if _aware(token["expires_at"]) <= now:
         # §3.7 : expiration observée, sans surveillance active
@@ -607,13 +634,13 @@ async def validate_access_token(db, raw_token: Optional[str]) -> tuple:
 # CONNEXIONS DE L'UTILISATEUR
 # ============================================
 
-async def list_user_grants(db, user_id: str) -> List[dict]:
-    """Connexions de l'utilisateur (sans aucun secret). `alert` : signal indicatif calculé à la
+async def _grant_views(db, query: dict, limit: int) -> List[dict]:
+    """Vue des connexions, SANS aucun secret ni haché. `alert` : signal indicatif calculé à la
     consultation (§3.7), sans surveillance active."""
     now = _now()
     items = []
     clients = {}
-    async for g in db[GRANTS].find({"user_id": user_id}, {"_id": 0}).sort("created_at", -1).limit(20):
+    async for g in db[GRANTS].find(query, {"_id": 0}).sort("created_at", -1).limit(limit):
         if g["client_id"] not in clients:
             c = await db[CLIENTS].find_one({"client_id": g["client_id"]}, {"name": 1})
             clients[g["client_id"]] = c["name"] if c else "Client"
@@ -627,9 +654,37 @@ async def list_user_grants(db, user_id: str) -> List[dict]:
         items.append({
             "id": g["id"], "client_name": clients[g["client_id"]], "scopes": g["scopes"], "status": g["status"],
             "created_at": _aware(g["created_at"]), "last_refresh_at": _aware(g.get("last_refresh_at")),
-            "expires_at": abs_end, "alert": alert,
+            "expires_at": abs_end, "alert": alert, "_user_id": g["user_id"], "_client_id": g["client_id"],
         })
     return items
+
+
+async def list_user_grants(db, user_id: str) -> List[dict]:
+    """Connexions de l'utilisateur (isolation : uniquement les siennes)."""
+    return [{k: v for k, v in g.items() if not k.startswith("_")}
+            for g in await _grant_views(db, {"user_id": user_id}, 20)]
+
+
+async def list_all_grants(db) -> List[dict]:
+    """Vue ADMINISTRATEUR : toutes les connexions, avec l'e-mail du compte et le client_id."""
+    items = await _grant_views(db, {}, 100)
+    emails = {}
+    for g in items:
+        uid = g.pop("_user_id")
+        if uid not in emails:
+            u = await db.users.find_one({"id": uid}, {"email": 1})
+            emails[uid] = u.get("email", "") if u else ""
+        g["user_email"] = emails[uid]
+        g["client_id"] = g.pop("_client_id")
+    return items
+
+
+async def admin_revoke_grant(db, grant_id: str) -> bool:
+    grant = await db[GRANTS].find_one({"id": grant_id}, {"id": 1})
+    if not grant:
+        return False
+    await revoke_grant(db, grant_id, REVOKED, "admin_revocation")
+    return True
 
 
 async def revoke_user_grant(db, user_id: str, grant_id: str) -> bool:

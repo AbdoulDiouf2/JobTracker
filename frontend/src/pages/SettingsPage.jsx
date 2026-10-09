@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 const API_URL = process.env.REACT_APP_BACKEND_URL;
 import { Link } from 'react-router-dom';
-import { AgentTokensSection } from '../components/settings/AgentTokensSection';
+import { ApiAgentsSection } from '../components/settings/ApiAgentsSection';
 
 export default function SettingsPage() {
   const { user, updateProfile, updateUser, api } = useAuth();
@@ -848,9 +848,9 @@ export default function SettingsPage() {
       </section>
 
       {/* ============================================
-          SECTION 3.2: API / AGENTS (tokens d'accès externes)
+          SECTION 3.2: API / AGENTS (tokens API ; connexions OAuth / MCP pour l'admin)
           ============================================ */}
-      <AgentTokensSection />
+      <ApiAgentsSection />
 
       {/* ============================================
           SECTION 3.5: SUPPORT

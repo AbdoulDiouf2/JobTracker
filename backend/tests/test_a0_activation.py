@@ -327,6 +327,8 @@ async def issue_access_token(db):
     grant = {"id": str(uuid.uuid4()), "user_id": user_id, "client_id": "jt_oc_test",
              "scopes": ["watch:read", "opportunities:write"], "resource": svc.canonical_resource(),
              "status": "active", "created_at": now, "absolute_expires_at": now + timedelta(days=1)}
+    # Client enregistré et actif : un jeton d'un client inconnu ou désactivé est refusé
+    await db[svc.CLIENTS].update_one({"client_id": grant["client_id"]}, {"$set": {"active": True, "name": "ChatGPT", "redirect_uris": []}}, upsert=True)
     await db[svc.GRANTS].insert_one(dict(grant))
     return (await svc._issue_tokens(db, grant))["access_token"]
 
