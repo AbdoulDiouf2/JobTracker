@@ -259,6 +259,31 @@ async def list_opportunities(
     }
 
 
+async def list_recent_summary(db, user_id: str, days: int, limit: int, now: Optional[datetime] = None) -> dict:
+    """
+    Résumé MINIMAL des opportunités récentes du compte (outil MCP `list_recent_opportunities`,
+    spécification §5.3) : titre, entreprise, URL, statut, date. Toutes sources confondues, pour
+    que ChatGPT ne repropose pas une offre déjà connue. Aucune description ni autre donnée.
+    """
+    await ensure_indexes(db)
+    # Dates stockées en ISO UTC (`_to_document`) : la comparaison de chaînes suit l'ordre temporel
+    since = _utc((now or datetime.now(timezone.utc)) - timedelta(days=days)).isoformat()
+    query = {"user_id": user_id, "discovered_at": {"$gte": since}}
+    total = await db[COLLECTION].count_documents(query)
+    cursor = (
+        db[COLLECTION]
+        .find(query, {"_id": 0, "title": 1, "company": 1, "url": 1, "status": 1, "discovered_at": 1})
+        .sort([("discovered_at", -1), ("created_at", -1)])
+        .limit(limit)
+    )
+    items = [
+        {"title": d.get("title"), "company": d.get("company"), "url": d.get("url"), "status": d.get("status"),
+         "discovered_at": d.get("discovered_at")}
+        async for d in cursor
+    ]
+    return {"items": items, "total": total, "days": days}
+
+
 async def get_opportunity(db, user_id: str, opportunity_id: str) -> dict:
     opportunity = await db[COLLECTION].find_one(
         {"id": opportunity_id, "user_id": user_id},

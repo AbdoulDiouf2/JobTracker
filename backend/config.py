@@ -182,6 +182,8 @@ class Settings(BaseSettings):
     MCP_PRODUCTION_ALLOWED: bool = os.environ.get('MCP_PRODUCTION_ALLOWED', 'false').strip().lower() == 'true'
     # Hôtes acceptés par la protection anti DNS-rebinding du SDK (liste séparée par des virgules)
     MCP_ALLOWED_HOSTS: str = os.environ.get('MCP_ALLOWED_HOSTS', 'jobtracker.maadec.com')
+    # Rafale par grant OAuth (spécification §6.2, D9) : requêtes MCP par minute et par instance
+    MCP_RATE_LIMIT_PER_MINUTE: int = _bounded_int('MCP_RATE_LIMIT_PER_MINUTE', 30, 5, 600)
 
     # OAuth 2.1 du connecteur MCP (Lot 2, étape 3). Actif seulement si le MCP l'est.
     # Émetteur = origine canonique ; ressource protégée = émetteur + /api/mcp (RFC 8707 / 9728).

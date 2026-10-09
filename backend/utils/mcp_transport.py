@@ -20,9 +20,11 @@ Contrôles à CHAQUE requête (spécification §8 bis.2), dans cet ordre :
    service coupé (503) tant qu'il n'a pas été explicitement ouvert ;
 3. jeton d'accès OAuth valide (opaque, audience = ressource canonique, grant actif,
    compte actif et `watch_enabled`), sinon 401 + `WWW-Authenticate` (RFC 9728) ;
-4. scope de l'outil appelé, sinon 403 `insufficient_scope` ;
-5. hôtes et origines (protection anti DNS-rebinding du SDK).
-Un seul outil de démonstration, sans accès aux données (`jobtracker_ping`).
+4. rafale par grant (spécification §6.2), sinon 429 + `Retry-After` ;
+5. scope de l'outil appelé, sinon 403 `insufficient_scope` ;
+6. hôtes et origines (protection anti DNS-rebinding du SDK).
+Outils : `jobtracker_ping` (diagnostic, sans accès aux données) et les cinq outils métier de
+la veille (`services/mcp_tools.py`), exécutés pour le seul `user_id` du grant.
 """
 
 import asyncio
@@ -30,10 +32,11 @@ import contextvars
 import json
 import logging
 import os
+import time
 from typing import Optional
 
 from config import settings
-from services import oauth_service
+from services import mcp_tools, oauth_service
 
 logger = logging.getLogger("jobtracker.mcp")
 
@@ -49,7 +52,11 @@ build_count = 0
 _NOT_FOUND = json.dumps({"detail": "Not Found"}, separators=(",", ":")).encode()
 MAX_BODY_BYTES = 4 * 1024 * 1024
 # Scope exigé par outil (spécification §3.5)
-TOOL_SCOPES = {PING_TOOL: "watch:read"}
+TOOL_SCOPES = {PING_TOOL: "watch:read", **{t.name: t.scope for t in mcp_tools.TOOLS}}
+
+# Rafale par grant : fenêtre fixe d'une minute, par instance (comme slowapi au Lot 1)
+_RATE_WINDOW_SECONDS = 60.0
+_rate_windows: dict = {}
 
 # Identité vérifiée de la requête en cours, lue par les outils (jamais d'argument user_id)
 current_principal: contextvars.ContextVar = contextvars.ContextVar("mcp_principal", default=None)
@@ -79,6 +86,13 @@ def _build_server():
     from mcp import types
     from mcp.server import Server
 
+    def tool_result(payload: dict, is_error: bool) -> types.CallToolResult:
+        return types.CallToolResult(
+            content=[types.TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))],
+            structured_content=None if is_error else payload,
+            is_error=is_error,
+        )
+
     ping_tool = types.Tool(
         name=PING_TOOL,
         title="JobTracker : test de connexion",
@@ -87,21 +101,36 @@ def _build_server():
         annotations=types.ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True),
     )
 
+    business_tools = [
+        types.Tool(
+            name=spec.name,
+            title=spec.title,
+            description=spec.description,
+            input_schema=spec.input_schema,
+            annotations=types.ToolAnnotations(
+                read_only_hint=spec.read_only, destructive_hint=False, idempotent_hint=spec.idempotent,
+                open_world_hint=False,
+            ),
+        )
+        for spec in mcp_tools.TOOLS
+    ]
+
     async def on_list_tools(ctx, params) -> types.ListToolsResult:
-        return types.ListToolsResult(tools=[ping_tool])
+        return types.ListToolsResult(tools=[ping_tool, *business_tools])
 
     async def on_call_tool(ctx, params) -> types.CallToolResult:
-        if params.name != PING_TOOL:
-            return types.CallToolResult(
-                content=[types.TextContent(type="text", text=json.dumps({"error": {"code": "unknown_tool"}}))],
-                is_error=True,
-            )
-        payload = {"service": "jobtracker", "transport": "ok", "authenticated": current_principal.get() is not None}
-        return types.CallToolResult(
-            content=[types.TextContent(type="text", text=json.dumps(payload))],
-            structured_content=payload,
-            is_error=False,
-        )
+        principal = current_principal.get()
+        if params.name == PING_TOOL:
+            payload = {"service": "jobtracker", "transport": "ok", "authenticated": principal is not None}
+            return tool_result(payload, False)
+        spec = mcp_tools.TOOLS_BY_NAME.get(params.name)
+        if spec is None:
+            return tool_result({"error": {"code": "unknown_tool"}}, True)
+        # Défense en profondeur : identité et scope revérifiés au plus près de l'outil
+        if principal is None or spec.scope not in principal.scopes:
+            return tool_result({"error": {"code": "insufficient_scope", "scope": spec.scope}}, True)
+        payload, is_error = await mcp_tools.call_tool(db_provider(), principal.user_id, spec.name, params.arguments)
+        return tool_result(payload, is_error)
 
     return Server(SERVER_NAME, version="0.1.0", on_list_tools=on_list_tools, on_call_tool=on_call_tool)
 
@@ -122,6 +151,23 @@ def reset_for_tests() -> None:
     global _server, build_count
     _server = None
     build_count = 0
+    _rate_windows.clear()
+
+
+def _rate_limited(grant_id: str) -> Optional[int]:
+    """None si la requête est admise, sinon le délai (s) avant la prochaine fenêtre."""
+    now = time.monotonic()
+    start, count = _rate_windows.get(grant_id, (now, 0))
+    if now - start >= _RATE_WINDOW_SECONDS:
+        start, count = now, 0
+    if count >= settings.MCP_RATE_LIMIT_PER_MINUTE:
+        return max(1, int(_RATE_WINDOW_SECONDS - (now - start)) + 1)
+    _rate_windows[grant_id] = (start, count + 1)
+    if len(_rate_windows) > 10000:  # borne mémoire : on oublie les fenêtres expirées
+        for key, (s, _) in list(_rate_windows.items()):
+            if now - s >= _RATE_WINDOW_SECONDS:
+                _rate_windows.pop(key, None)
+    return None
 
 
 async def _send_json(send, status: int, payload: dict, extra_headers: Optional[list] = None) -> None:
@@ -225,6 +271,12 @@ class McpEndpoint:
             error = None if reason == "missing" else "invalid_token"
             logger.info("mcp_auth result=%s", reason)
             await _send_json(send, 401, {"error": error or "unauthorized"}, _challenge(error))
+            return
+
+        retry_after = _rate_limited(principal.grant_id)
+        if retry_after is not None:
+            logger.warning("mcp_rate_limited grant=%s", principal.grant_id[:8])
+            await _send_json(send, 429, {"error": "rate_limited"}, [(b"retry-after", str(retry_after).encode())])
             return
 
         if scope.get("method") == "POST":

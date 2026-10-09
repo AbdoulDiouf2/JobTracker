@@ -108,7 +108,8 @@ async def test_initialize_list_and_call(client, mcp_on):
     assert r.json()["result"]["serverInfo"]["name"] == "JobTracker"
 
     tools = (await post(client, LIST)).json()["result"]["tools"]
-    assert [t["name"] for t in tools] == ["jobtracker_ping"]
+    assert [t["name"] for t in tools] == ["jobtracker_ping", "get_watch_preferences", "create_opportunities",
+                                          "list_recent_opportunities", "get_watch_status", "report_watch_run"]
     assert tools[0]["annotations"]["readOnlyHint"] is True
     assert tools[0]["annotations"]["destructiveHint"] is False
 

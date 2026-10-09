@@ -5,10 +5,11 @@ Sous-lot A0 (préparation de l'activation, sans activation) :
 - 404 de /api/mcp identique à l'octet près à une route absente ;
 - ajout strict d'une adresse de retour à un client existant (service et script) ;
 - script d'essai manuel V1 à V6, exécuté contre l'application en mémoire (jamais la base réelle) ;
-- seul l'outil de démonstration est exposé.
+- catalogue exposé : `jobtracker_ping` et les cinq outils métier, chacun avec son scope.
 """
 
 import io
+import json
 import os
 import subprocess
 import sys
@@ -314,7 +315,7 @@ async def test_manual_check_detects_closed_service(api, db, monkeypatch):
 
 
 # ============================================
-# Seul l'outil de démonstration est exposé
+# Catalogue exposé : diagnostic + cinq outils métier (GO du Lot 2)
 # ============================================
 
 async def issue_access_token(db):
@@ -337,22 +338,27 @@ BUSINESS_TOOLS = ["get_watch_preferences", "create_opportunities", "list_recent_
                   "get_watch_status", "report_watch_run"]
 
 
-def test_only_demo_tool_is_declared():
-    assert set(mcp_transport.TOOL_SCOPES) == {"jobtracker_ping"}
-    source = open(os.path.join(BACKEND_DIR, "utils", "mcp_transport.py"), encoding="utf-8").read()
-    for name in BUSINESS_TOOLS:
-        assert name not in source
+def test_declared_tools_and_scopes():
+    """Moindre privilège (§3.5) : lecture en watch:read, écritures en opportunities:write."""
+    assert mcp_transport.TOOL_SCOPES == {
+        "jobtracker_ping": "watch:read", "get_watch_preferences": "watch:read",
+        "list_recent_opportunities": "watch:read", "get_watch_status": "watch:read",
+        "create_opportunities": "opportunities:write", "report_watch_run": "opportunities:write",
+    }
 
 
 @pytest.mark.parametrize("tool", BUSINESS_TOOLS)
-async def test_business_tools_are_not_callable(api, db, monkeypatch, tool):
+async def test_business_tools_reject_invalid_calls_without_writing(api, db, monkeypatch, tool):
     configure(monkeypatch, True, False, None)
     await svc.set_kill_switch(db, False, "tests")
     token = await issue_access_token(db)
     headers = {**MCP_HEADERS, "Authorization": f"Bearer {token}"}
     listed = await api.post("/api/mcp", json=LIST, headers=headers)
-    assert [t["name"] for t in listed.json()["result"]["tools"]] == ["jobtracker_ping"]
+    assert [t["name"] for t in listed.json()["result"]["tools"]] == ["jobtracker_ping"] + BUSINESS_TOOLS
     call = await api.post("/api/mcp", json={"jsonrpc": "2.0", "id": 2, "method": "tools/call",
-                                            "params": {"name": tool, "arguments": {}}}, headers=headers)
+                                            "params": {"name": tool, "arguments": {"user_id": "autre"}}},
+                          headers=headers)
     assert call.json()["result"]["isError"] is True
+    assert json.loads(call.json()["result"]["content"][0]["text"])["error"]["code"] == "invalid_arguments"
     assert await db.opportunities.count_documents({}) == 0
+    assert await db.watch_runs.count_documents({}) == 0

@@ -35,6 +35,8 @@ import httpx
 DEFAULT_BASE = "https://jobtracker.maadec.com"
 DEFAULT_REDIRECT = "https://chatgpt.com/connector_platform_oauth_redirect"
 SCOPE = "watch:read opportunities:write"
+EXPECTED_TOOLS = ["jobtracker_ping", "get_watch_preferences", "create_opportunities",
+                  "list_recent_opportunities", "get_watch_status", "report_watch_run"]
 MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json"}
 
 
@@ -119,7 +121,7 @@ async def finish_flow(http: httpx.AsyncClient, base: str, client_id: str, client
     rep.check("V6 initialize authentifié", init.status_code == 200, f"HTTP {init.status_code}")
     listed = await mcp_call(http, access, "tools/list", {}, 2)
     names = [t["name"] for t in listed.json().get("result", {}).get("tools", [])] if listed.status_code == 200 else []
-    rep.check("V6 outils exposés : démonstration uniquement", names == ["jobtracker_ping"], f"{names}")
+    rep.check("V6 outils exposés : diagnostic et cinq outils métier", names == EXPECTED_TOOLS, f"{names}")
     ping = await mcp_call(http, access, "tools/call", {"name": "jobtracker_ping", "arguments": {}}, 3)
     payload = ping.json().get("result", {}).get("structuredContent", {}) if ping.status_code == 200 else {}
     rep.check("V6 jobtracker_ping authentifié", payload.get("authenticated") is True, f"HTTP {ping.status_code}")
