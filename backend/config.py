@@ -180,6 +180,17 @@ class Settings(BaseSettings):
     # Hôtes acceptés par la protection anti DNS-rebinding du SDK (liste séparée par des virgules)
     MCP_ALLOWED_HOSTS: str = os.environ.get('MCP_ALLOWED_HOSTS', 'jobtracker.maadec.com')
 
+    # OAuth 2.1 du connecteur MCP (Lot 2, étape 3). Actif seulement si le MCP l'est.
+    # Émetteur = origine canonique ; ressource protégée = émetteur + /api/mcp (RFC 8707 / 9728).
+    OAUTH_ISSUER: str = os.environ.get('OAUTH_ISSUER', 'https://jobtracker.maadec.com').strip().rstrip('/')
+    OAUTH_ACCESS_TTL_SECONDS: int = _bounded_int('OAUTH_ACCESS_TTL_SECONDS', 3600, 60, 86400)  # D2 : 1 h
+    OAUTH_REFRESH_TTL_SECONDS: int = _bounded_int('OAUTH_REFRESH_TTL_SECONDS', 30 * 86400, 600, 90 * 86400)  # glissant
+    OAUTH_GRANT_MAX_SECONDS: int = _bounded_int('OAUTH_GRANT_MAX_SECONDS', 90 * 86400, 3600, 90 * 86400)  # absolu
+    OAUTH_CODE_TTL_SECONDS: int = _bounded_int('OAUTH_CODE_TTL_SECONDS', 60, 30, 300)
+    OAUTH_REQUEST_TTL_SECONDS: int = _bounded_int('OAUTH_REQUEST_TTL_SECONDS', 600, 60, 1800)
+    OAUTH_REFRESH_REUSE_GRACE_SECONDS: int = _bounded_int('OAUTH_REFRESH_REUSE_GRACE_SECONDS', 30, 0, 120)
+    OAUTH_RATE_LIMIT: str = os.environ.get('OAUTH_RATE_LIMIT', '10/minute')  # authorize et token, par IP
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'

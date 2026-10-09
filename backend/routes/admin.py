@@ -565,6 +565,31 @@ async def set_watch_access(
     return {"user_id": user_id, "watch_enabled": data.enabled}
 
 
+class KillSwitchUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    active: StrictBool
+
+
+@router.get("/settings/mcp-kill-switch")
+async def get_mcp_kill_switch(admin_user: dict = Depends(get_admin_user), db = Depends(get_db)):
+    """Interrupteur d'urgence MCP et OAuth (Lot 2, §8 bis)."""
+    from services.oauth_service import kill_switch_active
+    return {"active": await kill_switch_active(db)}
+
+
+@router.put("/settings/mcp-kill-switch")
+async def set_mcp_kill_switch(
+    data: KillSwitchUpdate,
+    admin_user: dict = Depends(get_admin_user),
+    db = Depends(get_db)
+):
+    """Coupe (active=true) ou rétablit le MCP et OAuth immédiatement, sans redéploiement."""
+    from services.oauth_service import set_kill_switch
+    await set_kill_switch(db, data.active, admin_user["id"])
+    return {"active": data.active}
+
+
 @router.post("/users", response_model=UserAdminResponse)
 async def create_user(
     user_data: AdminUserCreate,

@@ -60,6 +60,8 @@ from routes.agent import get_db as agent_get_db
 from routes.watch import router as watch_router
 from routes.watch import get_db as watch_get_db
 from utils import mcp_transport
+from routes.oauth import router as oauth_router, well_known_router
+from routes.oauth import get_db as oauth_get_db
 from utils.agent_auth import get_db as agent_auth_get_db
 from utils.auth import get_current_user, security
 
@@ -214,14 +216,19 @@ api_router.include_router(opportunities_router)
 api_router.include_router(agent_tokens_router)
 api_router.include_router(agent_router)
 api_router.include_router(watch_router)
+api_router.include_router(oauth_router)
 
 
 # Include main router
 app.include_router(api_router)
+# Découverte OAuth (RFC 9728 / 8414) : à la racine, hors /api (404 tant que le MCP est inactif)
+app.include_router(well_known_router)
 
 # Transport MCP (Lot 2) : application ASGI brute, SDK chargé à la demande.
 # Aucune restriction de méthode ici : désactivé, il répond 404 comme une route absente.
 app.add_route("/api/mcp", mcp_transport.endpoint, include_in_schema=False)
+# Le transport ASGI brut n'a pas l'injection FastAPI : il obtient la base par ce fournisseur
+mcp_transport.db_provider = lambda: _ensure_db()
 
 # Override dependencies
 app.dependency_overrides[auth_get_db] = override_get_db
@@ -244,6 +251,7 @@ app.dependency_overrides[opportunities_get_db] = override_get_db
 app.dependency_overrides[agent_tokens_get_db] = override_get_db
 app.dependency_overrides[agent_get_db] = override_get_db
 app.dependency_overrides[watch_get_db] = override_get_db
+app.dependency_overrides[oauth_get_db] = override_get_db
 app.dependency_overrides[agent_auth_get_db] = override_get_db
 app.dependency_overrides[auth_utils_get_db] = override_get_db
 

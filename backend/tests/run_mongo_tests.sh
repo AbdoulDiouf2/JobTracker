@@ -46,7 +46,7 @@ if [ ${#TESTS[@]} -eq 0 ]; then
          tests/test_security_settings.py
          tests/test_watch_validation.py tests/test_watch_preferences.py tests/test_watch_ingest.py
          tests/test_watch_api.py tests/test_vercel_routing.py tests/test_mcp_transport.py
-         tests/test_ai_sdk_offline.py)
+         tests/test_ai_sdk_offline.py tests/test_oauth.py)
 fi
 
 MONGO_TEST_URL="mongodb://127.0.0.1:${PORT}" PYTHONIOENCODING=utf-8 "$PY" -m pytest "${TESTS[@]}" -v -p no:cacheprovider
