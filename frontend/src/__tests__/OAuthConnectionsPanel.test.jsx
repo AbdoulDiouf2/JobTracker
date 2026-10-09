@@ -64,6 +64,20 @@ const fill = async (user, element, text) => {
   await user.paste(text);
 };
 
+/** Carte repliée : région masquée et vide (Radix ne rend pas le contenu fermé). */
+const expectCollapsed = (id) => {
+  const region = screen.getByTestId(`oauth-client-details-${id}`);
+  expect(region).toHaveAttribute('data-state', 'closed');
+  expect(region).toHaveAttribute('hidden');
+  expect(region).toBeEmptyDOMElement();
+};
+
+/** Déplie la carte d'un client (accordéon : contenu non rendu tant qu'elle est repliée). */
+const expand = async (user, id) => {
+  await user.click(await screen.findByTestId(`oauth-client-toggle-${id}`));
+  return screen.findByTestId(`oauth-client-details-${id}`);
+};
+
 const openCreate = async (user) => {
   await user.click(await screen.findByTestId('oauth-add-client'));
   return screen.findByTestId('oauth-create-dialog');
@@ -102,6 +116,7 @@ describe('Connexions OAuth / MCP — plusieurs clients', () => {
   });
 
   test('affiche tous les clients, chacun avec son état, ses valeurs et ses adresses', async () => {
+    const user = userEvent.setup();
     server.status = statusOf({ service: 'open', kill_switch_active: false });
     server.clients = [clientOf(), agentOf({ active: false })];
     renderPanel();
@@ -109,12 +124,14 @@ describe('Connexions OAuth / MCP — plusieurs clients', () => {
 
     const gpt = screen.getByTestId(`oauth-client-${GPT_ID}`);
     expect(within(gpt).getByTestId(`oauth-client-state-${GPT_ID}`)).toHaveTextContent('Actif');
+    await expand(user, GPT_ID);
     expect(within(gpt).getByText('À saisir dans ChatGPT')).toBeInTheDocument();
     expect(within(gpt).getByTestId(`oauth-client-id-${GPT_ID}`)).toHaveTextContent(GPT_ID);
     expect(within(gpt).getByTestId(`oauth-mcp-url-${GPT_ID}`)).toHaveTextContent(MCP_URL);
 
     const agent = screen.getByTestId(`oauth-client-${AGENT_ID}`);
     expect(within(agent).getByTestId(`oauth-client-state-${AGENT_ID}`)).toHaveTextContent('Désactivé');
+    await expand(user, AGENT_ID);
     expect(within(agent).getByText('À saisir dans Agent MAADEC')).toBeInTheDocument();
     expect(within(agent).getByTestId(`oauth-redirect-list-${AGENT_ID}`)).toHaveTextContent(AGENT_REDIRECT);
     expect(within(agent).getByTestId(`oauth-reactivate-${AGENT_ID}`)).toBeInTheDocument();
@@ -256,6 +273,7 @@ describe('Connexions OAuth / MCP — gestion individuelle', () => {
     api.post.mockResolvedValue({ data: { client_id: AGENT_ID, client_secret: NEW_SECRET } });
     renderPanel();
 
+    await expand(user, AGENT_ID);
     await user.click(await screen.findByTestId(`oauth-rotate-${AGENT_ID}`));
     const confirm = await screen.findByRole('alertdialog');
     expect(confirm).toHaveTextContent('Régénérer le secret de Agent MAADEC ?');
@@ -278,6 +296,7 @@ describe('Connexions OAuth / MCP — gestion individuelle', () => {
     });
     renderPanel();
 
+    await expand(user, AGENT_ID);
     await user.click(await screen.findByTestId(`oauth-deactivate-${AGENT_ID}`));
     const confirm = await screen.findByRole('alertdialog');
     expect(confirm).toHaveTextContent('Désactiver Agent MAADEC ?');
@@ -286,7 +305,8 @@ describe('Connexions OAuth / MCP — gestion individuelle', () => {
     await user.click(within(confirm).getByTestId('oauth-confirm'));
     await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/api/admin/oauth/clients/${AGENT_ID}/active`, { active: false }));
     expect(await screen.findByTestId(`oauth-reactivate-${AGENT_ID}`)).toBeInTheDocument();
-    expect(screen.getByTestId(`oauth-deactivate-${GPT_ID}`)).toBeInTheDocument();
+    // La carte reste ouverte après l'action ; l'autre client n'est pas touché
+    expect(screen.getByTestId(`oauth-client-state-${GPT_ID}`)).toHaveTextContent('Configuré');
 
     await user.click(screen.getByTestId(`oauth-reactivate-${AGENT_ID}`));
     await waitFor(() => expect(api.put).toHaveBeenLastCalledWith(`/api/admin/oauth/clients/${AGENT_ID}/active`, { active: true }));
@@ -298,6 +318,7 @@ describe('Connexions OAuth / MCP — gestion individuelle', () => {
     api.post.mockRejectedValueOnce(axiosError(400, 'redirect_uri invalide : HTTPS obligatoire'));
     renderPanel();
 
+    await expand(user, AGENT_ID);
     const input = await screen.findByTestId(`oauth-redirect-input-${AGENT_ID}`);
     await user.type(input, 'http://agent.maadec.com/x');
     await user.click(screen.getByTestId(`oauth-redirect-add-${AGENT_ID}`));
@@ -413,13 +434,16 @@ describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () =>
   });
 
   test('carte d’un client public : badge, pas de secret ni de régénération', async () => {
+    const user = userEvent.setup();
     server.clients = [clientOf(), publicOf()];
     renderPanel();
     const card = await screen.findByTestId(`oauth-client-${PUB_ID}`);
     expect(within(card).getByTestId(`oauth-client-type-${PUB_ID}`)).toHaveTextContent('Public');
+    await expand(user, PUB_ID);
     expect(within(card).getByText(/Application publique : aucun secret/)).toBeInTheDocument();
     expect(within(card).getByText(/aucune \(client public\)/)).toBeInTheDocument();
     expect(within(card).queryByTestId(`oauth-rotate-${PUB_ID}`)).toBeNull();
+    await expand(user, GPT_ID);
     expect(screen.getByTestId(`oauth-rotate-${GPT_ID}`)).toBeInTheDocument();
     expect(screen.getByTestId(`oauth-client-type-${GPT_ID}`)).toHaveTextContent('Confidentiel');
   });
@@ -432,6 +456,7 @@ describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () =>
       return { data: { client: server.clients[0] } };
     });
     renderPanel();
+    await expand(user, GPT_ID);
     const scopes = await screen.findByTestId(`oauth-scopes-${GPT_ID}`);
     expect(within(scopes).queryByTestId(`oauth-scopes-save-${GPT_ID}`)).toBeNull();
     await user.click(within(scopes).getByTestId(`oauth-${GPT_ID}-scope-opportunities:write`));
@@ -449,6 +474,7 @@ describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () =>
       return { data: { client_id: PUB_ID, redirect_uris: ['http://[::1]/cb'] } };
     });
     renderPanel();
+    await expand(user, PUB_ID);
     await user.click(await screen.findByTestId(`oauth-redirect-remove-${PUB_ID}-${LOCAL}`));
     const confirm = await screen.findByRole('alertdialog');
     expect(confirm).toHaveTextContent('ne pourra plus servir à se connecter');
@@ -467,5 +493,87 @@ describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () =>
     await user.click(within(dialog).getByTestId('oauth-preset-chatgpt'));
     expect(within(dialog).getByTestId('oauth-client-type-confidential')).toHaveAttribute('aria-checked', 'true');
     expect(within(dialog).getByTestId('oauth-create-scope-opportunities:write')).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
+describe('Connexions OAuth / MCP — accordéon des applications', () => {
+  const PUB_ID = 'jt_oc_Public123456';
+  const publicOf = () => clientOf({ client_id: PUB_ID, name: 'Agent local', redirect_uris: ['http://127.0.0.1/callback'],
+    client_type: 'public', allowed_scopes: ['watch:read'], active_grants: 3 });
+
+  test('cartes compactes repliées par défaut : nom, statut, type et connexions visibles', async () => {
+    server.clients = [clientOf(), agentOf(), publicOf()];
+    renderPanel();
+    for (const [id, name, type, count] of [[GPT_ID, 'ChatGPT', 'Confidentiel', '1'], [AGENT_ID, 'Agent MAADEC', 'Confidentiel', '0'],
+      [PUB_ID, 'Agent local', 'Public', '3']]) {
+      const toggle = await screen.findByTestId(`oauth-client-toggle-${id}`);
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle.tagName).toBe('BUTTON');
+      expect(toggle).toHaveTextContent(name);
+      expect(within(toggle).getByTestId(`oauth-client-type-${id}`)).toHaveTextContent(type);
+      expect(within(toggle).getByTestId(`oauth-client-state-${id}`)).toHaveTextContent('Configuré');
+      expect(within(toggle).getByTestId(`oauth-client-connections-${id}`)).toHaveTextContent(`${count} connexion(s) active(s)`);
+      expectCollapsed(id);
+    }
+    // Intitulé accessible explicite
+    expect(screen.getByRole('button', { name: /ChatGPT.*afficher ou masquer les détails de l'application/ })).toBeInTheDocument();
+  });
+
+  test('ouverture, fermeture au second clic, une seule carte ouverte à la fois', async () => {
+    const user = userEvent.setup();
+    server.clients = [clientOf(), agentOf()];
+    renderPanel();
+    const gptToggle = await screen.findByTestId(`oauth-client-toggle-${GPT_ID}`);
+    const agentToggle = screen.getByTestId(`oauth-client-toggle-${AGENT_ID}`);
+
+    await user.click(gptToggle);
+    expect(gptToggle).toHaveAttribute('aria-expanded', 'true');
+    const details = await screen.findByTestId(`oauth-client-details-${GPT_ID}`);
+    expect(gptToggle).toHaveAttribute('aria-controls', details.id);
+
+    // Changement de carte : la première se replie
+    await user.click(agentToggle);
+    expect(agentToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(gptToggle).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => expectCollapsed(GPT_ID));
+    expect(screen.getByTestId(`oauth-client-details-${AGENT_ID}`)).toHaveAttribute('data-state', 'open');
+    expect(screen.getByTestId(`oauth-values-${AGENT_ID}`)).toBeInTheDocument();
+
+    // Second clic : repliée
+    await user.click(agentToggle);
+    expect(agentToggle).toHaveAttribute('aria-expanded', 'false');
+    await waitFor(() => expectCollapsed(AGENT_ID));
+  });
+
+  test('clavier : Entrée et Espace ouvrent et ferment', async () => {
+    const user = userEvent.setup();
+    server.clients = [clientOf(), agentOf()];
+    renderPanel();
+    const gptToggle = await screen.findByTestId(`oauth-client-toggle-${GPT_ID}`);
+    gptToggle.focus();
+    await user.keyboard('{Enter}');
+    expect(gptToggle).toHaveAttribute('aria-expanded', 'true');
+    await user.keyboard(' ');
+    expect(gptToggle).toHaveAttribute('aria-expanded', 'false');
+  });
+
+  test('partie dépliée : tous les champs et actions restent disponibles, avec confirmations', async () => {
+    const user = userEvent.setup();
+    server.clients = [clientOf()];
+    renderPanel();
+    const details = await expand(user, GPT_ID);
+    for (const testId of [`oauth-values-${GPT_ID}`, `oauth-client-id-${GPT_ID}`, `oauth-mcp-url-${GPT_ID}`,
+      `oauth-redirect-list-${GPT_ID}`, `oauth-redirect-input-${GPT_ID}`, `oauth-scopes-${GPT_ID}`,
+      `oauth-rotate-${GPT_ID}`, `oauth-deactivate-${GPT_ID}`]) {
+      expect(within(details).getByTestId(testId)).toBeInTheDocument();
+    }
+    // Les actions sensibles gardent leur confirmation
+    await user.click(within(details).getByTestId(`oauth-deactivate-${GPT_ID}`));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Désactiver ChatGPT ?');
+    expect(api.put).not.toHaveBeenCalled();
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Annuler' }));
+    await user.click(within(details).getByTestId(`oauth-rotate-${GPT_ID}`));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Régénérer le secret de ChatGPT ?');
+    expect(api.post).not.toHaveBeenCalled();
   });
 });

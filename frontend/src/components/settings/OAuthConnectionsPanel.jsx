@@ -12,6 +12,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../ui/dialog';
@@ -106,6 +107,7 @@ const T = {
     removeRedirectText: (u) => `${u} ne pourra plus servir à se connecter. Les connexions déjà établies ne sont pas révoquées.`,
     redirectRemoved: 'Adresse retirée', removeError: "Impossible de retirer l'adresse.", removeLabel: 'Retirer',
     connections: (n) => `${n} connexion(s) active(s)`,
+    toggleDetails: " — afficher ou masquer les détails de l'application",
     grantsTitle: 'Autorisations OAuth',
     grantsEmpty: 'Aucune autorisation pour le moment.',
     grantStatus: {
@@ -210,6 +212,7 @@ const T = {
     removeRedirectText: (u) => `${u} will no longer be usable to connect. Existing connections are not revoked.`,
     redirectRemoved: 'URL removed', removeError: 'Unable to remove the URL.', removeLabel: 'Remove',
     connections: (n) => `${n} active connection(s)`,
+    toggleDetails: ' — show or hide the application details',
     grantsTitle: 'OAuth authorizations',
     grantsEmpty: 'No authorization yet.',
     grantStatus: {
@@ -606,20 +609,36 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
   const id = client.client_id;
   const isPublic = client.client_type === 'public';
   return (
-    <li className={`p-4 rounded-lg border flex flex-col gap-4 ${client.active ? 'border-slate-700 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
-      data-testid={`oauth-client-${id}`}>
-      <div className="flex flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <AppWindow size={16} className="text-gold shrink-0" aria-hidden="true" />
-          <p className="text-white font-medium break-words min-w-0" data-testid={`oauth-client-name-${id}`}>{client.name}</p>
-          <Badge className={STATE_STYLE[state]} testId={`oauth-client-state-${id}`}>{t.state[state]}</Badge>
-          <Badge className="border-slate-600 bg-slate-800/60 text-slate-300" testId={`oauth-client-type-${id}`}>
-            {t.typeBadge[isPublic ? 'public' : 'confidential']}
-          </Badge>
-        </div>
-        <p className="text-xs text-slate-400">{t.stateHelp[state]}</p>
-        <p className="text-xs text-slate-500">{t.connections(client.active_grants ?? 0)}</p>
-      </div>
+    <AccordionItem
+      value={id}
+      className={`rounded-lg border ${client.active ? 'border-slate-700 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
+      data-testid={`oauth-client-${id}`}
+    >
+      {/* En-tête compact : bouton natif (Radix) avec aria-expanded / aria-controls, Entrée et Espace */}
+      <AccordionTrigger
+        className="min-h-14 px-4 py-3 gap-3 rounded-lg hover:no-underline transition-colors hover:bg-slate-800/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 [&>svg]:text-slate-400"
+        data-testid={`oauth-client-toggle-${id}`}
+      >
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+          <span className="flex min-w-0 items-center gap-2">
+            <AppWindow size={16} className="text-gold shrink-0" aria-hidden="true" />
+            <span className="text-white font-medium break-words min-w-0" data-testid={`oauth-client-name-${id}`}>{client.name}</span>
+          </span>
+          <span className="flex flex-wrap items-center gap-2">
+            <Badge className={STATE_STYLE[state]} testId={`oauth-client-state-${id}`}>{t.state[state]}</Badge>
+            <Badge className="border-slate-600 bg-slate-800/60 text-slate-300" testId={`oauth-client-type-${id}`}>
+              {t.typeBadge[isPublic ? 'public' : 'confidential']}
+            </Badge>
+            <span className="text-xs text-slate-500 whitespace-nowrap" data-testid={`oauth-client-connections-${id}`}>
+              {t.connections(client.active_grants ?? 0)}
+            </span>
+          </span>
+        </span>
+        <span className="sr-only">{t.toggleDetails}</span>
+      </AccordionTrigger>
+
+      <AccordionContent className="flex flex-col gap-4 px-4 pb-4 pt-1" data-testid={`oauth-client-details-${id}`}>
+      <p className="text-xs text-slate-400">{t.stateHelp[state]}</p>
 
       <div className="flex flex-col gap-3 p-3 rounded-lg border border-gold/20 bg-gold/5" data-testid={`oauth-values-${id}`}>
         <p className="text-sm text-white font-medium break-words">{t.valuesTitle(client.name)}</p>
@@ -674,7 +693,8 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
           </Button>
         )}
       </div>
-    </li>
+      </AccordionContent>
+    </AccordionItem>
   );
 };
 
@@ -830,13 +850,14 @@ export const OAuthConnectionsPanel = () => {
             <p className="text-sm text-slate-400">{t.clientsEmpty}</p>
           </div>
         ) : (
-          <ul className="flex flex-col gap-3">
+          // Accordéon : toutes repliées par défaut, une seule ouverte à la fois, re-clic pour replier
+          <Accordion type="single" collapsible className="flex flex-col gap-2" data-testid="oauth-clients-list">
             {clientList.map(c => (
               <ClientCard key={c.client_id} client={c} status={s} busy={busyClient === c.client_id}
                 addRedirectUri={addRedirectUri} setClientActive={setClientActive} setClientScopes={setClientScopes}
                 onConfirm={setConfirm} onReactivate={reactivate} t={t} />
             ))}
-          </ul>
+          </Accordion>
         )}
       </div>
 
