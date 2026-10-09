@@ -99,7 +99,6 @@ TanStack Query, React Router 7, Framer Motion, Recharts, `sonner`, `lucide-react
 | `chrome-extension/` | Extension « JobTracker Clipper » ([README](../chrome-extension/README.md), [déploiement](../chrome-extension/DEPLOYMENT.md)) |
 | `landing-page/` | Site vitrine |
 | `Doc/` | Documentation (ce dossier) ; `Doc/archives/` : documents historiques |
-| `tests/` (racine), `test_reports/` | Restes de l'ancienne plateforme de génération (paquet vide, rapports JSON) ; les tests actuels sont dans `backend/tests/` et `frontend/src/__tests__/` |
 
 ## Voir aussi
 

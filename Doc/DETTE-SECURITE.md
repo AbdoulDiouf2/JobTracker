@@ -69,8 +69,10 @@ affichée dans un iframe. Aucune politique CSP ne limitait les scripts.
 
 **Correction** : suppression des deux chargements ; titre de l'onglet `JobTracker`. Aucun code
 de `frontend/src` ne dépendait de ces scripts. Dans le même lot, toutes les autres traces de
-cette plateforme ont été retirées du dépôt : plugin d'édition visuelle du serveur de
-développement, branches SDK et clé d'API dédiées dans le backend, fichiers et archives associés.
+cette plateforme ont été retirées du dépôt : script d'analyse d'audience PostHog (projet tiers,
+enregistrement de session activé), plugins d'édition visuelle et de supervision du serveur de
+développement, branches SDK et clé d'API dédiées dans le backend, fichiers, rapports de test et
+archives associés.
 
 **Vérifications** :
 
@@ -83,9 +85,6 @@ développement, branches SDK et clé d'API dédiées dans le backend, fichiers e
 
 **Reste ouvert** :
 
-- PostHog (`us.i.posthog.com`, clé de projet en dur, enregistrement de session activé) est
-  toujours chargé sur toutes les pages, avec le même accès au `localStorage`. Origine et usage à
-  confirmer avant de le conserver.
 - Pas de politique CSP `script-src`.
 
 ---
