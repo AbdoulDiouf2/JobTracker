@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import {
-  Ban, Check, Copy, KeyRound, Link2, Loader2, Plus, Power, PowerOff, RefreshCw, Server, ShieldAlert, ShieldCheck,
+  AppWindow, Ban, Check, Copy, KeyRound, Link2, Loader2, Plus, Power, PowerOff, RefreshCw, Server, ShieldAlert,
+  ShieldCheck, Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOAuthAdmin } from '../../hooks/useOAuthAdmin';
@@ -10,6 +11,7 @@ import { useLanguage } from '../../i18n';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../ui/dialog';
@@ -20,15 +22,15 @@ import {
 
 const T = {
   fr: {
-    intro: "Connectez ChatGPT à JobTracker via OAuth et MCP. Réservé à l'administrateur.",
+    intro: "Connectez des applications compatibles MCP (ChatGPT, agents…) à JobTracker via OAuth. Réservé à l'administrateur.",
     state: { none: 'Non configuré', configured: 'Configuré', active: 'Actif', disabled: 'Désactivé', unavailable: 'Indisponible' },
     stateHelp: {
-      none: 'Aucun client ChatGPT : créez-le pour obtenir ses identifiants.',
       configured: 'Client prêt. Le service est coupé : ouvrez-le pour autoriser la connexion.',
-      active: 'Le service est ouvert : ChatGPT peut se connecter avec ses identifiants.',
-      disabled: 'Le client est désactivé : aucune connexion possible.',
-      unavailable: 'Le MCP n\'est pas activé sur ce déploiement (variables de production).',
+      active: 'Le service est ouvert : cette application peut se connecter avec ses identifiants.',
+      disabled: 'Client désactivé : aucune connexion possible.',
+      unavailable: "Le MCP n'est pas activé sur ce déploiement (variables de production).",
     },
+    service: { open: 'Service ouvert', cut: 'Service coupé', unavailable: 'Service indisponible' },
     serviceTitle: 'Service OAuth / MCP',
     checkKeys: 'Activation du déploiement',
     checkSwitch: "Interrupteur d'urgence",
@@ -43,28 +45,40 @@ const T = {
     cutText: 'OAuth et MCP seront coupés immédiatement pour tous les clients, sans redéploiement. Les connexions existantes sont conservées et reprendront à la réouverture.',
     unavailableNote: "Tant que le déploiement n'est pas activé, l'ouverture de l'interrupteur reste sans effet.",
     opened: 'Service ouvert', cutDone: 'Service coupé', switchError: "Impossible de modifier l'interrupteur.",
-    clientTitle: 'Client ChatGPT',
-    createClient: 'Créer le client ChatGPT',
-    createError: 'Impossible de créer le client.',
+    clientsTitle: 'Applications clientes',
+    clientsEmpty: 'Aucune application cliente enregistrée.',
+    addClient: 'Ajouter une application',
+    createTitle: 'Nouvelle application cliente',
+    createText: "Le nom est affiché à l'utilisateur lors du consentement. Les adresses de retour doivent être exactes et en HTTPS.",
+    nameLabel: "Nom de l'application",
+    namePlaceholder: 'Agent MAADEC',
+    urisLabel: 'Adresses de retour autorisées (une par ligne)',
+    urisPlaceholder: 'https://exemple.com/oauth/callback',
+    preset: 'Préréglage',
+    presetUsed: 'déjà configuré',
+    create: "Créer l'application",
+    createError: "Impossible de créer l'application.",
+    sharedRedirect: (uri, names) => `Adresse ${uri} également utilisée par : ${names}.`,
     clientActive: 'Actif', clientInactive: 'Désactivé',
     redirects: 'Adresses de retour autorisées',
     addRedirect: 'Ajouter',
-    addRedirectLabel: 'Nouvelle adresse de retour (fournie par ChatGPT)',
+    addRedirectLabel: "Nouvelle adresse de retour (fournie par l'application)",
     redirectAdded: 'Adresse de retour ajoutée',
-    redirectError: "Adresse refusée.",
+    redirectError: 'Adresse refusée.',
     rotate: 'Régénérer le secret',
-    rotateTitle: 'Régénérer le secret ?',
-    rotateText: "L'ancien secret sera refusé immédiatement. Vous devrez saisir le nouveau dans ChatGPT.",
+    rotateTitle: (n) => `Régénérer le secret de ${n} ?`,
+    rotateText: "L'ancien secret sera refusé immédiatement. Vous devrez saisir le nouveau dans l'application.",
     rotateError: 'Impossible de régénérer le secret.',
     deactivate: 'Désactiver', reactivate: 'Réactiver',
-    deactivateTitle: 'Désactiver ce client ?',
-    deactivateText: (n) => `Toutes ses connexions (${n}) et leurs jetons seront révoqués immédiatement. Une réactivation exigera une nouvelle connexion depuis ChatGPT.`,
-    deactivated: 'Client désactivé', reactivated: 'Client réactivé', activeError: 'Impossible de modifier le client.',
-    chatgptTitle: 'À saisir dans ChatGPT',
+    deactivateTitle: (n) => `Désactiver ${n} ?`,
+    deactivateText: (n) => `Toutes ses connexions (${n}) et leurs jetons seront révoqués immédiatement. Une réactivation exigera une nouvelle connexion depuis l'application. Les autres applications ne sont pas affectées.`,
+    deactivated: 'Application désactivée', reactivated: 'Application réactivée', activeError: "Impossible de modifier l'application.",
+    valuesTitle: (n) => `À saisir dans ${n}`,
     mcpUrl: 'URL du serveur MCP',
     clientId: 'Client ID',
     secretNote: "Le secret n'est disponible que dans la fenêtre affichée à la création ou à la régénération.",
-    authMethod: 'Authentification du client : client_secret_post ou client_secret_basic.',
+    authMethod: 'Authentification du client : client_secret_post ou client_secret_basic. PKCE S256 obligatoire.',
+    connections: (n) => `${n} connexion(s) active(s)`,
     grantsTitle: 'Autorisations OAuth',
     grantsEmpty: 'Aucune autorisation pour le moment.',
     grantStatus: {
@@ -74,26 +88,26 @@ const T = {
     alerts: { refresh_not_observed: 'Renouvellement non observé', reconnection_soon: 'Reconnexion bientôt nécessaire' },
     createdAt: 'Créée le', lastRefresh: 'Dernier renouvellement', expires: 'Expire le', never: 'Jamais',
     revoke: 'Révoquer', revokeTitle: 'Révoquer cette autorisation ?',
-    revokeText: 'ChatGPT perdra immédiatement son accès ; une nouvelle connexion sera nécessaire.',
+    revokeText: (n) => `${n} perdra immédiatement cet accès ; une nouvelle connexion sera nécessaire. Les autres applications ne sont pas affectées.`,
     revoked: 'Autorisation révoquée', revokeError: "Impossible de révoquer l'autorisation.",
     cancel: 'Annuler', confirm: 'Confirmer',
     copy: 'Copier', copied: 'Copié', copyError: 'Copie impossible : sélectionnez la valeur et copiez-la manuellement.',
-    secretTitle: 'Identifiants du client ChatGPT',
+    secretTitle: (n) => `Identifiants de ${n}`,
     secretWarning: 'Copiez le secret maintenant. Pour votre sécurité, il ne sera plus jamais affiché.',
     secretLabel: 'Client secret',
     done: "J'ai copié le secret",
     loadError: 'Impossible de charger les connexions OAuth.', retry: 'Réessayer',
   },
   en: {
-    intro: 'Connect ChatGPT to JobTracker through OAuth and MCP. Administrator only.',
+    intro: 'Connect MCP-compatible applications (ChatGPT, agents…) to JobTracker through OAuth. Administrator only.',
     state: { none: 'Not configured', configured: 'Configured', active: 'Active', disabled: 'Disabled', unavailable: 'Unavailable' },
     stateHelp: {
-      none: 'No ChatGPT client yet: create it to get its credentials.',
       configured: 'Client ready. The service is cut: open it to allow the connection.',
-      active: 'The service is open: ChatGPT can connect with its credentials.',
-      disabled: 'The client is disabled: no connection is possible.',
+      active: 'The service is open: this application can connect with its credentials.',
+      disabled: 'Client disabled: no connection is possible.',
       unavailable: 'MCP is not enabled on this deployment (production variables).',
     },
+    service: { open: 'Service open', cut: 'Service cut', unavailable: 'Service unavailable' },
     serviceTitle: 'OAuth / MCP service',
     checkKeys: 'Deployment activation',
     checkSwitch: 'Emergency switch',
@@ -108,28 +122,40 @@ const T = {
     cutText: 'OAuth and MCP will be cut immediately for every client, without redeploying. Existing connections are kept and resume when reopened.',
     unavailableNote: 'Until the deployment is enabled, opening the switch has no effect.',
     opened: 'Service opened', cutDone: 'Service cut', switchError: 'Unable to change the switch.',
-    clientTitle: 'ChatGPT client',
-    createClient: 'Create the ChatGPT client',
-    createError: 'Unable to create the client.',
+    clientsTitle: 'Client applications',
+    clientsEmpty: 'No client application registered.',
+    addClient: 'Add an application',
+    createTitle: 'New client application',
+    createText: 'The name is shown to the user at consent time. Redirect URLs must be exact and use HTTPS.',
+    nameLabel: 'Application name',
+    namePlaceholder: 'MAADEC agent',
+    urisLabel: 'Allowed redirect URLs (one per line)',
+    urisPlaceholder: 'https://example.com/oauth/callback',
+    preset: 'Preset',
+    presetUsed: 'already configured',
+    create: 'Create application',
+    createError: 'Unable to create the application.',
+    sharedRedirect: (uri, names) => `URL ${uri} is also used by: ${names}.`,
     clientActive: 'Active', clientInactive: 'Disabled',
     redirects: 'Allowed redirect URLs',
     addRedirect: 'Add',
-    addRedirectLabel: 'New redirect URL (provided by ChatGPT)',
+    addRedirectLabel: 'New redirect URL (provided by the application)',
     redirectAdded: 'Redirect URL added',
     redirectError: 'URL rejected.',
     rotate: 'Regenerate secret',
-    rotateTitle: 'Regenerate the secret?',
-    rotateText: 'The previous secret will be rejected immediately. You will need to enter the new one in ChatGPT.',
+    rotateTitle: (n) => `Regenerate the secret of ${n}?`,
+    rotateText: 'The previous secret will be rejected immediately. You will need to enter the new one in the application.',
     rotateError: 'Unable to regenerate the secret.',
     deactivate: 'Disable', reactivate: 'Reactivate',
-    deactivateTitle: 'Disable this client?',
-    deactivateText: (n) => `All its connections (${n}) and their tokens will be revoked immediately. Reactivating will require a new connection from ChatGPT.`,
-    deactivated: 'Client disabled', reactivated: 'Client reactivated', activeError: 'Unable to update the client.',
-    chatgptTitle: 'To enter in ChatGPT',
+    deactivateTitle: (n) => `Disable ${n}?`,
+    deactivateText: (n) => `All its connections (${n}) and their tokens will be revoked immediately. Reactivating will require a new connection from the application. Other applications are not affected.`,
+    deactivated: 'Application disabled', reactivated: 'Application reactivated', activeError: 'Unable to update the application.',
+    valuesTitle: (n) => `To enter in ${n}`,
     mcpUrl: 'MCP server URL',
     clientId: 'Client ID',
     secretNote: 'The secret is only available in the window shown at creation or regeneration.',
-    authMethod: 'Client authentication: client_secret_post or client_secret_basic.',
+    authMethod: 'Client authentication: client_secret_post or client_secret_basic. PKCE S256 required.',
+    connections: (n) => `${n} active connection(s)`,
     grantsTitle: 'OAuth authorizations',
     grantsEmpty: 'No authorization yet.',
     grantStatus: {
@@ -139,11 +165,11 @@ const T = {
     alerts: { refresh_not_observed: 'Renewal not observed', reconnection_soon: 'Reconnection needed soon' },
     createdAt: 'Created on', lastRefresh: 'Last renewal', expires: 'Expires on', never: 'Never',
     revoke: 'Revoke', revokeTitle: 'Revoke this authorization?',
-    revokeText: 'ChatGPT will lose access immediately; a new connection will be required.',
+    revokeText: (n) => `${n} will lose this access immediately; a new connection will be required. Other applications are not affected.`,
     revoked: 'Authorization revoked', revokeError: 'Unable to revoke the authorization.',
     cancel: 'Cancel', confirm: 'Confirm',
     copy: 'Copy', copied: 'Copied', copyError: 'Copy failed: select the value and copy it manually.',
-    secretTitle: 'ChatGPT client credentials',
+    secretTitle: (n) => `Credentials of ${n}`,
     secretWarning: 'Copy the secret now. For your security, it will never be shown again.',
     secretLabel: 'Client secret',
     done: 'I have copied the secret',
@@ -160,6 +186,7 @@ const STATE_STYLE = {
   disabled: 'border-slate-600 bg-slate-700/30 text-slate-400',
   unavailable: 'border-red-500/30 bg-red-500/10 text-red-400',
 };
+const SERVICE_STYLE = { open: STATE_STYLE.active, cut: STATE_STYLE.configured, unavailable: STATE_STYLE.unavailable };
 
 const formatDate = (value, language) => {
   if (!value) return null;
@@ -173,12 +200,21 @@ const errorDetail = (err, fallback) => {
   return typeof detail === 'string' ? detail : fallback;
 };
 
-/** État global affiché en tête : non configuré, configuré, actif, désactivé ou indisponible. */
+/** État d'UN client : non configuré, configuré, actif, désactivé ou indisponible. */
 export const connectionState = (status, client) => {
   if (!client) return 'none';
   if (!client.active) return 'disabled';
   if (!status || status.service === 'unavailable') return 'unavailable';
   return status.service === 'open' ? 'active' : 'configured';
+};
+
+/** Avertissements de collision d'adresses de retour, regroupés par adresse. */
+const reportSharedRedirects = (warnings, t) => {
+  const byUri = {};
+  (warnings || []).filter(w => w.code === 'redirect_uri_shared').forEach((w) => {
+    (byUri[w.redirect_uri] = byUri[w.redirect_uri] || []).push(w.client_name);
+  });
+  Object.entries(byUri).forEach(([uri, names]) => toast.warning(t.sharedRedirect(uri, names.join(', '))));
 };
 
 const Badge = ({ className, children, testId }) => (
@@ -228,9 +264,9 @@ const OAuthSecretDialog = ({ credentials, onClose, t }) => (
       data-testid="oauth-secret-dialog"
     >
       <DialogHeader className="text-left pr-6">
-        <DialogTitle className="font-heading text-lg flex items-center gap-2">
-          <KeyRound size={18} className="text-gold" aria-hidden="true" />
-          {t.secretTitle}
+        <DialogTitle className="font-heading text-lg flex items-center gap-2 break-words">
+          <KeyRound size={18} className="text-gold shrink-0" aria-hidden="true" />
+          {t.secretTitle(credentials?.name || '')}
         </DialogTitle>
         <DialogDescription className="flex items-start gap-2 text-amber-300">
           <ShieldAlert size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
@@ -257,7 +293,7 @@ const ConfirmDialog = ({ open, title, text, confirmLabel, danger, onConfirm, onC
   <AlertDialog open={open} onOpenChange={(o) => { if (!o) onCancel(); }}>
     <AlertDialogContent className="bg-[#0a0f1a] border-slate-800 text-white w-[calc(100%-2rem)] max-w-md rounded-xl">
       <AlertDialogHeader className="text-left">
-        <AlertDialogTitle>{title}</AlertDialogTitle>
+        <AlertDialogTitle className="break-words">{title}</AlertDialogTitle>
         <AlertDialogDescription className="text-slate-400">{text}</AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter className="gap-2">
@@ -286,6 +322,90 @@ const CheckRow = ({ label, ok, value }) => (
   </div>
 );
 
+/** Création d'un client : nom + adresses de retour ; préréglages facultatifs fournis par le backend. */
+const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t }) => {
+  const [name, setName] = useState('');
+  const [uris, setUris] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) { setName(''); setUris(''); setError(''); setSubmitting(false); }
+  }, [open]);
+
+  const redirectUris = uris.split('\n').map(u => u.trim()).filter(Boolean);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || redirectUris.length === 0 || submitting) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await onCreate({ name: name.trim(), redirectUris });
+    } catch (err) {
+      setError(errorDetail(err, t.createError));
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o && !submitting) onClose(); }}>
+      <DialogContent className="bg-[#0a0f1a] border-slate-800 text-white w-[calc(100%-2rem)] max-w-lg rounded-xl"
+        data-testid="oauth-create-dialog">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <DialogHeader className="text-left pr-6">
+            <DialogTitle className="font-heading text-lg">{t.createTitle}</DialogTitle>
+            <DialogDescription className="text-slate-400">{t.createText}</DialogDescription>
+          </DialogHeader>
+
+          {presets.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-slate-500">{t.preset} :</span>
+              {presets.map((p) => {
+                const used = existingNames.includes(p.name.toLowerCase());
+                return (
+                  <Button key={p.key} type="button" variant="outline" size="sm" disabled={used}
+                    onClick={() => { setName(p.name); setUris(p.redirect_uris.join('\n')); }}
+                    className="h-8 border-slate-700 transition-colors" data-testid={`oauth-preset-${p.key}`}>
+                    <Sparkles size={14} aria-hidden="true" />
+                    {p.name}{used ? ` (${t.presetUsed})` : ''}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="oauth-client-name" className="text-slate-300">{t.nameLabel}</Label>
+            <Input id="oauth-client-name" value={name} onChange={(e) => setName(e.target.value)}
+              placeholder={t.namePlaceholder} maxLength={100} required autoComplete="off"
+              className="h-10 bg-slate-900/50 border-slate-700 text-white" data-testid="oauth-client-name" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="oauth-client-uris" className="text-slate-300">{t.urisLabel}</Label>
+            <Textarea id="oauth-client-uris" value={uris} onChange={(e) => setUris(e.target.value)}
+              placeholder={t.urisPlaceholder} rows={3} autoComplete="off" spellCheck={false}
+              className="bg-slate-900/50 border-slate-700 text-white font-mono text-sm"
+              aria-invalid={!!error} aria-describedby={error ? 'oauth-create-error' : undefined}
+              data-testid="oauth-client-uris" />
+          </div>
+          {error && <p id="oauth-create-error" role="alert" className="text-sm text-red-400">{error}</p>}
+
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="ghost" className="h-10" onClick={onClose} disabled={submitting}>{t.cancel}</Button>
+            <Button type="submit" disabled={!name.trim() || redirectUris.length === 0 || submitting} aria-busy={submitting}
+              className="h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
+              data-testid="oauth-create-submit">
+              {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
+              {t.create}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 const AddRedirectForm = ({ clientId, mutation, t }) => {
   const [value, setValue] = useState('');
   const [error, setError] = useState('');
@@ -296,9 +416,10 @@ const AddRedirectForm = ({ clientId, mutation, t }) => {
     if (!value.trim() || mutation.isPending) return;
     setError('');
     try {
-      await mutation.mutateAsync({ clientId, redirectUri: value.trim() });
+      const result = await mutation.mutateAsync({ clientId, redirectUri: value.trim() });
       setValue('');
       toast.success(t.redirectAdded);
+      reportSharedRedirects(result?.warnings, t);
     } catch (err) {
       setError(errorDetail(err, t.redirectError));
     }
@@ -312,23 +433,84 @@ const AddRedirectForm = ({ clientId, mutation, t }) => {
           id={`oauth-redirect-${clientId}`}
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="https://chatgpt.com/connector/oauth/…"
+          placeholder="https://…"
           maxLength={512}
           autoComplete="off"
           inputMode="url"
           className="h-10 bg-slate-900/50 border-slate-700 text-white font-mono text-sm"
           aria-invalid={!!error}
           aria-describedby={error ? `oauth-redirect-error-${clientId}` : undefined}
-          data-testid="oauth-redirect-input"
+          data-testid={`oauth-redirect-input-${clientId}`}
         />
         <Button type="submit" variant="outline" className="h-10 shrink-0 border-slate-700 transition-colors"
-          disabled={!value.trim() || mutation.isPending} data-testid="oauth-redirect-add">
+          disabled={!value.trim() || mutation.isPending} data-testid={`oauth-redirect-add-${clientId}`}>
           {mutation.isPending ? <Loader2 className="animate-spin" /> : <Plus />}
           {t.addRedirect}
         </Button>
       </div>
       {error && <p id={`oauth-redirect-error-${clientId}`} role="alert" className="text-sm text-red-400">{error}</p>}
     </form>
+  );
+};
+
+const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, onConfirm, onReactivate, t }) => {
+  const state = connectionState(status, client);
+  const id = client.client_id;
+  return (
+    <li className={`p-4 rounded-lg border flex flex-col gap-4 ${client.active ? 'border-slate-700 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
+      data-testid={`oauth-client-${id}`}>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <AppWindow size={16} className="text-gold shrink-0" aria-hidden="true" />
+          <p className="text-white font-medium break-words min-w-0" data-testid={`oauth-client-name-${id}`}>{client.name}</p>
+          <Badge className={STATE_STYLE[state]} testId={`oauth-client-state-${id}`}>{t.state[state]}</Badge>
+        </div>
+        <p className="text-xs text-slate-400">{t.stateHelp[state]}</p>
+        <p className="text-xs text-slate-500">{t.connections(client.active_grants ?? 0)}</p>
+      </div>
+
+      <div className="flex flex-col gap-3 p-3 rounded-lg border border-gold/20 bg-gold/5" data-testid={`oauth-values-${id}`}>
+        <p className="text-sm text-white font-medium break-words">{t.valuesTitle(client.name)}</p>
+        <CopyField label={t.mcpUrl} value={status.mcp_url} testId={`oauth-mcp-url-${id}`} t={t} />
+        <CopyField label={t.clientId} value={id} testId={`oauth-client-id-${id}`} t={t} />
+        <p className="text-xs text-slate-400">{t.secretNote}</p>
+        <p className="text-xs text-slate-500">{t.authMethod}</p>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <p className="text-xs text-slate-500 flex items-center gap-1.5"><Link2 size={12} aria-hidden="true" />{t.redirects}</p>
+        <ul className="flex flex-col gap-1" data-testid={`oauth-redirect-list-${id}`}>
+          {client.redirect_uris.map(uri => (
+            <li key={uri} className="font-mono text-xs text-slate-300 break-all">{uri}</li>
+          ))}
+        </ul>
+        <AddRedirectForm clientId={id} mutation={addRedirectUri} t={t} />
+      </div>
+
+      <div className="flex flex-col sm:flex-row gap-2">
+        <Button variant="outline" onClick={() => onConfirm({ kind: 'rotate', client })} disabled={busy}
+          className="h-10 border-slate-700 transition-colors" data-testid={`oauth-rotate-${id}`}>
+          {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+          {t.rotate}
+        </Button>
+        {client.active ? (
+          <Button variant="outline" onClick={() => onConfirm({ kind: 'deactivate', client })}
+            disabled={setClientActive.isPending}
+            className="h-10 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
+            data-testid={`oauth-deactivate-${id}`}>
+            <Ban />
+            {t.deactivate}
+          </Button>
+        ) : (
+          <Button onClick={() => onReactivate(client)} disabled={setClientActive.isPending}
+            className="h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
+            data-testid={`oauth-reactivate-${id}`}>
+            <Power />
+            {t.reactivate}
+          </Button>
+        )}
+      </div>
+    </li>
   );
 };
 
@@ -342,22 +524,29 @@ export const OAuthConnectionsPanel = () => {
   // Le secret ne vit que dans ce state local : effacé à la fermeture, détruit au démontage.
   const [credentials, setCredentials] = useState(null);
   const [confirm, setConfirm] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const [busyClient, setBusyClient] = useState(null);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const s = status.data;
   const clientList = clients.data ?? [];
-  const client = clientList.find(c => c.name.toLowerCase() === 'chatgpt') || clientList[0] || null;
-  const state = connectionState(s, client);
 
-  const runSecretAction = async (action, fallback) => {
-    if (busy) return;
-    setBusy(true);
+  const handleCreate = async (definition) => {
+    const created = await createClient(definition);
+    setCreateOpen(false);
+    reportSharedRedirects(created.warnings, t);
+    setCredentials({ name: created.name, client_id: created.client_id, client_secret: created.client_secret });
+  };
+
+  const rotate = async (client) => {
+    if (busyClient) return;
+    setBusyClient(client.client_id);
     try {
-      setCredentials(await action());
+      const rotated = await rotateSecret(client.client_id);
+      setCredentials({ name: client.name, client_id: rotated.client_id, client_secret: rotated.client_secret });
     } catch (err) {
-      toast.error(errorDetail(err, fallback));
+      toast.error(errorDetail(err, t.rotateError));
     } finally {
-      setBusy(false);
+      setBusyClient(null);
     }
   };
 
@@ -373,7 +562,7 @@ export const OAuthConnectionsPanel = () => {
         await setClientActive.mutateAsync({ clientId: current.client.client_id, active: false });
         toast.success(t.deactivated);
       } else if (current.kind === 'rotate') {
-        await runSecretAction(() => rotateSecret(current.client.client_id), t.rotateError);
+        await rotate(current.client);
       } else if (current.kind === 'revoke') {
         await revokeGrant.mutateAsync(current.grant.id);
         toast.success(t.revoked);
@@ -409,18 +598,20 @@ export const OAuthConnectionsPanel = () => {
   const confirmProps = confirm && {
     open: { title: t.openTitle, text: t.openText, confirmLabel: t.open, danger: false },
     cut: { title: t.cutTitle, text: t.cutText, confirmLabel: t.cut, danger: true },
-    deactivate: { title: t.deactivateTitle, text: t.deactivateText(confirm.client?.active_grants ?? 0), confirmLabel: t.deactivate, danger: true },
-    rotate: { title: t.rotateTitle, text: t.rotateText, confirmLabel: t.rotate, danger: false },
-    revoke: { title: t.revokeTitle, text: t.revokeText, confirmLabel: t.revoke, danger: true },
+    deactivate: {
+      title: t.deactivateTitle(confirm.client?.name), text: t.deactivateText(confirm.client?.active_grants ?? 0),
+      confirmLabel: t.deactivate, danger: true,
+    },
+    rotate: { title: t.rotateTitle(confirm.client?.name), text: t.rotateText, confirmLabel: t.rotate, danger: false },
+    revoke: { title: t.revokeTitle, text: t.revokeText(confirm.grant?.client_name), confirmLabel: t.revoke, danger: true },
   }[confirm.kind];
 
   return (
     <div className="flex flex-col gap-4" data-testid="oauth-panel">
       <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
         <p className="text-slate-400 text-sm">{t.intro}</p>
-        <Badge className={STATE_STYLE[state]} testId="oauth-state">{t.state[state]}</Badge>
+        <Badge className={SERVICE_STYLE[s.service]} testId="oauth-service-state">{t.service[s.service]}</Badge>
       </div>
-      <p className="text-sm text-slate-300 -mt-2" data-testid="oauth-state-help">{t.stateHelp[state]}</p>
 
       {/* Service */}
       <div className="p-4 rounded-lg border border-slate-700 bg-slate-900/40 flex flex-col gap-3" data-testid="oauth-service">
@@ -451,71 +642,32 @@ export const OAuthConnectionsPanel = () => {
         )}
       </div>
 
-      {/* Client */}
-      {!client ? (
-        <div className="text-center py-8 px-4 border border-dashed border-slate-700 rounded-lg" data-testid="oauth-client-empty">
-          <KeyRound className="mx-auto mb-3 text-slate-500" aria-hidden="true" />
-          <p className="text-white font-medium mb-3">{t.clientTitle}</p>
-          <Button onClick={() => runSecretAction(createClient, t.createError)} disabled={busy} aria-busy={busy}
-            className="h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
-            data-testid="oauth-create-client">
-            {busy ? <Loader2 className="animate-spin" /> : <Plus />}
-            {t.createClient}
+      {/* Applications clientes */}
+      <div className="flex flex-col gap-2" data-testid="oauth-clients">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 justify-between">
+          <p className="text-white font-medium">{t.clientsTitle}</p>
+          <Button onClick={() => setCreateOpen(true)}
+            className="h-10 self-start sm:self-auto bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
+            data-testid="oauth-add-client">
+            <Plus />
+            {t.addClient}
           </Button>
         </div>
-      ) : (
-        <div className={`p-4 rounded-lg border flex flex-col gap-4 ${client.active ? 'border-slate-700 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
-          data-testid="oauth-client">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-white font-medium">{t.clientTitle}</p>
-            <Badge className={client.active ? STATE_STYLE.active : STATE_STYLE.disabled} testId="oauth-client-status">
-              {client.active ? t.clientActive : t.clientInactive}
-            </Badge>
+        {clientList.length === 0 ? (
+          <div className="text-center py-8 px-4 border border-dashed border-slate-700 rounded-lg" data-testid="oauth-clients-empty">
+            <KeyRound className="mx-auto mb-3 text-slate-500" aria-hidden="true" />
+            <p className="text-sm text-slate-400">{t.clientsEmpty}</p>
           </div>
-
-          <div className="flex flex-col gap-3 p-3 rounded-lg border border-gold/20 bg-gold/5" data-testid="oauth-chatgpt-values">
-            <p className="text-sm text-white font-medium">{t.chatgptTitle}</p>
-            <CopyField label={t.mcpUrl} value={s.mcp_url} testId="oauth-mcp-url" t={t} />
-            <CopyField label={t.clientId} value={client.client_id} testId="oauth-client-id" t={t} />
-            <p className="text-xs text-slate-400">{t.secretNote}</p>
-            <p className="text-xs text-slate-500">{t.authMethod}</p>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-slate-500 flex items-center gap-1.5"><Link2 size={12} aria-hidden="true" />{t.redirects}</p>
-            <ul className="flex flex-col gap-1" data-testid="oauth-redirect-list">
-              {client.redirect_uris.map(uri => (
-                <li key={uri} className="font-mono text-xs text-slate-300 break-all">{uri}</li>
-              ))}
-            </ul>
-            <AddRedirectForm clientId={client.client_id} mutation={addRedirectUri} t={t} />
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setConfirm({ kind: 'rotate', client })} disabled={busy}
-              className="h-10 border-slate-700 transition-colors" data-testid="oauth-rotate-secret">
-              {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-              {t.rotate}
-            </Button>
-            {client.active ? (
-              <Button variant="outline" onClick={() => setConfirm({ kind: 'deactivate', client })}
-                disabled={setClientActive.isPending}
-                className="h-10 border-red-500/40 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors"
-                data-testid="oauth-deactivate">
-                <Ban />
-                {t.deactivate}
-              </Button>
-            ) : (
-              <Button onClick={() => reactivate(client)} disabled={setClientActive.isPending}
-                className="h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
-                data-testid="oauth-reactivate">
-                <Power />
-                {t.reactivate}
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {clientList.map(c => (
+              <ClientCard key={c.client_id} client={c} status={s} busy={busyClient === c.client_id}
+                addRedirectUri={addRedirectUri} setClientActive={setClientActive}
+                onConfirm={setConfirm} onReactivate={reactivate} t={t} />
+            ))}
+          </ul>
+        )}
+      </div>
 
       {/* Autorisations */}
       <div className="flex flex-col gap-2" data-testid="oauth-grants">
@@ -534,7 +686,7 @@ export const OAuthConnectionsPanel = () => {
                   <div className="flex flex-col sm:flex-row sm:items-start gap-2 justify-between">
                     <div className="min-w-0 flex flex-col gap-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-white text-sm font-medium">{g.client_name}</p>
+                        <p className="text-white text-sm font-medium break-words">{g.client_name}</p>
                         <Badge className={usable ? STATE_STYLE.active : STATE_STYLE.disabled}>{t.grantStatus[g.status] || g.status}</Badge>
                         {g.alert && <Badge className={STATE_STYLE.configured}>{t.alerts[g.alert] || g.alert}</Badge>}
                       </div>
@@ -561,6 +713,15 @@ export const OAuthConnectionsPanel = () => {
           </ul>
         )}
       </div>
+
+      <CreateClientDialog
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreate={handleCreate}
+        presets={s.presets ?? []}
+        existingNames={clientList.map(c => c.name.toLowerCase())}
+        t={t}
+      />
 
       <ConfirmDialog
         open={!!confirm}

@@ -81,33 +81,33 @@ def _parse(model, arguments: dict):
 # OUTILS
 # ============================================
 
-async def _get_watch_preferences(db, user_id: str, arguments: dict) -> dict:
+async def _get_watch_preferences(db, user_id: str, arguments: dict, client_id: str) -> dict:
     _parse(_NoArguments, arguments)
     await watch_ingest_service.require_enabled(db, user_id)
     prefs = await watch_preferences_service.get_or_create(db, user_id)
     return prefs.model_dump(mode="json")
 
 
-async def _create_opportunities(db, user_id: str, arguments: dict) -> dict:
-    result = await watch_ingest_service.ingest_batch(db, user_id, arguments)
+async def _create_opportunities(db, user_id: str, arguments: dict, client_id: str) -> dict:
+    result = await watch_ingest_service.ingest_batch(db, user_id, arguments, client_id=client_id)
     return result.model_dump(mode="json")
 
 
-async def _list_recent_opportunities(db, user_id: str, arguments: dict) -> dict:
+async def _list_recent_opportunities(db, user_id: str, arguments: dict, client_id: str) -> dict:
     args = _parse(_RecentArguments, arguments)
     await watch_ingest_service.require_enabled(db, user_id)
     return await opportunity_service.list_recent_summary(db, user_id, args.days, args.limit)
 
 
-async def _get_watch_status(db, user_id: str, arguments: dict) -> dict:
+async def _get_watch_status(db, user_id: str, arguments: dict, client_id: str) -> dict:
     _parse(_NoArguments, arguments)
     await watch_ingest_service.require_enabled(db, user_id)
     status = await watch_ingest_service.get_status(db, user_id)
     return {"service": "ok", **status.model_dump(mode="json")}
 
 
-async def _report_watch_run(db, user_id: str, arguments: dict) -> dict:
-    result = await watch_ingest_service.report_watch_run(db, user_id, arguments)
+async def _report_watch_run(db, user_id: str, arguments: dict, client_id: str) -> dict:
+    result = await watch_ingest_service.report_watch_run(db, user_id, arguments, client_id=client_id)
     return result.model_dump(mode="json")
 
 
@@ -232,9 +232,13 @@ TOOLS = [
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
-async def call_tool(db, user_id: str, name: str, arguments) -> tuple:
+IDENTITY_ARGUMENTS = ("user_id", "client_id", "source")
+
+
+async def call_tool(db, user_id: str, name: str, arguments, client_id: Optional[str] = None) -> tuple:
     """
-    Exécute un outil métier pour `user_id` (issu du grant). Retourne (payload, is_error).
+    Exécute un outil métier pour `user_id` et `client_id`, tous deux issus du grant OAuth
+    vérifié (jamais des arguments). Retourne (payload, is_error).
     Le scope a déjà été vérifié par le transport ; il est revérifié par l'appelant.
     """
     spec = TOOLS_BY_NAME.get(name)
@@ -245,12 +249,12 @@ async def call_tool(db, user_id: str, name: str, arguments) -> tuple:
     try:
         if not isinstance(arguments, dict):
             raise ToolError("invalid_arguments", [{"loc": [], "type": "dict_type"}])
-        if "user_id" in arguments or "source" in arguments:
-            # Propriétaire et source sont imposés par le serveur (spécification §5.2)
+        if any(k in arguments for k in IDENTITY_ARGUMENTS):
+            # Propriétaire, client et source sont imposés par le serveur (§5.2, P1.4)
             raise ToolError("invalid_arguments", [{"loc": [k], "type": "extra_forbidden"}
-                                                  for k in ("user_id", "source") if k in arguments])
-        payload = await spec.handler(db, user_id, arguments)
-        logger.info("mcp_tool name=%s user_id=%s result=ok", name, user_id)
+                                                  for k in IDENTITY_ARGUMENTS if k in arguments])
+        payload = await spec.handler(db, user_id, arguments, client_id)
+        logger.info("mcp_tool name=%s user_id=%s client_id=%s result=ok", name, user_id, client_id)
         return payload, False
     except ToolError as e:
         error = {"code": e.code, "details": e.details}

@@ -125,10 +125,15 @@ async def get_consent_request(request_id: str, db=Depends(oauth_available), curr
         # 404 introuvable, 410 expirée, 409 déjà utilisée : la page explique quoi faire
         code = {oauth_service.REQUEST_EXPIRED: 410, oauth_service.REQUEST_USED: 409}.get(error, 404)
         return JSONResponse(status_code=code, content={"error": error}, headers=SECURE)
+    try:
+        # Domaine de retour REVALIDÉ côté serveur : l'utilisateur voit où il sera renvoyé (P1.1)
+        redirect_domain = oauth_service.redirect_host(req["redirect_uri"])
+    except ValueError:
+        return JSONResponse(status_code=400, content={"error": "invalid_request"}, headers=SECURE)
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "email": 1, "full_name": 1})
     return JSONResponse(headers=SECURE, content={
         "request_id": req["id"],
-        "client": {"name": req["client_name"]},
+        "client": {"name": req["client_name"], "redirect_domain": redirect_domain},
         "scopes": [{"scope": s, "description": oauth_service.SCOPE_DESCRIPTIONS[s]} for s in req["scopes"]],
         "account": {"email": (user or {}).get("email"), "name": (user or {}).get("full_name")},
         "eligible": await oauth_service.user_is_eligible(db, current_user["user_id"]),

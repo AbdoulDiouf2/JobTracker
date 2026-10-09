@@ -20,7 +20,7 @@ const CONTINUE_URL = 'https://jobtracker.maadec.com/api/oauth/continue?ticket=Tk
 
 const details = (overrides = {}) => ({
   request_id: REQUEST_ID,
-  client: { name: 'ChatGPT' },
+  client: { name: 'ChatGPT', redirect_domain: 'chatgpt.com' },
   scopes: [
     { scope: 'watch:read', description: 'Lire tes critères de veille, l\'état du service et un résumé de tes opportunités récentes' },
     { scope: 'opportunities:write', description: 'Ajouter de nouvelles opportunités (statut « nouveau ») et le compte-rendu de chaque veille' },
@@ -203,4 +203,53 @@ describe('OAuthConsentPage — anti-clickjacking', () => {
 
 test('axiosError reste disponible pour les autres suites', () => {
   expect(axiosError(400, 'x').response.status).toBe(400);
+});
+
+describe('OAuthConsentPage — client générique (P1.1)', () => {
+  test('affiche le vrai nom du client et son domaine de retour, sans mention de ChatGPT', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: 'Agent MAADEC', redirect_domain: 'agent.maadec.com' } }) });
+    api.post.mockResolvedValue({ data: { continue_url: CONTINUE_URL } });
+    renderPage();
+    const form = await screen.findByTestId('consent-form');
+    expect(within(form).getByRole('heading', { level: 1 })).toHaveTextContent('Autoriser Agent MAADEC');
+    expect(screen.getByTestId('consent-redirect-domain')).toHaveTextContent('agent.maadec.com');
+    expect(screen.getByText('Ce que Agent MAADEC pourra faire')).toBeInTheDocument();
+    expect(screen.getByText('Ce que Agent MAADEC ne pourra jamais faire')).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/ChatGPT/);
+    await userEvent.click(screen.getByRole('button', { name: 'Autoriser' }));
+    expect(await screen.findByText('Retour vers agent.maadec.com…')).toBeInTheDocument();
+  });
+
+  test('client sans nom : jamais « ChatGPT » en remplacement', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: '  ', redirect_domain: 'agent.maadec.com' } }) });
+    renderPage();
+    const form = await screen.findByTestId('consent-form');
+    expect(within(form).getByRole('heading', { level: 1 })).toHaveTextContent('Autoriser Application non identifiée');
+    expect(document.body.textContent).not.toMatch(/ChatGPT/);
+  });
+
+  test('sans domaine de retour vérifié : aucun formulaire de consentement', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: 'Agent MAADEC' } }) });
+    renderPage();
+    expect(await screen.findByTestId('consent-error-generic')).toBeInTheDocument();
+    expect(screen.queryByTestId('consent-form')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Autoriser' })).toBeNull();
+  });
+
+  test('nom et domaine rendus comme du texte (aucune interprétation HTML)', async () => {
+    const name = '<img src=x onerror="window.__pwned=1">Agent';
+    api.get.mockResolvedValue({ data: details({ client: { name, redirect_domain: 'agent.maadec.com' } }) });
+    renderPage();
+    const form = await screen.findByTestId('consent-form');
+    expect(within(form).getByRole('heading', { level: 1 })).toHaveTextContent(`Autoriser ${name}`);
+    expect(document.querySelector('img')).toBeNull();
+    expect(window.__pwned).toBeUndefined();
+  });
+
+  test('compte non éligible : retour proposé vers le vrai client', async () => {
+    api.get.mockResolvedValue({ data: details({ eligible: false, client: { name: 'Agent MAADEC', redirect_domain: 'agent.maadec.com' } }) });
+    renderPage();
+    expect(await screen.findByRole('button', { name: 'Refuser et revenir à Agent MAADEC' })).toBeInTheDocument();
+    expect(screen.getByText(/La veille n'est pas activée pour ce compte/)).toBeInTheDocument();
+  });
 });

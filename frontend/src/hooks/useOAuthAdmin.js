@@ -24,8 +24,8 @@ export const useOAuthAdmin = () => {
    * client_secret, qui ne doit jamais entrer dans le cache TanStack. Seul l'appelant le
    * reçoit, pour l'afficher une fois puis l'oublier.
    */
-  const createClient = async () => {
-    const response = await api.post(`${BASE}/clients`);
+  const createClient = async ({ name, redirectUris }) => {
+    const response = await api.post(`${BASE}/clients`, { name, redirect_uris: redirectUris });
     invalidate();
     return response.data;
   };

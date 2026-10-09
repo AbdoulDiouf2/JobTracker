@@ -129,7 +129,8 @@ def _build_server():
         # Défense en profondeur : identité et scope revérifiés au plus près de l'outil
         if principal is None or spec.scope not in principal.scopes:
             return tool_result({"error": {"code": "insufficient_scope", "scope": spec.scope}}, True)
-        payload, is_error = await mcp_tools.call_tool(db_provider(), principal.user_id, spec.name, params.arguments)
+        payload, is_error = await mcp_tools.call_tool(db_provider(), principal.user_id, spec.name, params.arguments,
+                                                      client_id=principal.client_id)
         return tool_result(payload, is_error)
 
     return Server(SERVER_NAME, version="0.1.0", on_list_tools=on_list_tools, on_call_tool=on_call_tool)

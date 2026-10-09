@@ -231,16 +231,40 @@ def _validate_redirect_uri(uri: str) -> str:
     return validate_redirect_uri(uri)
 
 
+def redirect_host(uri: str) -> str:
+    """Domaine de retour affiché au consentement (P1.1) : l'adresse est REVALIDÉE (stricte),
+    puis seul le nom d'hôte est renvoyé. ValueError si l'adresse n'est pas conforme."""
+    return urlsplit(validate_redirect_uri(uri)).hostname
+
+
+MAX_REDIRECT_URIS = 10
+_CLIENT_NAME_FORBIDDEN = re.compile(r"[\x00-\x1f\x7f<>]")
+
+
+def validate_client_name(name) -> str:
+    """Nom affiché à l'utilisateur au consentement : requis, 1 à 100 caractères, sans
+    caractère de contrôle ni chevron. Jamais de valeur de remplacement implicite."""
+    if not isinstance(name, str) or not name.strip():
+        raise ValueError("nom du client requis")
+    name = " ".join(name.split())
+    if len(name) > 100 or _CLIENT_NAME_FORBIDDEN.search(name):
+        raise ValueError("nom du client invalide : 100 caractères au plus, sans caractère de contrôle ni chevron")
+    return name
+
+
 async def create_client(db, name: str, redirect_uris: List[str]) -> dict:
     """Crée un client confidentiel. Le secret brut n'est renvoyé QU'UNE fois."""
     await ensure_indexes(db)
-    uris = [_validate_redirect_uri(u) for u in redirect_uris]
+    name = validate_client_name(name)
+    uris = list(dict.fromkeys(_validate_redirect_uri(u) for u in redirect_uris))
     if not uris:
         raise ValueError("au moins une redirect_uri est requise")
+    if len(uris) > MAX_REDIRECT_URIS:
+        raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
     client_id = CLIENT_PREFIX + secrets.token_urlsafe(16)
     secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32)
     await db[CLIENTS].insert_one({
-        "client_id": client_id, "name": name.strip()[:100] or "ChatGPT", "secret_hash": hash_secret(secret),
+        "client_id": client_id, "name": name, "secret_hash": hash_secret(secret),
         "redirect_uris": uris, "active": True, "created_at": _now(), "secret_rotated_at": _now(),
     })
     logger.info("oauth_client_created client_id=%s", client_id)
@@ -255,6 +279,8 @@ async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
         raise ValueError("client inconnu")
     if uri in client["redirect_uris"]:
         return client["redirect_uris"]
+    if len(client["redirect_uris"]) >= MAX_REDIRECT_URIS:
+        raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
     await db[CLIENTS].update_one({"client_id": client_id}, {"$addToSet": {"redirect_uris": uri}})
     logger.info("oauth_client_redirect_added client_id=%s", client_id)
     return client["redirect_uris"] + [uri]
@@ -334,6 +360,11 @@ async def create_authorization_request(db, params: dict) -> dict:
         raise OAuthError("invalid_client", "Client inconnu")
     redirect_uri = params.get("redirect_uri")
     if not redirect_uri or redirect_uri not in client["redirect_uris"]:
+        raise OAuthError("invalid_request", "redirect_uri non autorisée")
+    try:
+        # Défense en profondeur : l'adresse enregistrée doit rester conforme (domaine affiché)
+        redirect_host(redirect_uri)
+    except ValueError:
         raise OAuthError("invalid_request", "redirect_uri non autorisée")
 
     if params.get("response_type") != "code":

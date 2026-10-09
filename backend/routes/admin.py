@@ -15,7 +15,7 @@ from models import (
     sent_applications_filter
 )
 from passlib.context import CryptContext
-from pydantic import BaseModel, ConfigDict, StrictBool
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 import logging
 import uuid
 
@@ -597,7 +597,12 @@ async def set_mcp_kill_switch(
 
 # Réponses contenant un secret : jamais mises en cache (navigateur, proxy, CDN)
 NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
-CHATGPT_CLIENT_NAME = "ChatGPT"
+
+
+def _client_presets() -> list:
+    """Préréglages FACULTATIFS proposés à la création (P1.2). Aucun n'est imposé."""
+    from services.oauth_service import CHATGPT_DEFAULT_REDIRECT
+    return [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_DEFAULT_REDIRECT]}]
 
 
 async def get_webapp_admin(
@@ -617,6 +622,26 @@ class OAuthRedirectUriAdd(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     redirect_uri: str
+
+
+class OAuthClientCreate(BaseModel):
+    """Client confidentiel pré-enregistré : nom affiché au consentement et adresses de retour
+    EXACTES en HTTPS (validées par le service OAuth)."""
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(..., max_length=200)
+    redirect_uris: List[str] = Field(..., min_length=1, max_length=10)
+
+
+def _redirect_collisions(clients: list, uris: list, exclude_client_id: Optional[str] = None) -> list:
+    """Adresses de retour déjà enregistrées sur un AUTRE client. Autorisé (deux connecteurs d'une
+    même plateforme partagent légitimement son adresse de retour : le code reste lié au client_id),
+    mais signalé explicitement à l'administrateur."""
+    return [
+        {"code": "redirect_uri_shared", "redirect_uri": uri, "client_id": c["client_id"], "client_name": c["name"]}
+        for uri in uris for c in clients
+        if c["client_id"] != exclude_client_id and uri in c["redirect_uris"]
+    ]
 
 
 class OAuthClientActiveUpdate(BaseModel):
@@ -651,6 +676,7 @@ async def get_oauth_status(admin_user: dict = Depends(get_webapp_admin), db = De
                  "production_allowed": bool(settings.MCP_PRODUCTION_ALLOWED)},
         "owner_watch_enabled": admin_user.get("watch_enabled") is True,
         "mcp_url": canonical_resource(),
+        "presets": _client_presets(),
     }
 
 
@@ -663,25 +689,36 @@ async def get_oauth_clients(admin_user: dict = Depends(get_webapp_admin), db = D
 
 @router.post("/oauth/clients", status_code=status.HTTP_201_CREATED)
 async def create_oauth_client(
+    data: OAuthClientCreate,
     response: Response,
     admin_user: dict = Depends(get_webapp_admin),
     db = Depends(get_db)
 ):
     """
-    Crée LE client ChatGPT (adresse de retour par défaut). Le secret n'est renvoyé QU'UNE fois.
-    Refus si un client ChatGPT existe déjà, actif ou non : le réactiver plutôt que créer un doublon.
+    Crée un client OAuth (plusieurs clients possibles). Le secret n'est renvoyé QU'UNE fois.
+    Nom unique sans tenir compte de la casse, client désactivé compris : le réactiver plutôt
+    que créer un doublon. Adresse de retour déjà utilisée par un autre client : acceptée et
+    signalée (`warnings`).
     """
-    from services.oauth_service import create_client, list_clients, CHATGPT_DEFAULT_REDIRECT
-    if any(c["name"].strip().lower() == CHATGPT_CLIENT_NAME.lower() for c in await list_clients(db)):
+    from services.oauth_service import create_client, list_clients, validate_client_name, validate_redirect_uri
+    try:
+        name = validate_client_name(data.name)
+        uris = list(dict.fromkeys(validate_redirect_uri(u) for u in data.redirect_uris))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    clients = await list_clients(db)
+    taken = next((c for c in clients if c["name"].casefold() == name.casefold()), None)
+    if taken:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Un client ChatGPT existe déjà : réactivez-le ou régénérez son secret"
+            detail=(f"Un client nommé « {taken['name']} » existe déjà"
+                    + (" : réactivez-le plutôt que d'en créer un nouveau" if not taken["active"] else "")),
         )
-    created = await create_client(db, CHATGPT_CLIENT_NAME, [CHATGPT_DEFAULT_REDIRECT])
+    created = await create_client(db, name, uris)
     response.headers.update(NO_STORE)
     logger.info("oauth_client_created_by_admin admin_id=%s client_id=%s", admin_user["id"], created["client_id"])
-    return {"client_id": created["client_id"], "client_secret": created["client_secret"],
-            "redirect_uris": created["redirect_uris"]}
+    return {"client_id": created["client_id"], "client_secret": created["client_secret"], "name": name,
+            "redirect_uris": created["redirect_uris"], "warnings": _redirect_collisions(clients, uris)}
 
 
 @router.post("/oauth/clients/{client_id}/redirect-uris")
@@ -692,14 +729,15 @@ async def add_oauth_redirect_uri(
     db = Depends(get_db)
 ):
     """Ajoute une adresse de retour EXACTE (validation stricte du service OAuth)."""
-    from services.oauth_service import add_redirect_uri
+    from services.oauth_service import add_redirect_uri, list_clients
     await _oauth_client_or_404(db, client_id)
     try:
         uris = await add_redirect_uri(db, client_id, data.redirect_uri)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     logger.info("oauth_redirect_added_by_admin admin_id=%s client_id=%s", admin_user["id"], client_id)
-    return {"client_id": client_id, "redirect_uris": uris}
+    warnings = _redirect_collisions(await list_clients(db), [data.redirect_uri], exclude_client_id=client_id)
+    return {"client_id": client_id, "redirect_uris": uris, "warnings": warnings}
 
 
 @router.put("/oauth/clients/{client_id}/active")

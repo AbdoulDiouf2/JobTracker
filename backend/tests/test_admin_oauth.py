@@ -23,6 +23,7 @@ from test_oauth import (HOST, ISSUER, LIST, REDIRECT, RESOURCE, do_refresh, enab
 pytestmark = pytest.mark.anyio
 
 BASE = "/api/admin/oauth"
+CHATGPT = {"name": "ChatGPT", "redirect_uris": [REDIRECT]}
 
 
 @pytest.fixture(autouse=True)
@@ -55,7 +56,7 @@ async def service_open(db):
 
 
 async def create(api, admin):
-    r = await api.post(f"{BASE}/clients", headers=admin)
+    r = await api.post(f"{BASE}/clients", json=CHATGPT, headers=admin)
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -85,7 +86,7 @@ async def test_routes_require_admin_webapp_session(api, db, admin, method, path)
 
 async def test_create_returns_secret_once_and_never_again(api, db, admin, caplog):
     caplog.set_level(logging.DEBUG)
-    r = await api.post(f"{BASE}/clients", headers=admin)
+    r = await api.post(f"{BASE}/clients", json=CHATGPT, headers=admin)
     assert r.status_code == 201
     assert "no-store" in r.headers["cache-control"]
     body = r.json()
@@ -106,10 +107,10 @@ async def test_create_returns_secret_once_and_never_again(api, db, admin, caplog
 
 async def test_no_duplicate_even_when_deactivated(api, db, admin):
     created = await create(api, admin)
-    r = await api.post(f"{BASE}/clients", headers=admin)
+    r = await api.post(f"{BASE}/clients", json=CHATGPT, headers=admin)
     assert r.status_code == 409 and "client_secret" not in r.text
     await api.put(f"{BASE}/clients/{created['client_id']}/active", json={"active": False}, headers=admin)
-    assert (await api.post(f"{BASE}/clients", headers=admin)).status_code == 409
+    assert (await api.post(f"{BASE}/clients", json=CHATGPT, headers=admin)).status_code == 409
     assert await db.oauth_clients.count_documents({}) == 1
 
 
@@ -253,7 +254,8 @@ async def test_status(api, db, admin, monkeypatch, vercel_env, enabled, allowed,
     assert body == {"service": expected, "mcp_enabled": expected != "unavailable", "kill_switch_active": kill,
                     "production": vercel_env == "production",
                     "keys": {"mcp_enabled": enabled, "production_allowed": allowed},
-                    "owner_watch_enabled": True, "mcp_url": RESOURCE}
+                    "owner_watch_enabled": True, "mcp_url": RESOURCE,
+                    "presets": [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [REDIRECT]}]}
 
 
 async def test_kill_switch_closed_by_default_in_status(api, db, admin):

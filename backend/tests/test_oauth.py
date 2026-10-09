@@ -299,7 +299,7 @@ async def test_consent_details(api, db):
     r = await api.get(f"/api/oauth/requests/{request_id}", headers=api.headers_for("a"))
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     body = r.json()
-    assert body["client"] == {"name": "ChatGPT"} and body["eligible"] is True
+    assert body["client"] == {"name": "ChatGPT", "redirect_domain": "chatgpt.com"} and body["eligible"] is True
     assert [s["scope"] for s in body["scopes"]] == ["watch:read", "opportunities:write"]
     assert all(s["description"] for s in body["scopes"])
 

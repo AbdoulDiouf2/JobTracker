@@ -1095,6 +1095,8 @@ class OpportunityWatchInfo(BaseModel):
     preferences_version: Optional[int] = None
     contract_category: Optional[str] = None  # contrat normalisé (permanent, fixed_term...)
     seniority: Optional[str] = None  # niveau normalisé, si fourni
+    # Client OAuth VÉRIFIÉ (grant) ayant créé l'offre (P1.4). Absent des offres antérieures.
+    client_id: Optional[str] = None
 
 
 class Opportunity(BaseModel):

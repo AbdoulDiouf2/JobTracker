@@ -122,8 +122,10 @@ async def require_enabled(db, user_id: str) -> None:
 # EXÉCUTIONS
 # ============================================
 
-async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime) -> ParsedRunId:
-    """Valide le run_id (fenêtre « reprise » si déjà connu) et enregistre l'exécution."""
+async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime,
+                    client_id: Optional[str] = None) -> ParsedRunId:
+    """Valide le run_id (fenêtre « reprise » si déjà connu) et enregistre l'exécution.
+    `client_id` : client OAuth VÉRIFIÉ, ajouté à `client_ids` (traçabilité, P1.4)."""
     runs = db[RUNS]
     known = await runs.find_one({"user_id": user_id, "run_id": run_id}, {"_id": 1}) is not None
     try:
@@ -153,11 +155,13 @@ async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime) -
         },
         "$set": {"last_seen_at": now.isoformat()},
     }
+    if client_id:
+        update["$addToSet"] = {"client_ids": client_id}
     try:
         await runs.update_one(query, update, upsert=True)
     except DuplicateKeyError:
         # Premier appel concurrent de la même exécution : le document existe désormais
-        await runs.update_one(query, {"$set": update["$set"]})
+        await runs.update_one(query, {k: v for k, v in update.items() if k != "$setOnInsert"})
     return parsed
 
 
@@ -269,6 +273,7 @@ async def _claim_item(db, key: dict, claim_id: str) -> tuple:
 
 async def _process_item(
     db, user_id: str, run: ParsedRunId, check: ItemCheck, prefs: dict, cap: int,
+    client_id: Optional[str] = None,
 ) -> WatchItemResult:
     key = {"user_id": user_id, "run_id": run.run_id, "item_key": check.item_key}
     claim_id = uuid.uuid4().hex
@@ -349,7 +354,8 @@ async def _process_item(
 
     # 3. Ingestion (service du Lot 1, upsert $setOnInsert)
     try:
-        result = await opportunity_service.ingest_opportunity(db, user_id, data, watch=check.watch)
+        watch = {**check.watch, "client_id": client_id} if client_id else check.watch
+        result = await opportunity_service.ingest_opportunity(db, user_id, data, watch=watch)
     except Exception:
         logger.exception("watch_ingest result=error user_id=%s run_id=%s", user_id, run.run_id)
         await release()
@@ -369,10 +375,13 @@ async def _process_item(
 # API DU SERVICE
 # ============================================
 
-async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] = None) -> WatchBatchResult:
+async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] = None,
+                       client_id: Optional[str] = None) -> WatchBatchResult:
     """
     Ingestion d'un envoi groupé (1 à 20 offres) pour une exécution `run_id`.
     Lève WatchNotEnabled ou WatchRequestError ; sinon un résultat PAR ÉLÉMENT.
+    `client_id` : client OAuth VÉRIFIÉ (jamais un argument de l'appelant), enregistré sur
+    l'exécution et sur chaque nouvelle offre. Le format de la réponse est inchangé.
     """
     now = now or _utcnow()
     await ensure_indexes(db)
@@ -383,13 +392,13 @@ async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] 
         raise WatchRequestError("invalid_arguments", _error_details(e))
 
     prefs = (await watch_preferences_service.get_or_create(db, user_id)).model_dump()
-    run = await _open_run(db, user_id, request.run_id, prefs, now)
+    run = await _open_run(db, user_id, request.run_id, prefs, now, client_id)
     cap = _run_cap(prefs)
 
     results = []
     for index, raw in enumerate(request.opportunities):
         check = check_item(raw, prefs, request.run_id, request.preferences_version)
-        item = await _process_item(db, user_id, run, check, prefs, cap)
+        item = await _process_item(db, user_id, run, check, prefs, cap, client_id)
         item.index = index
         results.append(item)
 
@@ -417,8 +426,10 @@ async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] 
     )
 
 
-async def report_watch_run(db, user_id: str, payload: dict, now: Optional[datetime] = None) -> WatchRunReportResult:
-    """Signal de fin d'exécution : le dernier rapport fait foi ; compteurs observés renvoyés."""
+async def report_watch_run(db, user_id: str, payload: dict, now: Optional[datetime] = None,
+                           client_id: Optional[str] = None) -> WatchRunReportResult:
+    """Signal de fin d'exécution : le dernier rapport fait foi ; compteurs observés renvoyés.
+    Le client auteur du rapport est stocké HORS de `report` (format de `last_run` inchangé)."""
     now = now or _utcnow()
     await ensure_indexes(db)
     await require_enabled(db, user_id)
@@ -428,12 +439,15 @@ async def report_watch_run(db, user_id: str, payload: dict, now: Optional[dateti
         raise WatchRequestError("invalid_arguments", _error_details(e))
 
     prefs = (await watch_preferences_service.get_or_create(db, user_id)).model_dump()
-    run = await _open_run(db, user_id, report.run_id, prefs, now)
+    run = await _open_run(db, user_id, report.run_id, prefs, now, client_id)
     declared = report.model_dump(exclude={"run_id"})
     declared["reported_at"] = now.isoformat()
+    fields = {"report": declared}
+    if client_id:
+        fields["report_client_id"] = client_id
     doc = await db[RUNS].find_one_and_update(
         {"user_id": user_id, "run_id": run.run_id},
-        {"$set": {"report": declared}, "$inc": {"report_count": 1}},
+        {"$set": fields, "$inc": {"report_count": 1}},
         projection={"_id": 0, "observed": 1},
         return_document=ReturnDocument.AFTER,
     )
