@@ -57,6 +57,7 @@ venv/
 .venv/
 
 # Development tools
+**/.claude/settings.local.json
 chainlit.md
 .chainlit
 .ipynb_checkpoints/
