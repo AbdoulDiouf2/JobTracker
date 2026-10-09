@@ -270,3 +270,28 @@ describe('OAuthConsentPage — application locale (P2.3)', () => {
     expect(screen.queryByTestId('consent-local-warning')).toBeNull();
   });
 });
+
+describe('OAuthConsentPage — identité publiée (P3, CIMD)', () => {
+  test('affiche l’hôte de l’éditeur pour un client CIMD', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: 'Claude Code', redirect_domain: 'localhost', redirect_local: true, identity_host: 'claude.ai' } }) });
+    renderPage();
+    await screen.findByTestId('consent-form');
+    expect(screen.getByTestId('consent-identity')).toHaveTextContent('Identité publiée par claude.ai');
+    expect(screen.getByTestId('consent-local-warning')).toBeInTheDocument();
+  });
+
+  test('un nom usurpé reste accompagné de l’hôte réel', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: 'ChatGPT', redirect_domain: 'vscode.dev', redirect_local: false, identity_host: 'vscode.dev' } }) });
+    renderPage();
+    await screen.findByTestId('consent-form');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Autoriser ChatGPT');
+    expect(screen.getByTestId('consent-identity')).toHaveTextContent('vscode.dev');
+  });
+
+  test('client enregistré à la main : aucune mention d’identité publiée', async () => {
+    api.get.mockResolvedValue({ data: details() });
+    renderPage();
+    await screen.findByTestId('consent-form');
+    expect(screen.queryByTestId('consent-identity')).toBeNull();
+  });
+});

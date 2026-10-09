@@ -134,7 +134,9 @@ async def get_consent_request(request_id: str, db=Depends(oauth_available), curr
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "email": 1, "full_name": 1})
     return JSONResponse(headers=SECURE, content={
         "request_id": req["id"],
-        "client": {"name": req["client_name"], "redirect_domain": redirect["host"], "redirect_local": redirect["local"]},
+        "client": {"name": req["client_name"], "redirect_domain": redirect["host"], "redirect_local": redirect["local"],
+                   # Identité publiée (CIMD) : l'hôte de l'éditeur est montré pour éviter l'usurpation de nom
+                   **({"identity_host": req.get("client_host")} if req.get("client_registration") == "cimd" else {})},
         "scopes": [{"scope": s, "description": oauth_service.SCOPE_DESCRIPTIONS[s]} for s in req["scopes"]],
         "account": {"email": (user or {}).get("email"), "name": (user or {}).get("full_name")},
         "eligible": await oauth_service.user_is_eligible(db, current_user["user_id"]),
@@ -243,4 +245,7 @@ async def protected_resource_metadata(db=Depends(discovery_available)):
 
 @well_known_router.get("/.well-known/oauth-authorization-server")
 async def authorization_server_metadata(db=Depends(discovery_available)):
-    return JSONResponse(content=oauth_service.authorization_server_metadata())
+    from services import cimd_service
+    # CIMD annoncé uniquement si la politique de l'administrateur le rend opérationnel (P3.1)
+    cimd = cimd_service.operational(await cimd_service.get_policy(db))
+    return JSONResponse(content=oauth_service.authorization_server_metadata(cimd_supported=cimd))

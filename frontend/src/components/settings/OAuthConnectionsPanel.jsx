@@ -23,6 +23,7 @@ import {
 
 const T = {
   fr: {
+    lang: 'fr',
     intro: "Connectez des applications compatibles MCP (ChatGPT, agents…) à JobTracker via OAuth. Réservé à l'administrateur.",
     state: { none: 'Non configuré', configured: 'Configuré', active: 'Actif', disabled: 'Désactivé', unavailable: 'Indisponible' },
     stateHelp: {
@@ -108,6 +109,25 @@ const T = {
     redirectRemoved: 'Adresse retirée', removeError: "Impossible de retirer l'adresse.", removeLabel: 'Retirer',
     connections: (n) => `${n} connexion(s) active(s)`,
     toggleDetails: " — afficher ou masquer les détails de l'application",
+    cimdBadge: 'Identité publiée',
+    cimdNote: (host, date) => `Identité publiée par ${host}${date ? ` — document lu le ${date}` : ''}. Pas de secret : PKCE obligatoire.`,
+    cimdRedirects: "Adresses fournies par le document de l'éditeur : non modifiables ici.",
+    cimd: {
+      title: 'Applications à identité publiée (CIMD)',
+      help: "Permet à des applications comme Claude Code, Codex ou VS Code de se connecter sans création manuelle : leur nom et leurs adresses de retour sont lus dans un document publié sur leur propre domaine. Seuls les domaines approuvés ci-dessous sont acceptés, et chaque connexion exige ton consentement.",
+      on: 'Actif — annoncé aux applications', off: 'Désactivé',
+      enable: 'Accepter les applications à identité publiée',
+      hosts: 'Domaines approuvés (un par ligne, correspondance exacte)',
+      hostsPlaceholder: 'claude.ai',
+      suggestions: 'Domaines vérifiés :',
+      scopes: 'Permissions accordées par défaut aux nouvelles applications',
+      scopesHelp: 'Lecture seule recommandée : tu pourras élargir ensuite, application par application.',
+      save: 'Enregistrer la politique', saved: 'Politique enregistrée', error: "Impossible d'enregistrer la politique.",
+      confirmTitle: 'Enregistrer la politique CIMD ?',
+      confirmEnable: (n) => `Les applications publiées par ${n} domaine(s) approuvé(s) pourront demander une connexion. Chaque connexion reste soumise à ton consentement explicite.`,
+      confirmDisable: "Aucune nouvelle application à identité publiée ne pourra se connecter. Les connexions existantes restent actives : désactive-les une par une si nécessaire.",
+      noHosts: 'Ajoute au moins un domaine pour activer.',
+    },
     grantsTitle: 'Autorisations OAuth',
     grantsEmpty: 'Aucune autorisation pour le moment.',
     grantStatus: {
@@ -128,6 +148,7 @@ const T = {
     loadError: 'Impossible de charger les connexions OAuth.', retry: 'Réessayer',
   },
   en: {
+    lang: 'en',
     intro: 'Connect MCP-compatible applications (ChatGPT, agents…) to JobTracker through OAuth. Administrator only.',
     state: { none: 'Not configured', configured: 'Configured', active: 'Active', disabled: 'Disabled', unavailable: 'Unavailable' },
     stateHelp: {
@@ -213,6 +234,25 @@ const T = {
     redirectRemoved: 'URL removed', removeError: 'Unable to remove the URL.', removeLabel: 'Remove',
     connections: (n) => `${n} active connection(s)`,
     toggleDetails: ' — show or hide the application details',
+    cimdBadge: 'Published identity',
+    cimdNote: (host, date) => `Identity published by ${host}${date ? ` — document read on ${date}` : ''}. No secret: PKCE required.`,
+    cimdRedirects: "URLs provided by the publisher's document: not editable here.",
+    cimd: {
+      title: 'Applications with a published identity (CIMD)',
+      help: 'Lets applications such as Claude Code, Codex or VS Code connect without manual creation: their name and redirect URLs are read from a document published on their own domain. Only the approved domains below are accepted, and every connection requires your consent.',
+      on: 'Active — advertised to applications', off: 'Disabled',
+      enable: 'Accept applications with a published identity',
+      hosts: 'Approved domains (one per line, exact match)',
+      hostsPlaceholder: 'claude.ai',
+      suggestions: 'Verified domains:',
+      scopes: 'Permissions granted by default to new applications',
+      scopesHelp: 'Read-only recommended: you can widen them later, application by application.',
+      save: 'Save policy', saved: 'Policy saved', error: 'Unable to save the policy.',
+      confirmTitle: 'Save the CIMD policy?',
+      confirmEnable: (n) => `Applications published by ${n} approved domain(s) will be able to request a connection. Every connection still requires your explicit consent.`,
+      confirmDisable: 'No new application with a published identity will be able to connect. Existing connections stay active: disable them one by one if needed.',
+      noHosts: 'Add at least one domain to enable.',
+    },
     grantsTitle: 'OAuth authorizations',
     grantsEmpty: 'No authorization yet.',
     grantStatus: {
@@ -608,6 +648,7 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
   const state = connectionState(status, client);
   const id = client.client_id;
   const isPublic = client.client_type === 'public';
+  const isCimd = client.registration === 'cimd';
   return (
     <AccordionItem
       value={id}
@@ -629,6 +670,9 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
             <Badge className="border-slate-600 bg-slate-800/60 text-slate-300" testId={`oauth-client-type-${id}`}>
               {t.typeBadge[isPublic ? 'public' : 'confidential']}
             </Badge>
+            {isCimd && (
+              <Badge className="border-gold/30 bg-gold/10 text-gold" testId={`oauth-client-cimd-${id}`}>{t.cimdBadge}</Badge>
+            )}
             <span className="text-xs text-slate-500 whitespace-nowrap" data-testid={`oauth-client-connections-${id}`}>
               {t.connections(client.active_grants ?? 0)}
             </span>
@@ -644,7 +688,10 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
         <p className="text-sm text-white font-medium break-words">{t.valuesTitle(client.name)}</p>
         <CopyField label={t.mcpUrl} value={status.mcp_url} testId={`oauth-mcp-url-${id}`} t={t} />
         <CopyField label={t.clientId} value={id} testId={`oauth-client-id-${id}`} t={t} />
-        <p className="text-xs text-slate-400">{isPublic ? t.publicNoSecret : t.secretNote}</p>
+        <p className="text-xs text-slate-400">
+          {isCimd ? t.cimdNote(client.metadata_host, formatDate(client.metadata_fetched_at, t.lang))
+            : isPublic ? t.publicNoSecret : t.secretNote}
+        </p>
         <p className="text-xs text-slate-500">{isPublic ? t.authMethodPublic : t.authMethod}</p>
       </div>
 
@@ -654,16 +701,17 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
           {client.redirect_uris.map(uri => (
             <li key={uri} className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs text-slate-300 break-all">{uri}</span>
-              <button type="button" onClick={() => onConfirm({ kind: 'removeRedirect', client, uri })}
+              {!isCimd && <button type="button" onClick={() => onConfirm({ kind: 'removeRedirect', client, uri })}
                 disabled={client.redirect_uris.length <= 1} aria-label={t.removeRedirect(uri)}
                 className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
                 data-testid={`oauth-redirect-remove-${id}-${uri}`}>
                 <Trash2 size={14} aria-hidden="true" />
-              </button>
+              </button>}
             </li>
           ))}
         </ul>
-        <AddRedirectForm clientId={id} mutation={addRedirectUri} t={t} />
+        {isCimd ? <p className="text-xs text-slate-500">{t.cimdRedirects}</p>
+          : <AddRedirectForm clientId={id} mutation={addRedirectUri} t={t} />}
       </div>
 
       <ClientScopes client={client} mutation={setClientScopes} t={t} />
@@ -698,12 +746,71 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, set
   );
 };
 
+const VERIFIED_HOSTS = ['claude.ai', 'chatgpt.com', 'vscode.dev'];
+
+/** Politique CIMD : activation, domaines approuvés, permissions par défaut (enregistrement confirmé). */
+const CimdPolicyCard = ({ query, onSave, t }) => {
+  const c = t.cimd;
+  const data = query.data;
+  const [enabled, setEnabled] = useState(false);
+  const [hosts, setHosts] = useState('');
+  const [scopes, setScopes] = useState(['watch:read']);
+  const key = data ? JSON.stringify([data.enabled, data.allowed_hosts, data.default_scopes]) : '';
+  useEffect(() => {
+    if (!key) return;
+    const [e, h, sc] = JSON.parse(key);
+    setEnabled(e); setHosts(h.join('\n')); setScopes(sc);
+  }, [key]);
+  if (!data) return null;
+  const hostList = hosts.split('\n').map((h) => h.trim()).filter(Boolean);
+  const addHost = (h) => { if (!hostList.includes(h)) setHosts([...hostList, h].join('\n')); };
+
+  return (
+    <div className="p-4 rounded-lg border border-slate-700 bg-slate-900/40 flex flex-col gap-3" data-testid="oauth-cimd">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-white font-medium">{c.title}</p>
+        <Badge className={data.operational ? STATE_STYLE.active : STATE_STYLE.disabled} testId="oauth-cimd-state">
+          {data.operational ? c.on : c.off}
+        </Badge>
+      </div>
+      <p className="text-xs text-slate-400">{c.help}</p>
+      <Choice role="checkbox" checked={enabled} onClick={() => setEnabled(!enabled)} testId="oauth-cimd-enabled">{c.enable}</Choice>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="oauth-cimd-hosts" className="text-xs text-slate-400">{c.hosts}</Label>
+        <Textarea id="oauth-cimd-hosts" value={hosts} onChange={(e) => setHosts(e.target.value)} rows={3}
+          placeholder={c.hostsPlaceholder} spellCheck={false} autoComplete="off"
+          className="bg-slate-900/50 border-slate-700 text-white font-mono text-sm" data-testid="oauth-cimd-hosts" />
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-slate-500">{c.suggestions}</span>
+          {VERIFIED_HOSTS.map((h) => (
+            <Button key={h} type="button" variant="outline" size="sm" disabled={hostList.includes(h)} onClick={() => addHost(h)}
+              className="h-8 border-slate-700 transition-colors font-mono" data-testid={`oauth-cimd-suggest-${h}`}>
+              <Plus size={12} aria-hidden="true" />{h}
+            </Button>
+          ))}
+        </div>
+      </div>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="text-xs text-slate-400 mb-1">{c.scopes}</legend>
+        <ScopePicker value={scopes} onChange={setScopes} idPrefix="oauth-cimd" t={t} />
+        <p className="text-xs text-slate-500">{c.scopesHelp}</p>
+      </fieldset>
+      {enabled && hostList.length === 0 && <p className="text-xs text-amber-300" role="note">{c.noHosts}</p>}
+      <Button type="button" onClick={() => onSave({ enabled, allowed_hosts: hostList, default_scopes: SCOPES.filter((sc) => scopes.includes(sc)) })}
+        disabled={scopes.length === 0} className="self-start h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
+        data-testid="oauth-cimd-save">
+        <Check />{c.save}
+      </Button>
+    </div>
+  );
+};
+
 export const OAuthConnectionsPanel = () => {
   const { language } = useLanguage();
   const t = T[language];
   const {
     status, clients, grants, createClient, rotateSecret, addRedirectUri, removeRedirectUri, setClientScopes,
-    setClientActive, revokeGrant, setKillSwitch,
+    setClientActive, revokeGrant, setKillSwitch, cimdPolicy, setCimdPolicy,
   } = useOAuthAdmin();
 
   // Le secret ne vit que dans ce state local : effacé à la fermeture, détruit au démontage.
@@ -751,6 +858,9 @@ export const OAuthConnectionsPanel = () => {
       } else if (current.kind === 'revoke') {
         await revokeGrant.mutateAsync(current.grant.id);
         toast.success(t.revoked);
+      } else if (current.kind === 'cimd') {
+        await setCimdPolicy.mutateAsync(current.policy);
+        toast.success(t.cimd.saved);
       } else if (current.kind === 'removeRedirect') {
         await removeRedirectUri.mutateAsync({ clientId: current.client.client_id, redirectUri: current.uri });
         toast.success(t.redirectRemoved);
@@ -758,6 +868,7 @@ export const OAuthConnectionsPanel = () => {
     } catch (err) {
       const fallback = {
         open: t.switchError, cut: t.switchError, deactivate: t.activeError, revoke: t.revokeError, removeRedirect: t.removeError,
+        cimd: t.cimd.error,
       }[current.kind];
       toast.error(errorDetail(err, fallback));
     }
@@ -795,6 +906,12 @@ export const OAuthConnectionsPanel = () => {
     rotate: { title: t.rotateTitle(confirm.client?.name), text: t.rotateText, confirmLabel: t.rotate, danger: false },
     revoke: { title: t.revokeTitle, text: t.revokeText(confirm.grant?.client_name), confirmLabel: t.revoke, danger: true },
     removeRedirect: { title: t.removeRedirectTitle, text: t.removeRedirectText(confirm.uri), confirmLabel: t.removeLabel, danger: true },
+    cimd: {
+      title: t.cimd.confirmTitle,
+      text: confirm.policy?.enabled && confirm.policy?.allowed_hosts?.length
+        ? t.cimd.confirmEnable(confirm.policy.allowed_hosts.length) : t.cimd.confirmDisable,
+      confirmLabel: t.cimd.save, danger: false,
+    },
   }[confirm.kind];
 
   return (
@@ -832,6 +949,8 @@ export const OAuthConnectionsPanel = () => {
           </Button>
         )}
       </div>
+
+      <CimdPolicyCard query={cimdPolicy} onSave={(policy) => setConfirm({ kind: 'cimd', policy })} t={t} />
 
       {/* Applications clientes */}
       <div className="flex flex-col gap-2" data-testid="oauth-clients">

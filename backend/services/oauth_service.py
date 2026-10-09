@@ -122,7 +122,9 @@ def protected_resource_metadata() -> dict:
     }
 
 
-def authorization_server_metadata() -> dict:
+def authorization_server_metadata(cimd_supported: bool = False) -> dict:
+    """`cimd_supported` : vrai seulement si la politique CIMD est opérationnelle (P3.1).
+    Aucun `registration_endpoint` : l'enregistrement dynamique (DCR) n'est pas proposé."""
     base = issuer()
     return {
         "issuer": base,
@@ -137,7 +139,7 @@ def authorization_server_metadata() -> dict:
         "revocation_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
         "scopes_supported": list(SUPPORTED_SCOPES),
         "authorization_response_iss_parameter_supported": True,
-        "client_id_metadata_document_supported": False,
+        "client_id_metadata_document_supported": bool(cimd_supported),
     }
 
 
@@ -242,7 +244,8 @@ def _validate_redirect_uri(uri: str) -> str:
 LOOPBACK_HOSTS = ("127.0.0.1", "[::1]")
 _LOOPBACK_PATH = r"/[A-Za-z0-9._~!$&'()*+,;=:@/-]{0,200}"
 _LOOPBACK_REGISTERED_RE = re.compile(r"^http://(127\.0\.0\.1|\[::1\])(" + _LOOPBACK_PATH + r")$")
-_LOOPBACK_REQUEST_RE = re.compile(r"^http://(127\.0\.0\.1|\[::1\])(?::([1-9][0-9]{0,4}))?(" + _LOOPBACK_PATH + r")$")
+_LOOPBACK_REQUEST_RE = re.compile(
+    r"^http://(127\.0\.0\.1|\[::1\]|localhost)(?::([1-9][0-9]{0,4}))?(" + _LOOPBACK_PATH + r")$")
 
 
 def _check_loopback_path(path: str) -> None:
@@ -254,7 +257,7 @@ def _check_loopback_path(path: str) -> None:
 def is_loopback_uri(uri) -> bool:
     """Adresse visant un hôte loopback littéral (127.0.0.1 ou [::1]) ; toute autre adresse http
     relève de la règle HTTPS stricte (et sera refusée)."""
-    return isinstance(uri, str) and uri.startswith(("http://127.0.0.1", "http://[::1]"))
+    return isinstance(uri, str) and uri.startswith(("http://127.0.0.1", "http://[::1]", "http://localhost"))
 
 
 def validate_loopback_redirect(uri: str) -> str:
@@ -270,15 +273,18 @@ def validate_loopback_redirect(uri: str) -> str:
     return uri
 
 
-def loopback_registration_form(uri: str) -> Optional[str]:
-    """Forme enregistrée (sans port) d'une adresse locale reçue à l'autorisation, ou None si
-    l'adresse n'est pas une adresse locale strictement conforme (port 1-65535 compris)."""
+def loopback_registration_form(uri: str, allow_localhost: bool = False) -> Optional[str]:
+    """Forme enregistrée (sans port) d'une adresse locale, ou None si l'adresse n'est pas une
+    adresse locale strictement conforme (port 1-65535 compris). `localhost` n'est admis que pour
+    les clients CIMD, dont l'éditeur le déclare (Claude Code, Codex)."""
     if not isinstance(uri, str) or len(uri) > 512:
         return None
     match = _LOOPBACK_REQUEST_RE.fullmatch(uri)
     if not match:
         return None
     host, port, path = match.groups()
+    if host == "localhost" and not allow_localhost:
+        return None
     if port is not None and not 1 <= int(port) <= 65535:
         return None
     try:
@@ -308,8 +314,13 @@ def match_redirect_uri(client: dict, uri) -> bool:
     if is_loopback_uri(uri):
         if client_type_of(client) != PUBLIC:
             return False
-        form = loopback_registration_form(uri)
-        return form is not None and form in registered
+        cimd = client.get("registration") == "cimd"
+        form = loopback_registration_form(uri, allow_localhost=cimd)
+        if form is None:
+            return False
+        # Un document CIMD peut déclarer un port (ex. VS Code) : port ignoré des deux côtés
+        forms = {loopback_registration_form(r, allow_localhost=cimd) or r for r in registered}
+        return form in forms
     if uri not in registered:
         return False
     try:
@@ -323,7 +334,7 @@ def describe_redirect(uri: str) -> dict:
     """Domaine de retour affiché au consentement (P1.1), revalidé côté serveur.
     `local` : retour vers une application de CET appareil (adresse loopback)."""
     if is_loopback_uri(uri):
-        form = loopback_registration_form(uri)
+        form = loopback_registration_form(uri, allow_localhost=True)
         if form is None:
             raise ValueError("redirect_uri invalide")
         return {"host": _LOOPBACK_REQUEST_RE.fullmatch(uri).group(1), "local": True}
@@ -410,9 +421,12 @@ async def create_client(db, name: str, redirect_uris: List[str], client_type: st
 
 async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
     """Ajoute une adresse de retour EXACTE à un client existant (validation selon son type)."""
-    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1, "client_type": 1})
+    client = await db[CLIENTS].find_one({"client_id": client_id},
+                                        {"_id": 0, "redirect_uris": 1, "client_type": 1, "registration": 1})
     if not client:
         raise ValueError("client inconnu")
+    if client.get("registration") == "cimd":
+        raise ValueError("adresses de retour fournies par le document de l'éditeur (CIMD) : non modifiables")
     uri = validate_client_redirect(uri, client_type_of(client))
     if uri in client["redirect_uris"]:
         return client["redirect_uris"]
@@ -426,9 +440,11 @@ async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
 async def remove_redirect_uri(db, client_id: str, uri: str) -> List[str]:
     """Retire une adresse de retour ; au moins une doit rester. Les codes déjà émis vers cette
     adresse deviennent inutilisables (l'échange revérifie le client et l'adresse)."""
-    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1})
+    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1, "registration": 1})
     if not client:
         raise ValueError("client inconnu")
+    if client.get("registration") == "cimd":
+        raise ValueError("adresses de retour fournies par le document de l'éditeur (CIMD) : non modifiables")
     uris = list(client.get("redirect_uris") or [])
     if uri not in uris:
         raise ValueError("redirect_uri inconnue pour ce client")
@@ -485,7 +501,7 @@ async def activate_client(db, client_id: str) -> bool:
 async def list_clients(db) -> List[dict]:
     """Clients enregistrés, SANS le haché du secret, avec le nombre de connexions utilisables."""
     items = []
-    async for c in db[CLIENTS].find({}, {"_id": 0, "secret_hash": 0}).sort("created_at", 1).limit(50):
+    async for c in db[CLIENTS].find({}, {"_id": 0, "secret_hash": 0}).sort("created_at", 1).limit(100):
         active_grants = await db[GRANTS].count_documents(
             {"client_id": c["client_id"], "status": {"$in": list(USABLE_STATUSES)}})
         kind = client_type_of(c)
@@ -495,12 +511,17 @@ async def list_clients(db) -> List[dict]:
             "secret_rotated_at": _aware(c.get("secret_rotated_at")), "active_grants": active_grants,
             "client_type": kind, "allowed_scopes": client_scopes(c),
             "token_endpoint_auth_method": "none" if kind == PUBLIC else "client_secret_basic",
+            # Origine : manual (administration, script) | cimd (document publié par l'éditeur)
+            "registration": c.get("registration") or "manual",
+            "metadata_host": c.get("metadata_host"),
+            "metadata_fetched_at": _aware(c.get("metadata_fetched_at")),
         })
     return items
 
 
 async def get_active_client(db, client_id: Optional[str]) -> Optional[dict]:
-    if not client_id or not isinstance(client_id, str) or len(client_id) > 100:
+    # 512 : un client_id CIMD est une URL (les identifiants jt_oc_ restent courts)
+    if not client_id or not isinstance(client_id, str) or len(client_id) > 512:
         return None
     return await db[CLIENTS].find_one({"client_id": client_id, "active": True}, {"_id": 0})
 
@@ -536,7 +557,13 @@ async def create_authorization_request(db, params: dict) -> dict:
     Retourne la demande enregistrée (10 min, usage unique).
     """
     await ensure_indexes(db)
-    client = await get_active_client(db, params.get("client_id"))
+    from services import cimd_service
+    client_id = params.get("client_id")
+    if cimd_service.is_cimd_client_id(client_id):
+        # P3.1 : client identifié par l'URL de son document (politique de confiance de l'admin)
+        client = await cimd_service.resolve_client(db, client_id)
+    else:
+        client = await get_active_client(db, client_id)
     if not client:
         raise OAuthError("invalid_client", "Client inconnu")
     redirect_uri = params.get("redirect_uri")
@@ -569,6 +596,10 @@ async def create_authorization_request(db, params: dict) -> dict:
     request = {
         "id": secrets.token_urlsafe(24),
         "client_id": client["client_id"], "client_name": client["name"],
+        "client_registration": client.get("registration") or "manual",
+        "client_host": client.get("metadata_host"),
+        # CIMD : document validé conservé avec la demande ; le client n'est enregistré qu'après approbation
+        **({"client_snapshot": cimd_service.snapshot(client)} if client.get("registration") == "cimd" else {}),
         "redirect_uri": redirect_uri, "state": state, "code_challenge": challenge,
         "scopes": scopes, "resource": canonical_resource(),
         "created_at": _now(), "expires_at": _now() + timedelta(seconds=settings.OAUTH_REQUEST_TTL_SECONDS),
@@ -648,6 +679,13 @@ async def complete(db, ticket: str) -> str:
     if not await user_is_eligible(db, user_id):
         logger.info("oauth_consent result=not_eligible user_id=%s", user_id)
         return error_redirect(req["redirect_uri"], "access_denied", req.get("state"), "Compte non autorisé")
+    if req.get("client_registration") == "cimd":
+        # P3 : politique revérifiée à l'émission du code, puis client enregistré (premier consentement)
+        from services import cimd_service
+        if not await cimd_service.host_allowed(db, req["client_id"]) or \
+                not await cimd_service.persist_client(db, req["client_snapshot"]):
+            logger.info("oauth_consent result=cimd_not_allowed user_id=%s", user_id)
+            return error_redirect(req["redirect_uri"], "access_denied", req.get("state"), "Application non approuvée")
 
     code = secrets.token_urlsafe(32)
     await db[CODES].insert_one({
@@ -720,6 +758,10 @@ async def exchange_code(db, client: dict, form: dict) -> dict:
         raise OAuthError("invalid_grant", "Code expiré")
     if code_doc["client_id"] != client["client_id"]:
         raise OAuthError("invalid_grant", "Code émis pour un autre client")
+    if client.get("registration") == "cimd":
+        from services import cimd_service
+        if not await cimd_service.host_allowed(db, client["client_id"]):
+            raise OAuthError("invalid_grant", "Application non approuvée")
     if form.get("redirect_uri") != code_doc["redirect_uri"]:
         raise OAuthError("invalid_grant", "redirect_uri différente")
     resource = form.get("resource")

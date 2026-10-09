@@ -577,3 +577,74 @@ describe('Connexions OAuth / MCP — accordéon des applications', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 });
+
+describe('Connexions OAuth / MCP — identité publiée (P3, CIMD)', () => {
+  const CC = 'https://claude.ai/oauth/claude-code-client-metadata';
+  const cimdClient = clientOf({ client_id: CC, name: 'Claude Code', client_type: 'public', registration: 'cimd',
+    metadata_host: 'claude.ai', metadata_fetched_at: '2026-10-10T08:00:00+00:00', allowed_scopes: ['watch:read'],
+    redirect_uris: ['http://localhost/callback', 'http://127.0.0.1/callback'], active_grants: 1 });
+  let policy;
+
+  beforeEach(() => {
+    policy = { enabled: false, allowed_hosts: [], default_scopes: ['watch:read'], operational: false };
+    const base = api.get.getMockImplementation();
+    api.get.mockImplementation((url) => (url === '/api/admin/oauth/cimd-policy'
+      ? Promise.resolve({ data: policy }) : base(url)));
+  });
+
+  test('politique désactivée par défaut, activation confirmée avec domaines vérifiés', async () => {
+    const user = userEvent.setup();
+    api.put.mockImplementation(async (url, body) => {
+      policy = { ...body, operational: true };
+      return { data: policy };
+    });
+    renderPanel();
+    const card = await screen.findByTestId('oauth-cimd');
+    expect(within(card).getByTestId('oauth-cimd-state')).toHaveTextContent('Désactivé');
+    expect(within(card).getByTestId('oauth-cimd-enabled')).toHaveAttribute('aria-checked', 'false');
+    await user.click(within(card).getByTestId('oauth-cimd-enabled'));
+    expect(within(card).getByText('Ajoute au moins un domaine pour activer.')).toBeInTheDocument();
+    await user.click(within(card).getByTestId('oauth-cimd-suggest-claude.ai'));
+    await user.click(within(card).getByTestId('oauth-cimd-suggest-vscode.dev'));
+    expect(within(card).getByTestId('oauth-cimd-suggest-claude.ai')).toBeDisabled();
+    await user.click(within(card).getByTestId('oauth-cimd-save'));
+    const confirm = await screen.findByRole('alertdialog');
+    expect(confirm).toHaveTextContent('2 domaine(s) approuvé(s)');
+    expect(confirm).toHaveTextContent('consentement explicite');
+    expect(api.put).not.toHaveBeenCalled();
+    await user.click(within(confirm).getByTestId('oauth-confirm'));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith('/api/admin/oauth/cimd-policy',
+      { enabled: true, allowed_hosts: ['claude.ai', 'vscode.dev'], default_scopes: ['watch:read'] }));
+    expect(toast.success).toHaveBeenCalledWith('Politique enregistrée');
+    await waitFor(() => expect(screen.getByTestId('oauth-cimd-state')).toHaveTextContent('Actif'));
+  });
+
+  test('désactivation : confirmation expliquant que les connexions existantes restent', async () => {
+    const user = userEvent.setup();
+    policy = { enabled: true, allowed_hosts: ['claude.ai'], default_scopes: ['watch:read'], operational: true };
+    renderPanel();
+    const card = await screen.findByTestId('oauth-cimd');
+    await waitFor(() => expect(within(card).getByTestId('oauth-cimd-hosts')).toHaveValue('claude.ai'));
+    await user.click(within(card).getByTestId('oauth-cimd-enabled'));
+    await user.click(within(card).getByTestId('oauth-cimd-save'));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Les connexions existantes restent actives');
+  });
+
+  test('carte d’un client CIMD : badge, éditeur, adresses non modifiables, pas de secret', async () => {
+    const user = userEvent.setup();
+    server.clients = [cimdClient];
+    renderPanel();
+    expect(await screen.findByTestId(`oauth-client-cimd-${CC}`)).toHaveTextContent('Identité publiée');
+    const details = await expand(user, CC);
+    expect(details).toHaveTextContent('Identité publiée par claude.ai');
+    expect(details).toHaveTextContent("Adresses fournies par le document de l'éditeur");
+    expect(within(details).getByTestId(`oauth-redirect-list-${CC}`)).toHaveTextContent('http://localhost/callback');
+    expect(within(details).queryByTestId(`oauth-redirect-input-${CC}`)).toBeNull();
+    expect(within(details).queryByRole('button', { name: /Retirer l'adresse/ })).toBeNull();
+    expect(within(details).queryByTestId(`oauth-rotate-${CC}`)).toBeNull();
+    // Permissions et désactivation restent disponibles
+    expect(within(details).getByTestId(`oauth-scopes-${CC}`)).toBeInTheDocument();
+    await user.click(within(details).getByTestId(`oauth-deactivate-${CC}`));
+    expect(await screen.findByRole('alertdialog')).toHaveTextContent('Désactiver Claude Code ?');
+  });
+});

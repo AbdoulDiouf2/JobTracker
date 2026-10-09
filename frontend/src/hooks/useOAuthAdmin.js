@@ -70,6 +70,13 @@ export const useOAuthAdmin = () => {
     onSuccess: invalidate,
   });
 
+  // Clients à identité publiée (CIMD, P3) : politique de confiance
+  const cimdPolicy = useQuery({ queryKey: [...OAUTH_ADMIN_KEY, 'cimd'], queryFn: () => api.get(`${BASE}/cimd-policy`).then(r => r.data) });
+  const setCimdPolicy = useMutation({
+    mutationFn: (policy) => api.put(`${BASE}/cimd-policy`, policy).then(r => r.data),
+    onSuccess: invalidate,
+  });
+
   const setKillSwitch = useMutation({
     mutationFn: (active) => api.put('/api/admin/settings/mcp-kill-switch', { active }).then(r => r.data),
     onSuccess: invalidate,
@@ -78,6 +85,6 @@ export const useOAuthAdmin = () => {
   return {
     status, clients, grants,
     createClient, rotateSecret, addRedirectUri, removeRedirectUri, setClientScopes, setClientActive, revokeGrant,
-    setKillSwitch,
+    setKillSwitch, cimdPolicy, setCimdPolicy,
   };
 };

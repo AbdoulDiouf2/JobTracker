@@ -720,7 +720,9 @@ async def create_oauth_client(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     clients = await list_clients(db)
-    taken = next((c for c in clients if c["name"].casefold() == name.casefold()), None)
+    # Unicité parmi les clients enregistrés à la main (un client CIMD porte le nom choisi par son éditeur)
+    taken = next((c for c in clients if c.get("registration", "manual") == "manual"
+                  and c["name"].casefold() == name.casefold()), None)
     if taken:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -740,7 +742,7 @@ async def create_oauth_client(
             "redirect_uris": created["redirect_uris"], "warnings": _redirect_collisions(clients, uris)}
 
 
-@router.post("/oauth/clients/{client_id}/redirect-uris")
+@router.post("/oauth/clients/{client_id:path}/redirect-uris")
 async def add_oauth_redirect_uri(
     client_id: str,
     data: OAuthRedirectUriAdd,
@@ -759,7 +761,40 @@ async def add_oauth_redirect_uri(
     return {"client_id": client_id, "redirect_uris": uris, "warnings": warnings}
 
 
-@router.delete("/oauth/clients/{client_id}/redirect-uris")
+class CimdPolicyUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: StrictBool
+    allowed_hosts: List[str] = Field(default_factory=list, max_length=20)
+    default_scopes: List[OAuthScope] = Field(..., min_length=1, max_length=10)
+
+
+@router.get("/oauth/cimd-policy")
+async def get_cimd_policy(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """Politique des clients à identité publiée (CIMD) : désactivée par défaut."""
+    from services import cimd_service
+    policy = await cimd_service.get_policy(db)
+    return {**policy, "operational": cimd_service.operational(policy)}
+
+
+@router.put("/oauth/cimd-policy")
+async def set_cimd_policy(
+    data: CimdPolicyUpdate,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Active ou désactive CIMD, fixe les hôtes approuvés (correspondance exacte) et les scopes
+    accordés par défaut aux nouveaux clients CIMD. Les clients déjà connus gardent leurs scopes."""
+    from services import cimd_service
+    try:
+        policy = await cimd_service.set_policy(db, data.enabled, data.allowed_hosts, list(data.default_scopes),
+                                               admin_user["id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return {**policy, "operational": cimd_service.operational(policy)}
+
+
+@router.delete("/oauth/clients/{client_id:path}/redirect-uris")
 async def remove_oauth_redirect_uri(
     client_id: str,
     redirect_uri: str = Query(..., max_length=512),
@@ -777,7 +812,7 @@ async def remove_oauth_redirect_uri(
     return {"client_id": client_id, "redirect_uris": uris}
 
 
-@router.put("/oauth/clients/{client_id}/scopes")
+@router.put("/oauth/clients/{client_id:path}/scopes")
 async def set_oauth_client_scopes(
     client_id: str,
     data: OAuthClientScopesUpdate,
@@ -794,7 +829,7 @@ async def set_oauth_client_scopes(
     return {"client": await _oauth_client_or_404(db, client_id)}
 
 
-@router.put("/oauth/clients/{client_id}/active")
+@router.put("/oauth/clients/{client_id:path}/active")
 async def set_oauth_client_active(
     client_id: str,
     data: OAuthClientActiveUpdate,
@@ -814,7 +849,7 @@ async def set_oauth_client_active(
     return {"client": await _oauth_client_or_404(db, client_id), "revoked_grants": revoked}
 
 
-@router.post("/oauth/clients/{client_id}/rotate-secret")
+@router.post("/oauth/clients/{client_id:path}/rotate-secret")
 async def rotate_oauth_client_secret(
     client_id: str,
     response: Response,

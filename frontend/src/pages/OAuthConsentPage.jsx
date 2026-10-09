@@ -19,6 +19,8 @@ const T = {
     lead: (client) => `${client} demande l'autorisation d'accéder à ta veille d'opportunités JobTracker.`,
     unknownClient: 'Application non identifiée',
     redirectLabel: 'Après ta décision, tu seras renvoyé vers',
+    identityLabel: (host) => `Identité publiée par ${host}`,
+    identityHelp: "Nom et adresses de retour lus dans le document officiel publié sur ce domaine. Vérifie qu'il s'agit bien de l'éditeur attendu.",
     localWarning: "Application installée sur cet appareil : le retour se fait vers une adresse locale. N'autorise que si tu viens de lancer toi-même la connexion depuis cette application.",
     account: 'Compte concerné',
     permissions: (client) => `Ce que ${client} pourra faire`,
@@ -57,6 +59,8 @@ const T = {
     lead: (client) => `${client} is requesting access to your JobTracker opportunity watch.`,
     unknownClient: 'Unidentified application',
     redirectLabel: 'After your decision, you will be sent back to',
+    identityLabel: (host) => `Identity published by ${host}`,
+    identityHelp: 'Name and redirect URLs read from the official document published on this domain. Check that it is the expected publisher.',
     localWarning: 'Application installed on this device: you will be sent back to a local address. Only authorize if you just started the connection from this application yourself.',
     account: 'Account',
     permissions: (client) => `What ${client} will be able to do`,
@@ -281,6 +285,15 @@ export default function OAuthConsentPage() {
           <p className="font-mono text-sm font-semibold text-white break-all" data-testid="consent-redirect-domain">
             {redirectDomain}
           </p>
+          {typeof details.client?.identity_host === 'string' && details.client.identity_host && (
+            <div className="mt-2 text-xs text-slate-300" data-testid="consent-identity">
+              <p className="flex items-center gap-1.5 font-medium">
+                <ShieldCheck className="h-4 w-4 shrink-0 text-[#c4a052]" aria-hidden="true" />
+                {t.identityLabel(details.client.identity_host)}
+              </p>
+              <p className="mt-0.5 text-slate-500">{t.identityHelp}</p>
+            </div>
+          )}
           {details.client?.redirect_local === true && (
             <p className="mt-2 flex items-start gap-2 text-xs text-amber-300" role="note" data-testid="consent-local-warning">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
