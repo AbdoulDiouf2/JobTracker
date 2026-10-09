@@ -17,6 +17,17 @@ from services import opportunity_service
 pytestmark = pytest.mark.anyio
 
 
+# Horloge figée pour le jour du quota (UTC) : un test qui franchit minuit UTC ne doit pas
+# lire le compteur d'un autre jour que celui de ses créations. La logique métier des quotas
+# n'est pas modifiée : seule la date renvoyée par _today() est fixée pendant le test.
+FROZEN_QUOTA_DAY = "2026-10-08"
+
+
+@pytest.fixture(autouse=True)
+def frozen_quota_day(monkeypatch):
+    monkeypatch.setattr(svc, "_today", lambda: FROZEN_QUOTA_DAY)
+
+
 async def make_user(db, active=True) -> str:
     user_id = "user-" + uuid.uuid4().hex[:8]
     await db.users.insert_one({"id": user_id, "email": f"{user_id}@t.local", "is_active": active})
@@ -197,4 +208,17 @@ async def test_duplicate_does_not_consume_and_bypasses_exhausted_quota(db, monke
     assert dup.duplicate is True and dup.opportunity_id == created.opportunity_id
     with pytest.raises(svc.AgentQuotaExceeded):
         await svc.ingest_opportunity_as_agent(db, token, offer())
+    assert await svc.get_creations_today(db, public["id"]) == 1
+
+
+async def test_quota_counter_is_per_utc_day(db, monkeypatch):
+    """Le compteur est bien remis à zéro au changement de jour UTC (simulé, sans attendre minuit)."""
+    user_id = await make_user(db)
+    public, _ = await svc.create_agent_token(db, user_id, AgentTokenCreate(name="Veille"))
+    token = {"id": public["id"], "user_id": user_id}
+    await svc.ingest_opportunity_as_agent(db, token, offer())
+    assert await svc.get_creations_today(db, public["id"]) == 1
+    monkeypatch.setattr(svc, "_today", lambda: "2026-10-09")  # le lendemain
+    assert await svc.get_creations_today(db, public["id"]) == 0
+    await svc.ingest_opportunity_as_agent(db, token, offer())
     assert await svc.get_creations_today(db, public["id"]) == 1

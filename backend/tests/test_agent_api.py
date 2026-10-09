@@ -16,6 +16,17 @@ from services import agent_token_service
 
 pytestmark = pytest.mark.anyio
 
+
+# Horloge figée pour le jour du quota (UTC) : un test qui franchit minuit UTC ne doit pas
+# lire le compteur d'un autre jour que celui de ses créations. La logique métier des quotas
+# n'est pas modifiée : seule la date renvoyée par _today() est fixée pendant le test.
+FROZEN_QUOTA_DAY = "2026-10-08"
+
+
+@pytest.fixture(autouse=True)
+def frozen_quota_day(monkeypatch):
+    monkeypatch.setattr(agent_token_service, "_today", lambda: FROZEN_QUOTA_DAY)
+
 TOKEN_RE = re.compile(r"^jt_agent_[A-Za-z0-9_-]{43}$")
 AGENT_URL = "/api/agent/opportunities"
 
