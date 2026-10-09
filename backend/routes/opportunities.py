@@ -42,9 +42,11 @@ async def list_opportunities(
     db = Depends(get_db)
 ):
     """Liste les opportunités de l'utilisateur (filtre statut, recherche poste/entreprise)"""
-    return await opportunity_service.list_opportunities(
+    result = await opportunity_service.list_opportunities(
         db, current_user["user_id"], status=status_filter, search=search, page=page, per_page=per_page
     )
+    await opportunity_service.attach_client_names(db, result["items"])
+    return result
 
 
 @router.get("/count", response_model=OpportunityCountResponse)
@@ -85,9 +87,10 @@ async def get_opportunity(
 ):
     """Récupère une opportunité par ID"""
     try:
-        return await opportunity_service.get_opportunity(db, current_user["user_id"], opportunity_id)
+        opportunity = await opportunity_service.get_opportunity(db, current_user["user_id"], opportunity_id)
     except OpportunityNotFound:
         raise _not_found()
+    return (await opportunity_service.attach_client_names(db, [opportunity]))[0]
 
 
 @router.patch("/{opportunity_id}", response_model=OpportunityResponse)
@@ -99,7 +102,8 @@ async def update_opportunity(
 ):
     """Met à jour une opportunité (champs descriptifs, statut new/ignored)"""
     try:
-        return await opportunity_service.update_opportunity(db, current_user["user_id"], opportunity_id, update)
+        updated = await opportunity_service.update_opportunity(db, current_user["user_id"], opportunity_id, update)
+        return (await opportunity_service.attach_client_names(db, [updated]))[0]
     except OpportunityNotFound:
         raise _not_found()
     except OpportunityConflict as e:
@@ -114,7 +118,8 @@ async def ignore_opportunity(
 ):
     """Ignore une opportunité (conservée pour éviter sa réimportation)"""
     try:
-        return await opportunity_service.ignore_opportunity(db, current_user["user_id"], opportunity_id)
+        ignored = await opportunity_service.ignore_opportunity(db, current_user["user_id"], opportunity_id)
+        return (await opportunity_service.attach_client_names(db, [ignored]))[0]
     except OpportunityNotFound:
         raise _not_found()
     except OpportunityConflict as e:

@@ -1097,6 +1097,9 @@ class OpportunityWatchInfo(BaseModel):
     seniority: Optional[str] = None  # niveau normalisé, si fourni
     # Client OAuth VÉRIFIÉ (grant) ayant créé l'offre (P1.4). Absent des offres antérieures.
     client_id: Optional[str] = None
+    # Nom de ce client : copie prise à la création (traçabilité même si le client disparaît) ;
+    # en lecture, remplacé par le nom ACTUEL du client enregistré s'il existe encore.
+    client_name: Optional[str] = None
 
 
 class Opportunity(BaseModel):

@@ -5,7 +5,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from '../ui/dialog';
 import { useLanguage } from '../../i18n';
-import { getSourceLabel } from '../../constants/opportunity';
+import { getOpportunitySourceLabel } from '../../constants/opportunity';
 import { toSafeExternalUrl } from '../../lib/safeUrl';
 import { OpportunityActions, OpportunityStatusBadge, formatLocation } from './OpportunityCard';
 
@@ -52,7 +52,7 @@ export const OpportunityDetailDialog = ({ opportunity, isOpen, onClose, ...actio
             <Field label={t.status}><OpportunityStatusBadge status={opportunity.status} /></Field>
             <Field label={t.location}>{formatLocation(opportunity) || '—'}</Field>
             <Field label={t.contract}>{opportunity.contract_type || '—'}</Field>
-            <Field label={t.source}>{getSourceLabel(opportunity.source, language)}</Field>
+            <Field label={t.source}>{getOpportunitySourceLabel(opportunity, language)}</Field>
             <Field label={t.discovered}>
               {discovered && !Number.isNaN(discovered.getTime())
                 ? format(discovered, 'd MMMM yyyy', { locale: language === 'fr' ? fr : enUS })

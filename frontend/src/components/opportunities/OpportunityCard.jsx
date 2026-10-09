@@ -3,7 +3,7 @@ import { fr, enUS } from 'date-fns/locale';
 import { MapPin, Briefcase, Clock, Radar, ExternalLink, EyeOff, Send, FileCheck, Loader2 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useLanguage } from '../../i18n';
-import { OPPORTUNITY_STATUS_META, getSourceLabel } from '../../constants/opportunity';
+import { OPPORTUNITY_STATUS_META, getOpportunitySourceLabel } from '../../constants/opportunity';
 import { toSafeExternalUrl } from '../../lib/safeUrl';
 
 export const formatDiscovered = (value, language = 'fr') => {
@@ -162,7 +162,7 @@ export const OpportunityCard = ({ opportunity, onOpen, ...actionProps }) => {
         </span>
         <span className="flex items-center gap-1.5">
           <Radar size={12} aria-hidden="true" />
-          {language === 'fr' ? 'Source' : 'Source'} : {getSourceLabel(opportunity.source, language)}
+          {language === 'fr' ? 'Source' : 'Source'} : {getOpportunitySourceLabel(opportunity, language)}
         </span>
       </div>
 

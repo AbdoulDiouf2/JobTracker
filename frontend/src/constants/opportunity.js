@@ -31,3 +31,21 @@ const SOURCE_LABELS = {
 
 export const getSourceLabel = (source, language = 'fr') =>
   SOURCE_LABELS[source]?.[language] || source || SOURCE_LABELS.other[language];
+
+const WATCH_SOURCE = 'chatgpt_watch';
+
+/**
+ * Libellé de provenance d'une opportunité. Pour la veille MCP, le nom vient du client OAuth
+ * VÉRIFIÉ, résolu par le backend (`watch.client_name`) à partir de `watch.client_id` :
+ * aucune liste de fournisseurs côté interface.
+ * - offre antérieure sans `client_id` : libellé historique (« Veille ChatGPT ») ;
+ * - client introuvable et sans nom conservé : « Veille (client inconnu) ».
+ */
+export const getOpportunitySourceLabel = (opportunity, language = 'fr') => {
+  const source = opportunity?.source;
+  const watch = opportunity?.watch;
+  if (source !== WATCH_SOURCE || !watch?.client_id) return getSourceLabel(source, language);
+  const name = typeof watch.client_name === 'string' ? watch.client_name.trim() : '';
+  if (!name) return language === 'en' ? 'Watch (unknown client)' : 'Veille (client inconnu)';
+  return language === 'en' ? `${name} watch` : `Veille ${name}`;
+};

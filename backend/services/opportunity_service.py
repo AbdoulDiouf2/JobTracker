@@ -284,6 +284,38 @@ async def list_recent_summary(db, user_id: str, days: int, limit: int, now: Opti
     return {"items": items, "total": total, "days": days}
 
 
+# ============================================
+# ORIGINE (client OAuth de la veille)
+# ============================================
+
+OAUTH_CLIENTS = "oauth_clients"
+
+
+async def oauth_client_name(db, client_id: str) -> Optional[str]:
+    """Nom enregistré du client OAuth (actif ou désactivé), ou None s'il n'existe plus."""
+    client = await db[OAUTH_CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "name": 1})
+    return client.get("name") if client else None
+
+
+async def attach_client_names(db, documents: list) -> list:
+    """
+    Complète `watch.client_name` des opportunités issues d'un client OAuth : nom ACTUEL du
+    client enregistré (même désactivé), sinon la copie prise à la création (client supprimé),
+    sinon None. Lecture seule, une requête pour toute la page. Les offres sans `client_id`
+    (antérieures à P1) sont laissées telles quelles.
+    """
+    ids = {(d.get("watch") or {}).get("client_id") for d in documents} - {None}
+    names = {}
+    if ids:
+        async for c in db[OAUTH_CLIENTS].find({"client_id": {"$in": list(ids)}}, {"_id": 0, "client_id": 1, "name": 1}):
+            names[c["client_id"]] = c.get("name")
+    for d in documents:
+        watch = d.get("watch")
+        if watch and watch.get("client_id"):
+            watch["client_name"] = names.get(watch["client_id"]) or watch.get("client_name")
+    return documents
+
+
 async def get_opportunity(db, user_id: str, opportunity_id: str) -> dict:
     opportunity = await db[COLLECTION].find_one(
         {"id": opportunity_id, "user_id": user_id},

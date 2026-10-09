@@ -273,7 +273,7 @@ async def _claim_item(db, key: dict, claim_id: str) -> tuple:
 
 async def _process_item(
     db, user_id: str, run: ParsedRunId, check: ItemCheck, prefs: dict, cap: int,
-    client_id: Optional[str] = None,
+    client_id: Optional[str] = None, client_name: Optional[str] = None,
 ) -> WatchItemResult:
     key = {"user_id": user_id, "run_id": run.run_id, "item_key": check.item_key}
     claim_id = uuid.uuid4().hex
@@ -354,7 +354,7 @@ async def _process_item(
 
     # 3. Ingestion (service du Lot 1, upsert $setOnInsert)
     try:
-        watch = {**check.watch, "client_id": client_id} if client_id else check.watch
+        watch = {**check.watch, "client_id": client_id, "client_name": client_name} if client_id else check.watch
         result = await opportunity_service.ingest_opportunity(db, user_id, data, watch=watch)
     except Exception:
         logger.exception("watch_ingest result=error user_id=%s run_id=%s", user_id, run.run_id)
@@ -394,11 +394,13 @@ async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] 
     prefs = (await watch_preferences_service.get_or_create(db, user_id)).model_dump()
     run = await _open_run(db, user_id, request.run_id, prefs, now, client_id)
     cap = _run_cap(prefs)
+    # Nom du client VÉRIFIÉ, lu dans le registre OAuth (jamais fourni par l'appelant)
+    client_name = await opportunity_service.oauth_client_name(db, client_id) if client_id else None
 
     results = []
     for index, raw in enumerate(request.opportunities):
         check = check_item(raw, prefs, request.run_id, request.preferences_version)
-        item = await _process_item(db, user_id, run, check, prefs, cap, client_id)
+        item = await _process_item(db, user_id, run, check, prefs, cap, client_id, client_name)
         item.index = index
         results.append(item)
 

@@ -259,3 +259,31 @@ describe('OpportunitiesPage — candidater', () => {
     expect(api.post).not.toHaveBeenCalled();
   });
 });
+
+describe('OpportunitiesPage — provenance de la veille', () => {
+  const watch = (over = {}) => ({ run_id: 'veille-20261010-0800-prog', relevance_score: 90, relevance_reasons: [], ...over });
+
+  test('affiche le client OAuth vérifié, et le libellé historique sans client', async () => {
+    mockList([
+      opp({ id: 'opp-claude', watch: watch({ client_id: 'jt_oc_claude', client_name: 'Claude' }) }),
+      opp({ id: 'opp-gpt', watch: watch({ client_id: 'jt_oc_gpt', client_name: 'ChatGPT' }) }),
+      opp({ id: 'opp-old', watch: watch() }),
+      opp({ id: 'opp-gone', watch: watch({ client_id: 'jt_oc_gone', client_name: null }) }),
+      opp({ id: 'opp-manual', source: 'manual' }),
+    ]);
+    renderPage();
+    expect(await screen.findByTestId('opportunity-card-opp-claude')).toHaveTextContent('Source : Veille Claude');
+    expect(screen.getByTestId('opportunity-card-opp-gpt')).toHaveTextContent('Source : Veille ChatGPT');
+    expect(screen.getByTestId('opportunity-card-opp-old')).toHaveTextContent('Source : Veille ChatGPT');
+    expect(screen.getByTestId('opportunity-card-opp-gone')).toHaveTextContent('Source : Veille (client inconnu)');
+    expect(screen.getByTestId('opportunity-card-opp-manual')).toHaveTextContent('Source : Ajout manuel');
+  });
+
+  test('la fiche détaillée reprend le même libellé', async () => {
+    const user = userEvent.setup();
+    mockList([opp({ watch: watch({ client_id: 'jt_oc_claude', client_name: 'Claude' }) })]);
+    renderPage();
+    await user.click(await screen.findByTestId('opportunity-open-opp-1'));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Veille Claude');
+  });
+});
