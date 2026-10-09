@@ -287,3 +287,33 @@ doit être enregistrée (protocole E0).
 
 **Verdict : GO technique pour D1**, aucun point bloquant. Le déploiement reste soumis à ton
 autorisation explicite de commit et de push sur `main`.
+
+## 8. Déploiement D1 — rapport (9 octobre 2026)
+
+| Étape | Résultat |
+|---|---|
+| Préconditions | `origin/main` = `ef07ab6` (vérifié en direct), `HEAD` = `e9989a3`, fichiers Gemini non suivis |
+| Push | `ef07ab6..e9989a3 main -> main` à 00:39 UTC, **sans force** |
+| Déploiement Vercel de production | `6950054261` : **success** à 00:40:59 UTC (API GitHub) |
+| R1 santé et application | `/api/health` 200 `healthy` (base connectée) ; `/api/`, `/`, `/login`, `/dashboard`, `/manifest.json` et le bundle JS en 200 |
+| R2 découverte | Les 4 chemins `/.well-known/*` → **404 `application/json`** (plus de HTML : nouvelle version en ligne) |
+| R3 MCP | `GET` et `POST /api/mcp` → 404 JSON |
+| R4 OAuth | `authorize`, `token`, `revoke`, `continue`, `requests`, `consent`, `grants` → **404 JSON** (aucun 401) |
+| R5 en-têtes | `/oauth/consent` (avec ou sans paramètre, avec la barre finale) : `X-Frame-Options: DENY`, `frame-ancestors 'none'`, `no-referrer`, `no-store` ; absents des autres pages |
+| R6 frontend | `/.well-known/security.txt` toujours servi par le frontend |
+| Routes existantes sans session | `auth/me`, candidatures, opportunités, statistiques, `watch/*`, jetons agent, API agent, connexion : **401** (aucune erreur 500) |
+| Configuration et activation | Aucune variable Vercel modifiée, aucune activation, aucun client OAuth, base réelle non touchée. MCP et OAuth fermés (R2 à R4) |
+
+**Non vérifiable de mon côté, à faire par toi** :
+- **C1** : journal de build (Python 3.12 via `.python-version`, versions installées) ;
+- **R7** : `GET /api/watch/status` connecté → 403 `watch_not_enabled` ;
+- **C6, C7, C9** : parcours connectés (connexion, candidatures, opportunités, IA, extension) ;
+- **C10** : journaux Vercel pendant 24 h.
+
+**Écart mineur, non bloquant** : `/api/mcp` désactivé renvoie `{"detail": "Not Found"}` (avec
+une espace), alors que FastAPI renvoie `{"detail":"Not Found"}`. L'existence de la route est
+donc décelable à l'octet près, sans aucun accès possible. Correctif d'une ligne proposé
+(`json.dumps(..., separators=(",", ":"))`), **non appliqué**.
+
+**Verdict D1 : déploiement dormant réussi, aucune régression constatée sur les contrôles
+anonymes.**

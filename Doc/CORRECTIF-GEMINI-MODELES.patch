@@ -1,0 +1,587 @@
+diff --git a/backend/routes/ai.py b/backend/routes/ai.py
+index 1c137f9..e13525c 100644
+--- a/backend/routes/ai.py
++++ b/backend/routes/ai.py
+@@ -9,6 +9,7 @@ from typing import Optional, List
+ from datetime import datetime, timezone
+ from dotenv import load_dotenv
+ from utils.crypto import decrypt
++from utils.ai_models import GEMINI_DEFAULT_MODEL, GEMINI_LITE_MODEL, require_ai_text, resolve_gemini_model
+ import os
+ import uuid
+ import json
+@@ -62,9 +63,8 @@ AI_MODELS = {
+         {"model_id": "gpt-4-turbo", "display_name": "GPT-4 Turbo", "description": "GPT-4 optimisé pour la vitesse"},
+     ],
+     "google": [
+-        {"model_id": "gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "description": "Modèle rapide de Google"},
+-        {"model_id": "gemini-1.5-pro", "display_name": "Gemini 1.5 Pro", "description": "Modèle avancé avec grand contexte"},
+-        {"model_id": "gemini-1.5-flash", "display_name": "Gemini 1.5 Flash", "description": "Version optimisée"},
++        {"model_id": GEMINI_DEFAULT_MODEL, "display_name": "Gemini Flash", "description": "Modèle rapide et polyvalent de Google"},
++        {"model_id": GEMINI_LITE_MODEL, "display_name": "Gemini Flash-Lite", "description": "Version économique"},
+     ],
+     "groq": [
+         {"model_id": "llama-3.3-70b-versatile", "display_name": "Llama 3.3 70B", "description": "Modèle Llama puissant sur Groq"},
+@@ -301,7 +301,7 @@ async def call_google(api_key: str, model: str, system_message: str, user_messag
+     else:
+         client = genai.Client(api_key=api_key)
+         full_prompt = f"{system_message}\n\n---\n\nQuestion:\n{user_message}"
+-        response = client.models.generate_content(model=model, contents=full_prompt)
++        response = client.models.generate_content(model=resolve_gemini_model(model), contents=full_prompt)
+         return response.text
+ 
+ 
+@@ -322,15 +322,17 @@ async def call_groq(api_key: str, model: str, system_message: str, user_message:
+ 
+ 
+ async def call_ai(api_key: str, provider: str, model: str, system_message: str, user_message: str) -> str:
+-    """Universal AI call function"""
++    """Universal AI call function. Une réponse vide lève EmptyAIResponseError : les appelants
++    n'enregistrent alors rien (historique de conversation, analyses)."""
+     if provider == "openai":
+-        return await call_openai(api_key, model, system_message, user_message)
++        text = await call_openai(api_key, model, system_message, user_message)
+     elif provider == "google":
+-        return await call_google(api_key, model, system_message, user_message)
++        text = await call_google(api_key, model, system_message, user_message)
+     elif provider == "groq":
+-        return await call_groq(api_key, model, system_message, user_message)
++        text = await call_groq(api_key, model, system_message, user_message)
+     else:
+         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
++    return require_ai_text(text, provider)
+ 
+ 
+ # ============== API Endpoints ==============
+@@ -600,7 +602,7 @@ async def extract_job_from_page(
+         if p == "openai":
+             return "gpt-4o-mini"
+         elif p == "google":
+-            return "gemini-1.5-flash"
++            return GEMINI_DEFAULT_MODEL
+         elif p == "groq":
+             return "llama-3.3-70b-versatile"
+         return AI_MODELS[p][0]["model_id"]
+diff --git a/backend/routes/data_import.py b/backend/routes/data_import.py
+index 7e225f2..e7363cf 100644
+--- a/backend/routes/data_import.py
++++ b/backend/routes/data_import.py
+@@ -45,6 +45,7 @@ except ImportError:
+ from utils.auth import get_current_user
+ from utils.ai_quota import check_and_increment_quota
+ from utils.crypto import decrypt
++from utils.ai_models import GEMINI_DEFAULT_MODEL
+ 
+ router = APIRouter(prefix="/import", tags=["Import"])
+ 
+@@ -452,7 +453,7 @@ async def analyze_cv_with_google(api_key: str, cv_text: str, apps_context: str)
+     full_prompt = f"{CV_ANALYSIS_SYSTEM_MESSAGE}\n\n{user_prompt}"
+     
+     client = genai.Client(api_key=api_key)
+-    response = client.models.generate_content(model="gemini-1.5-flash", contents=full_prompt)
++    response = client.models.generate_content(model=GEMINI_DEFAULT_MODEL, contents=full_prompt)
+     return response.text
+ 
+ 
+@@ -683,7 +684,7 @@ async def analyze_cv(
+         elif user and user.get("google_ai_key"):
+             api_key = decrypt(user["google_ai_key"])
+             provider = "google"
+-            model = "gemini-1.5-flash"
++            model = GEMINI_DEFAULT_MODEL
+         elif user and user.get("groq_key"):
+             api_key = decrypt(user["groq_key"])
+             provider = "groq"
+@@ -707,7 +708,7 @@ async def analyze_cv(
+                     if google_key:
+                         api_key = google_key
+                         provider = "google"
+-                        model = "gemini-1.5-flash"
++                        model = GEMINI_DEFAULT_MODEL
+     
+     if not api_key:
+         raise HTTPException(
+@@ -800,13 +801,13 @@ async def analyze_cv(
+                 model_used = "gpt-4o"
+                 
+         elif provider == "google" or provider == "gemini":
+-            emergent_model = model or "gemini-1.5-flash"
++            emergent_model = model or GEMINI_DEFAULT_MODEL
+             if use_emergent:
+                 response = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", emergent_model)
+                 model_used = emergent_model
+             else:
+                 response = await analyze_cv_with_google(api_key, cv_text, apps_context)
+-                model_used = "gemini-1.5-flash"
++                model_used = GEMINI_DEFAULT_MODEL
+                 
+         elif provider == "groq":
+             response = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
+@@ -956,7 +957,7 @@ async def analyze_existing_cv(
+         elif user and user.get("google_ai_key"):
+             api_key = decrypt(user["google_ai_key"])
+             provider = "google"
+-            model = "gemini-1.5-flash"
++            model = GEMINI_DEFAULT_MODEL
+         else:
+             emergent_key = os.environ.get("EMERGENT_LLM_KEY")
+             if emergent_key:
+@@ -1040,10 +1041,10 @@ async def analyze_existing_cv(
+             model_used = model or "gpt-4o"
+         elif provider == "google":
+             if USE_EMERGENT:
+-                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", model or "gemini-1.5-flash")
++                response_text = await analyze_cv_with_emergent(api_key, user_id, cv_text, apps_context, "gemini", model or GEMINI_DEFAULT_MODEL)
+             else:
+                 response_text = await analyze_cv_with_google(api_key, cv_text, apps_context)
+-            model_used = model or "gemini-1.5-flash"
++            model_used = model or GEMINI_DEFAULT_MODEL
+         elif provider == "groq":
+             response_text = await analyze_cv_with_groq(api_key, cv_text, apps_context, model)
+             model_used = model or "llama-3.3-70b-versatile"
+diff --git a/backend/routes/documents.py b/backend/routes/documents.py
+index 1e8d5b0..5d85d83 100644
+--- a/backend/routes/documents.py
++++ b/backend/routes/documents.py
+@@ -28,6 +28,7 @@ from models import (
+ )
+ from utils.auth import get_current_user
+ from utils.crypto import decrypt
++from utils.ai_models import GEMINI_DEFAULT_MODEL, EmptyAIResponseError, require_ai_text
+ from utils.ai_quota import check_and_increment_quota
+ from xml.sax.saxutils import escape
+ 
+@@ -1021,12 +1022,12 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
+             try:
+                 from emergentintegrations.llm.chat import LlmChat, UserMessage
+                 chat = LlmChat(api_key=api_key, session_id=str(uuid.uuid4()))
+-                chat = chat.with_model("gemini", "gemini-1.5-flash")
++                chat = chat.with_model("gemini", GEMINI_DEFAULT_MODEL)
+                 content = await chat.send_message(UserMessage(text=prompt))
+             except ImportError:
+                 from google import genai
+                 client = genai.Client(api_key=api_key)
+-                response = client.models.generate_content(model="gemini-1.5-flash", contents=prompt)
++                response = client.models.generate_content(model=GEMINI_DEFAULT_MODEL, contents=prompt)
+                 content = response.text
+         
+         elif provider == "groq":
+@@ -1037,6 +1038,15 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
+                 messages=[{"role": "user", "content": prompt}]
+             )
+             content = response.choices[0].message.content
++
++        # Une réponse vide n'est jamais enregistrée comme une lettre générée
++        try:
++            content = require_ai_text(content, provider)
++        except EmptyAIResponseError:
++            raise HTTPException(
++                status_code=status.HTTP_502_BAD_GATEWAY,
++                detail="Le service IA n'a renvoyé aucun texte : aucune lettre n'a été enregistrée. Réessayez."
++            )
+         
+         # Generate PDF and upload to Cloudinary
+         letter_id = str(uuid.uuid4())
+diff --git a/backend/routes/statistics.py b/backend/routes/statistics.py
+index 815f0f4..d508b43 100644
+--- a/backend/routes/statistics.py
++++ b/backend/routes/statistics.py
+@@ -18,6 +18,7 @@ from models import (
+     sent_applications_filter
+ )
+ from utils.auth import get_current_user
++from utils.ai_models import GEMINI_DEFAULT_MODEL
+ 
+ router = APIRouter(prefix="/statistics", tags=["Statistics"])
+ 
+@@ -1051,7 +1052,7 @@ async def analyze_statistics_with_ai(
+         model_map = {
+             "groq": "llama-3.3-70b-versatile",
+             "openai": "gpt-4o-mini",
+-            "google": "gemini-2.0-flash",
++            "google": GEMINI_DEFAULT_MODEL,
+         }
+         model = model_map.get(provider, "llama-3.3-70b-versatile")
+ 
+diff --git a/backend/routes/tracking.py b/backend/routes/tracking.py
+index 503442d..6b4cd44 100644
+--- a/backend/routes/tracking.py
++++ b/backend/routes/tracking.py
+@@ -13,6 +13,7 @@ from models import (
+ )
+ from utils.auth import get_current_user
+ from utils.crypto import decrypt
++from utils.ai_models import GEMINI_DEFAULT_MODEL, resolve_gemini_model
+ import os
+ 
+ router = APIRouter(prefix="/applications", tags=["Application Tracking"])
+@@ -301,7 +302,7 @@ Réponds UNIQUEMENT avec un JSON au format:
+             
+             client = genai.Client(api_key=api_key)
+             response = client.models.generate_content(
+-                model="gemini-1.5-flash",
++                model=GEMINI_DEFAULT_MODEL,
+                 contents=prompt
+             )
+             response_text = response.text
+@@ -535,7 +536,7 @@ Score guide:
+                         import google.genai as genai
+                         client = genai.Client(api_key=api_key)
+                         response = client.models.generate_content(
+-                            model=target_model or "gemini-1.5-flash",
++                            model=resolve_gemini_model(target_model),
+                             contents=prompt
+                         )
+                         response_text = response.text
+diff --git a/backend/tests/test_ai_empty_responses.py b/backend/tests/test_ai_empty_responses.py
+new file mode 100644
+index 0000000..c83465f
+--- /dev/null
++++ b/backend/tests/test_ai_empty_responses.py
+@@ -0,0 +1,180 @@
++"""
++Correctif Gemini (hors Lot 2) : une réponse IA vide n'est JAMAIS enregistrée comme une
++génération réussie (lettre de motivation, historique du conseiller et du chatbot).
++Tests hors ligne : faux clients SDK, aucune clé réelle, MongoDB éphémère pour les routes.
++"""
++
++from types import SimpleNamespace
++
++import pytest
++
++import google.genai
++import groq
++import openai
++from google.genai import types as gtypes
++from groq.types.chat import ChatCompletion as GroqChatCompletion
++from openai.types.chat import ChatCompletion as OpenAIChatCompletion
++
++from utils.ai_models import EmptyAIResponseError, require_ai_text
++
++pytestmark = pytest.mark.anyio
++
++AI_KEY_VARS = ("GROQ_API_KEY", "OPENAI_API_KEY", "EMERGENT_LLM_KEY", "GOOGLE_API_KEY",
++               "GEMINI_API_KEY", "GOOGLE_AI_API_KEY")
++LETTER = "Madame, Monsieur, je souhaite rejoindre votre équipe."
++
++
++def chat_completion(cls, text):
++    return cls.model_validate({
++        "id": "offline", "object": "chat.completion", "created": 0, "model": "offline",
++        "choices": [{"index": 0, "finish_reason": "stop", "message": {"role": "assistant", "content": text}}],
++    })
++
++
++def genai_response(text):
++    if text is None:
++        return gtypes.GenerateContentResponse.model_validate({"candidates": []})
++    return gtypes.GenerateContentResponse.model_validate(
++        {"candidates": [{"content": {"role": "model", "parts": [{"text": text}]}}]})
++
++
++@pytest.fixture
++def ai(monkeypatch):
++    """Faux clients des 3 SDK ; `state.reply` fixe la réponse renvoyée."""
++    for var in AI_KEY_VARS:
++        monkeypatch.delenv(var, raising=False)
++    state = SimpleNamespace(reply=LETTER, calls=0)
++
++    def chat_client(response_cls):
++        class Fake:
++            def __init__(self, api_key=None, **kwargs):
++                def create(**kw):
++                    state.calls += 1
++                    return chat_completion(response_cls, state.reply)
++                self.chat = SimpleNamespace(completions=SimpleNamespace(create=create))
++        return Fake
++
++    class FakeGenai:
++        def __init__(self, api_key=None, **kwargs):
++            def generate_content(**kw):
++                state.calls += 1
++                return genai_response(state.reply)
++            self.models = SimpleNamespace(generate_content=generate_content)
++
++    monkeypatch.setattr(openai, "OpenAI", chat_client(OpenAIChatCompletion))
++    monkeypatch.setattr(groq, "Groq", chat_client(GroqChatCompletion))
++    monkeypatch.setattr(google.genai, "Client", FakeGenai)
++    import routes.ai as ai_routes
++    monkeypatch.setattr(ai_routes, "OpenAI", openai.OpenAI, raising=False)
++    monkeypatch.setattr(ai_routes, "Groq", groq.Groq, raising=False)
++    monkeypatch.setattr(ai_routes, "USE_EMERGENT", False)
++    return state
++
++
++# ============================================
++# Garde-fou central
++# ============================================
++
++@pytest.mark.parametrize("value", [None, "", "   ", "\n\t", 42, {"text": "x"}])
++def test_require_ai_text_rejects_empty_or_non_text(value):
++    with pytest.raises(EmptyAIResponseError):
++        require_ai_text(value, "google")
++
++
++def test_require_ai_text_returns_text():
++    assert require_ai_text("  Bonjour ", "groq") == "  Bonjour "
++
++
++@pytest.mark.parametrize("provider", ["openai", "google", "groq"])
++@pytest.mark.parametrize("reply", [None, "", "   "])
++async def test_call_ai_never_returns_an_empty_response(ai, provider, reply):
++    from routes.ai import call_ai
++    if reply is None and provider != "google":
++        reply = ""  # OpenAI et Groq renvoient au pire une chaîne vide
++    ai.reply = reply
++    with pytest.raises(EmptyAIResponseError):
++        await call_ai("k", provider, "modele", "S", "U")
++
++
++async def test_call_ai_returns_non_empty_text(ai):
++    from routes.ai import call_ai
++    ai.reply = "Conseil"
++    assert await call_ai("k", "google", "gemini-1.5-flash", "S", "U") == "Conseil"
++
++
++# ============================================
++# Lettre de motivation : rien n'est enregistré si la réponse est vide
++# ============================================
++
++@pytest.fixture
++def no_cloudinary(monkeypatch):
++    import routes.documents as docs
++
++    async def fake_upload(*args, **kwargs):
++        return None
++    monkeypatch.setattr(docs, "upload_cover_letter_to_cloudinary", fake_upload)
++
++
++ENV_KEY = {"groq": "GROQ_API_KEY", "openai": "OPENAI_API_KEY", "google": "GOOGLE_API_KEY"}
++
++
++async def generate_letter(api):
++    return await api.post("/api/documents/generate-cover-letter-ai",
++                          params={"entreprise": "Orange", "poste": "Data Engineer"}, headers=api.headers_for("a"))
++
++
++@pytest.mark.parametrize("provider, reply", [
++    ("google", None), ("google", ""), ("google", "   "), ("openai", ""), ("groq", "  \n "),
++])
++async def test_empty_cover_letter_is_not_saved(api, db, ai, monkeypatch, no_cloudinary, provider, reply):
++    monkeypatch.setenv(ENV_KEY[provider], "cle-test")
++    ai.reply = reply
++    r = await generate_letter(api)
++    assert r.status_code == 502
++    assert "aucune lettre n'a été enregistrée" in r.json()["detail"]
++    assert await db.generated_cover_letters.count_documents({}) == 0
++
++
++@pytest.mark.parametrize("provider", ["google", "openai", "groq"])
++async def test_valid_cover_letter_is_saved(api, db, ai, monkeypatch, no_cloudinary, provider):
++    monkeypatch.setenv(ENV_KEY[provider], "cle-test")
++    ai.reply = LETTER
++    r = await generate_letter(api)
++    assert r.status_code == 200 and r.json()["content"] == LETTER
++    saved = await db.generated_cover_letters.find_one({"user_id": api.users["a"]})
++    assert saved["content"] == LETTER
++
++
++# ============================================
++# Conseiller carrière et chatbot : pas d'échange vide dans l'historique
++# ============================================
++
++async def give_google_key(db, api):
++    await db.users.update_one({"id": api.users["a"]}, {"$set": {"google_ai_key": "cle-test"}})
++
++
++async def test_empty_career_advice_is_not_saved(api, db, ai):
++    await give_google_key(db, api)
++    ai.reply = None
++    r = await api.post("/api/ai/career-advisor", json={"question": "Comment progresser ?", "model_provider": "google"},
++                       headers=api.headers_for("a"))
++    assert r.status_code == 500 and "Réponse vide" in r.json()["detail"]
++    assert await db.chat_history.count_documents({}) == 0
++
++
++async def test_valid_career_advice_is_saved(api, db, ai):
++    await give_google_key(db, api)
++    ai.reply = "Relancez vos candidatures."
++    r = await api.post("/api/ai/career-advisor", json={"question": "Comment progresser ?", "model_provider": "google"},
++                       headers=api.headers_for("a"))
++    assert r.status_code == 200 and r.json()["advice"] == "Relancez vos candidatures."
++    assert await db.chat_history.count_documents({}) == 1
++
++
++async def test_empty_chatbot_reply_is_not_saved(api, db, ai):
++    await give_google_key(db, api)
++    ai.reply = "   "
++    r = await api.post("/api/ai/chatbot", json={"message": "Bonjour", "model_provider": "google"},
++                       headers=api.headers_for("a"))
++    assert r.status_code == 500
++    assert await db.chat_history.count_documents({}) == 0
+diff --git a/backend/tests/test_ai_models.py b/backend/tests/test_ai_models.py
+new file mode 100644
+index 0000000..b6e62f1
+--- /dev/null
++++ b/backend/tests/test_ai_models.py
+@@ -0,0 +1,102 @@
++"""
++Correctif Gemini (hors Lot 2) : plus aucun modèle Gemini arrêté n'est appelé.
++Tests hors ligne : aucun réseau, aucune clé réelle.
++"""
++
++import os
++import re
++from types import SimpleNamespace
++
++import pytest
++
++import google.genai
++from google.genai import types as gtypes
++
++from utils.ai_models import (
++    GEMINI_DEFAULT_MODEL, GEMINI_LITE_MODEL, RETIRED_GEMINI_MODELS, resolve_gemini_model,
++)
++
++BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
++ROUTES = ["routes/ai.py", "routes/data_import.py", "routes/documents.py", "routes/tracking.py",
++          "routes/statistics.py"]
++
++
++def test_defaults_are_current_models():
++    assert GEMINI_DEFAULT_MODEL == "gemini-3.8-flash"
++    assert GEMINI_LITE_MODEL == "gemini-3.5-flash-lite"
++    assert GEMINI_DEFAULT_MODEL not in RETIRED_GEMINI_MODELS and GEMINI_LITE_MODEL not in RETIRED_GEMINI_MODELS
++
++
++@pytest.mark.parametrize("requested, expected", [
++    ("gemini-1.5-flash", "gemini-3.8-flash"),
++    ("gemini-1.5-pro", "gemini-3.8-flash"),
++    ("Gemini-1.5-Flash", "gemini-3.8-flash"),
++    ("gemini-2.0-flash", "gemini-3.8-flash"),
++    ("gemini-2.0-flash-lite", "gemini-3.5-flash-lite"),
++    ("gemini-1.5-flash-8b", "gemini-3.5-flash-lite"),
++    (None, "gemini-3.8-flash"),
++    ("", "gemini-3.8-flash"),
++    ("gemini-3.6-flash", "gemini-3.6-flash"),       # modèle actuel : respecté
++    ("gemini-3.1-pro-preview", "gemini-3.1-pro-preview"),
++])
++def test_resolve_gemini_model(requested, expected):
++    assert resolve_gemini_model(requested) == expected
++
++
++@pytest.mark.parametrize("path", ROUTES)
++def test_no_hardcoded_gemini_model_in_routes(path):
++    source = open(os.path.join(BACKEND_DIR, path), encoding="utf-8").read()
++    assert re.findall(r"gemini-\d", source) == []
++
++
++def test_catalog_lists_only_current_models():
++    from routes.ai import AI_MODELS
++    ids = [m["model_id"] for m in AI_MODELS["google"]]
++    assert ids == [GEMINI_DEFAULT_MODEL, GEMINI_LITE_MODEL]
++    assert not set(ids) & RETIRED_GEMINI_MODELS
++
++
++@pytest.fixture
++def fake_genai(monkeypatch):
++    calls = []
++
++    class FakeClient:
++        def __init__(self, api_key=None, **kwargs):
++            def generate_content(**kw):
++                calls.append(kw)
++                return gtypes.GenerateContentResponse.model_validate(
++                    {"candidates": [{"content": {"role": "model", "parts": [{"text": "ok"}]}}]})
++            self.models = SimpleNamespace(generate_content=generate_content)
++
++    monkeypatch.setattr(google.genai, "Client", FakeClient)
++    import routes.ai as ai_routes
++    monkeypatch.setattr(ai_routes, "USE_EMERGENT", False)
++    return calls
++
++
++@pytest.mark.anyio
++@pytest.mark.parametrize("requested", ["gemini-1.5-flash", "gemini-2.0-flash"])
++async def test_call_google_never_sends_a_retired_model(fake_genai, requested):
++    from routes.ai import call_google
++    assert await call_google("k", requested, "S", "U") == "ok"
++    assert fake_genai[-1]["model"] == GEMINI_DEFAULT_MODEL
++
++
++@pytest.mark.anyio
++async def test_cv_analysis_with_google_uses_current_model(fake_genai):
++    from routes.data_import import analyze_cv_with_google
++    assert await analyze_cv_with_google("k", "CV", "ctx") == "ok"
++    assert fake_genai[-1]["model"] == GEMINI_DEFAULT_MODEL
++
++
++def test_models_overridable_by_environment():
++    """Surcharge par variables d'environnement, vérifiée dans un processus neuf : recharger
++    le module dans le processus de test recréerait ses classes et fausserait les autres tests."""
++    import subprocess
++    import sys
++    code = ("from utils.ai_models import GEMINI_DEFAULT_MODEL as d, GEMINI_LITE_MODEL as l, "
++            "resolve_gemini_model as r; print(d, l, r('gemini-1.5-flash'), r('gemini-2.0-flash-lite'))")
++    env = {**os.environ, "GEMINI_DEFAULT_MODEL": "gemini-3.6-flash", "GEMINI_LITE_MODEL": "gemini-3.1-flash-lite"}
++    out = subprocess.run([sys.executable, "-c", code], cwd=BACKEND_DIR, env=env,
++                         capture_output=True, text=True, timeout=120)
++    assert out.stdout.split() == ["gemini-3.6-flash", "gemini-3.1-flash-lite", "gemini-3.6-flash", "gemini-3.1-flash-lite"], out.stderr
+diff --git a/backend/utils/ai_models.py b/backend/utils/ai_models.py
+new file mode 100644
+index 0000000..3f98bd5
+--- /dev/null
++++ b/backend/utils/ai_models.py
+@@ -0,0 +1,52 @@
++"""
++JobTracker SaaS - Identifiants des modèles Google Gemini
++
++Source unique des modèles Gemini utilisés par le backend. Les modèles Gemini 1.5 et 2.0
++ont été arrêtés par Google (2.0 : 1er juin 2026) : tout identifiant retiré, y compris
++envoyé par un client ou mémorisé côté navigateur, est redirigé vers un modèle actuel.
++
++Modèles surchargeables par variables d'environnement, sans redéploiement de code :
++GEMINI_DEFAULT_MODEL et GEMINI_LITE_MODEL.
++"""
++
++import os
++from typing import Optional
++
++# Modèle Flash stable actuel (usage général : conseils, analyses, lettres, score)
++GEMINI_DEFAULT_MODEL = os.environ.get("GEMINI_DEFAULT_MODEL", "gemini-3.8-flash").strip()
++# Modèle économique (variante « lite »)
++GEMINI_LITE_MODEL = os.environ.get("GEMINI_LITE_MODEL", "gemini-3.5-flash-lite").strip()
++
++# Identifiants arrêtés par Google ou à accès restreint
++RETIRED_GEMINI_MODELS = {
++    "gemini-pro", "gemini-1.0-pro",
++    "gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-1.5-flash-002", "gemini-1.5-flash-8b",
++    "gemini-1.5-pro", "gemini-1.5-pro-001", "gemini-1.5-pro-002",
++    "gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-2.0-flash-lite", "gemini-2.0-flash-lite-001",
++}
++
++
++class EmptyAIResponseError(Exception):
++    """Le fournisseur IA n'a renvoyé aucun texte (réponse vide, blocage de sécurité...).
++    Une réponse vide n'est jamais enregistrée comme une génération réussie."""
++
++    def __init__(self, provider: str = ""):
++        super().__init__(f"Réponse vide du fournisseur IA{f' ({provider})' if provider else ''}")
++        self.provider = provider
++
++
++def require_ai_text(text, provider: str = "") -> str:
++    """Retourne le texte s'il est non vide, sinon lève EmptyAIResponseError."""
++    if not isinstance(text, str) or not text.strip():
++        raise EmptyAIResponseError(provider)
++    return text
++
++
++def resolve_gemini_model(model: Optional[str]) -> str:
++    """Modèle à appeler : celui demandé s'il est actuel, sinon un remplaçant équivalent."""
++    name = (model or "").strip()
++    if not name:
++        return GEMINI_DEFAULT_MODEL
++    if name.lower() in RETIRED_GEMINI_MODELS:
++        return GEMINI_LITE_MODEL if "lite" in name.lower() or "8b" in name.lower() else GEMINI_DEFAULT_MODEL
++    return name
