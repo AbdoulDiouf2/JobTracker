@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { fr, enUS } from 'date-fns/locale';
 import {
   AppWindow, Ban, Check, Copy, KeyRound, Link2, Loader2, Plus, Power, PowerOff, RefreshCw, Server, ShieldAlert,
-  ShieldCheck, Sparkles,
+  ShieldCheck, Sparkles, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useOAuthAdmin } from '../../hooks/useOAuthAdmin';
@@ -78,6 +78,33 @@ const T = {
     clientId: 'Client ID',
     secretNote: "Le secret n'est disponible que dans la fenêtre affichée à la création ou à la régénération.",
     authMethod: 'Authentification du client : client_secret_post ou client_secret_basic. PKCE S256 obligatoire.',
+    authMethodPublic: 'Authentification du client : aucune (client public). PKCE S256 obligatoire.',
+    publicNoSecret: "Application publique : aucun secret. Elle s'identifie par son Client ID et doit utiliser PKCE (S256).",
+    typeLabel: "Type d'application",
+    types: { confidential: 'Service web (confidentiel)', public: 'Application installée (publique)' },
+    typeBadge: { confidential: 'Confidentiel', public: 'Public' },
+    typeHelp: {
+      confidential: 'Pour un service hébergé (ChatGPT, Claude sur le web…) : il reçoit un secret, affiché une seule fois.',
+      public: "Pour une application installée sur un ordinateur (outil en ligne de commande, éditeur de code…) : aucun secret, la sécurité repose sur PKCE. Adresses de retour locales autorisées.",
+    },
+    urisHelp: {
+      confidential: 'Adresses HTTPS exactes.',
+      public: 'Adresses HTTPS exactes, ou adresses locales http://127.0.0.1/<chemin> et http://[::1]/<chemin> sans port (le port est choisi par l’application).',
+    },
+    scopesLabel: 'Permissions accordées à cette application',
+    scopeNames: {
+      'watch:read': "Lire les critères, l'état de la veille et les offres récentes",
+      'opportunities:write': 'Ajouter des offres et les comptes-rendus de veille',
+    },
+    scopesRequired: 'Choisissez au moins une permission.',
+    scopesHelp: "Retirer une permission s'applique immédiatement ; en ajouter une demande une nouvelle connexion depuis l'application.",
+    scopesSave: 'Enregistrer les permissions', scopesSaved: 'Permissions mises à jour', scopesError: 'Impossible de modifier les permissions.',
+    publicCreatedTitle: (n) => `Application ${n} créée`,
+    publicCreatedText: "Application publique : il n'y a aucun secret à conserver. Saisissez ce Client ID dans l'application.",
+    removeRedirect: (u) => `Retirer l'adresse ${u}`,
+    removeRedirectTitle: 'Retirer cette adresse de retour ?',
+    removeRedirectText: (u) => `${u} ne pourra plus servir à se connecter. Les connexions déjà établies ne sont pas révoquées.`,
+    redirectRemoved: 'Adresse retirée', removeError: "Impossible de retirer l'adresse.", removeLabel: 'Retirer',
     connections: (n) => `${n} connexion(s) active(s)`,
     grantsTitle: 'Autorisations OAuth',
     grantsEmpty: 'Aucune autorisation pour le moment.',
@@ -155,6 +182,33 @@ const T = {
     clientId: 'Client ID',
     secretNote: 'The secret is only available in the window shown at creation or regeneration.',
     authMethod: 'Client authentication: client_secret_post or client_secret_basic. PKCE S256 required.',
+    authMethodPublic: 'Client authentication: none (public client). PKCE S256 required.',
+    publicNoSecret: 'Public application: no secret. It identifies itself with its Client ID and must use PKCE (S256).',
+    typeLabel: 'Application type',
+    types: { confidential: 'Web service (confidential)', public: 'Installed application (public)' },
+    typeBadge: { confidential: 'Confidential', public: 'Public' },
+    typeHelp: {
+      confidential: 'For a hosted service (ChatGPT, Claude on the web…): it gets a secret, shown only once.',
+      public: 'For an application installed on a computer (command-line tool, code editor…): no secret, security relies on PKCE. Local redirect URLs allowed.',
+    },
+    urisHelp: {
+      confidential: 'Exact HTTPS URLs.',
+      public: 'Exact HTTPS URLs, or local URLs http://127.0.0.1/<path> and http://[::1]/<path> without a port (the application picks it).',
+    },
+    scopesLabel: 'Permissions granted to this application',
+    scopeNames: {
+      'watch:read': 'Read the criteria, the watch status and recent offers',
+      'opportunities:write': 'Add offers and watch reports',
+    },
+    scopesRequired: 'Choose at least one permission.',
+    scopesHelp: 'Removing a permission applies immediately; adding one requires a new connection from the application.',
+    scopesSave: 'Save permissions', scopesSaved: 'Permissions updated', scopesError: 'Unable to update the permissions.',
+    publicCreatedTitle: (n) => `Application ${n} created`,
+    publicCreatedText: 'Public application: there is no secret to keep. Enter this Client ID in the application.',
+    removeRedirect: (u) => `Remove URL ${u}`,
+    removeRedirectTitle: 'Remove this redirect URL?',
+    removeRedirectText: (u) => `${u} will no longer be usable to connect. Existing connections are not revoked.`,
+    redirectRemoved: 'URL removed', removeError: 'Unable to remove the URL.', removeLabel: 'Remove',
     connections: (n) => `${n} active connection(s)`,
     grantsTitle: 'OAuth authorizations',
     grantsEmpty: 'No authorization yet.',
@@ -178,6 +232,8 @@ const T = {
 };
 
 const USABLE = ['active', 'access_expired_observed'];
+const SCOPES = ['watch:read', 'opportunities:write'];
+const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 const STATE_STYLE = {
   none: 'border-slate-600 bg-slate-700/30 text-slate-300',
@@ -266,17 +322,23 @@ const OAuthSecretDialog = ({ credentials, onClose, t }) => (
       <DialogHeader className="text-left pr-6">
         <DialogTitle className="font-heading text-lg flex items-center gap-2 break-words">
           <KeyRound size={18} className="text-gold shrink-0" aria-hidden="true" />
-          {t.secretTitle(credentials?.name || '')}
+          {credentials?.client_secret ? t.secretTitle(credentials?.name || '') : t.publicCreatedTitle(credentials?.name || '')}
         </DialogTitle>
-        <DialogDescription className="flex items-start gap-2 text-amber-300">
-          <ShieldAlert size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-          {t.secretWarning}
-        </DialogDescription>
+        {credentials?.client_secret ? (
+          <DialogDescription className="flex items-start gap-2 text-amber-300">
+            <ShieldAlert size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+            {t.secretWarning}
+          </DialogDescription>
+        ) : (
+          <DialogDescription className="text-slate-400" data-testid="oauth-public-created">{t.publicCreatedText}</DialogDescription>
+        )}
       </DialogHeader>
       {credentials && (
         <div className="flex flex-col gap-3">
           <CopyField label={t.clientId} value={credentials.client_id} testId="oauth-secret-client-id" t={t} />
-          <CopyField label={t.secretLabel} value={credentials.client_secret} testId="oauth-secret-value" t={t} />
+          {credentials.client_secret && (
+            <CopyField label={t.secretLabel} value={credentials.client_secret} testId="oauth-secret-value" t={t} />
+          )}
         </div>
       )}
       <DialogFooter>
@@ -322,26 +384,55 @@ const CheckRow = ({ label, ok, value }) => (
   </div>
 );
 
-/** Création d'un client : nom + adresses de retour ; préréglages facultatifs fournis par le backend. */
+const Choice = ({ role, checked, onClick, children, testId, disabled }) => (
+  <button type="button" role={role} aria-checked={checked} onClick={onClick} disabled={disabled}
+    className={`min-h-9 px-3 py-1.5 rounded-lg border text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60 disabled:opacity-50
+      ${checked ? 'border-gold/50 bg-gold/15 text-gold' : 'border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'}`}
+    data-testid={testId}>
+    {children}
+  </button>
+);
+
+const toggle = (list, value) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+
+/** Permissions (scopes) : cases à cocher accessibles, au moins une requise. */
+const ScopePicker = ({ value, onChange, idPrefix, t }) => (
+  <div className="flex flex-col gap-2" role="group" aria-label={t.scopesLabel}>
+    {SCOPES.map((scope) => (
+      <Choice key={scope} role="checkbox" checked={value.includes(scope)} onClick={() => onChange(toggle(value, scope))}
+        testId={`${idPrefix}-scope-${scope}`}>
+        <span className="block">{t.scopeNames[scope]}</span>
+        <code className="text-xs text-slate-500">{scope}</code>
+      </Choice>
+    ))}
+    {value.length === 0 && <p className="text-xs text-red-400" role="alert">{t.scopesRequired}</p>}
+  </div>
+);
+
+/** Création d'un client : type, nom, adresses de retour, permissions ; préréglages facultatifs. */
 const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t }) => {
   const [name, setName] = useState('');
   const [uris, setUris] = useState('');
+  const [clientType, setClientType] = useState('confidential');
+  const [scopes, setScopes] = useState(SCOPES);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) { setName(''); setUris(''); setError(''); setSubmitting(false); }
+    if (!open) {
+      setName(''); setUris(''); setClientType('confidential'); setScopes(SCOPES); setError(''); setSubmitting(false);
+    }
   }, [open]);
 
   const redirectUris = uris.split('\n').map(u => u.trim()).filter(Boolean);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || redirectUris.length === 0 || submitting) return;
+    if (!name.trim() || redirectUris.length === 0 || scopes.length === 0 || submitting) return;
     setSubmitting(true);
     setError('');
     try {
-      await onCreate({ name: name.trim(), redirectUris });
+      await onCreate({ name: name.trim(), redirectUris, clientType, allowedScopes: scopes });
     } catch (err) {
       setError(errorDetail(err, t.createError));
       setSubmitting(false);
@@ -365,7 +456,10 @@ const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t
                 const used = existingNames.includes(p.name.toLowerCase());
                 return (
                   <Button key={p.key} type="button" variant="outline" size="sm" disabled={used}
-                    onClick={() => { setName(p.name); setUris(p.redirect_uris.join('\n')); }}
+                    onClick={() => {
+                      setName(p.name); setUris(p.redirect_uris.join('\n'));
+                      setClientType(p.client_type || 'confidential'); setScopes(p.allowed_scopes || SCOPES);
+                    }}
                     className="h-8 border-slate-700 transition-colors" data-testid={`oauth-preset-${p.key}`}>
                     <Sparkles size={14} aria-hidden="true" />
                     {p.name}{used ? ` (${t.presetUsed})` : ''}
@@ -374,6 +468,19 @@ const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t
               })}
             </div>
           )}
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm text-slate-300 mb-2">{t.typeLabel}</legend>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label={t.typeLabel}>
+              {['confidential', 'public'].map((kind) => (
+                <Choice key={kind} role="radio" checked={clientType === kind} onClick={() => setClientType(kind)}
+                  testId={`oauth-client-type-${kind}`}>
+                  {t.types[kind]}
+                </Choice>
+              ))}
+            </div>
+            <p className="text-xs text-slate-400" data-testid="oauth-client-type-help">{t.typeHelp[clientType]}</p>
+          </fieldset>
 
           <div className="flex flex-col gap-2">
             <Label htmlFor="oauth-client-name" className="text-slate-300">{t.nameLabel}</Label>
@@ -386,14 +493,21 @@ const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t
             <Textarea id="oauth-client-uris" value={uris} onChange={(e) => setUris(e.target.value)}
               placeholder={t.urisPlaceholder} rows={3} autoComplete="off" spellCheck={false}
               className="bg-slate-900/50 border-slate-700 text-white font-mono text-sm"
-              aria-invalid={!!error} aria-describedby={error ? 'oauth-create-error' : undefined}
+              aria-invalid={!!error} aria-describedby={error ? 'oauth-create-error' : 'oauth-client-uris-help'}
               data-testid="oauth-client-uris" />
+            <p id="oauth-client-uris-help" className="text-xs text-slate-500">{t.urisHelp[clientType]}</p>
           </div>
+
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-sm text-slate-300 mb-2">{t.scopesLabel}</legend>
+            <ScopePicker value={scopes} onChange={setScopes} idPrefix="oauth-create" t={t} />
+          </fieldset>
           {error && <p id="oauth-create-error" role="alert" className="text-sm text-red-400">{error}</p>}
 
           <DialogFooter className="gap-2">
             <Button type="button" variant="ghost" className="h-10" onClick={onClose} disabled={submitting}>{t.cancel}</Button>
-            <Button type="submit" disabled={!name.trim() || redirectUris.length === 0 || submitting} aria-busy={submitting}
+            <Button type="submit" disabled={!name.trim() || redirectUris.length === 0 || scopes.length === 0 || submitting}
+              aria-busy={submitting}
               className="h-10 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
               data-testid="oauth-create-submit">
               {submitting ? <Loader2 className="animate-spin" /> : <Plus />}
@@ -453,9 +567,44 @@ const AddRedirectForm = ({ clientId, mutation, t }) => {
   );
 };
 
-const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, onConfirm, onReactivate, t }) => {
+/** Permissions d'un client existant : modification explicite (bouton Enregistrer). */
+const ClientScopes = ({ client, mutation, t }) => {
+  const current = client.allowed_scopes || SCOPES;
+  const [value, setValue] = useState(current);
+  const currentKey = current.join(' ');
+  useEffect(() => { setValue(currentKey ? currentKey.split(' ') : []); }, [currentKey]);
+  const changed = !sameSet(value, current);
+
+  const save = async () => {
+    try {
+      await mutation.mutateAsync({ clientId: client.client_id, scopes: SCOPES.filter((s) => value.includes(s)) });
+      toast.success(t.scopesSaved);
+    } catch (err) {
+      toast.error(errorDetail(err, t.scopesError));
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2" data-testid={`oauth-scopes-${client.client_id}`}>
+      <p className="text-xs text-slate-500">{t.scopesLabel}</p>
+      <ScopePicker value={value} onChange={setValue} idPrefix={`oauth-${client.client_id}`} t={t} />
+      <p className="text-xs text-slate-500">{t.scopesHelp}</p>
+      {changed && (
+        <Button type="button" size="sm" onClick={save} disabled={value.length === 0 || mutation.isPending}
+          className="self-start h-9 bg-gold hover:bg-gold-light text-[#020817] font-semibold transition-colors"
+          data-testid={`oauth-scopes-save-${client.client_id}`}>
+          {mutation.isPending ? <Loader2 className="animate-spin" /> : <Check />}
+          {t.scopesSave}
+        </Button>
+      )}
+    </div>
+  );
+};
+
+const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, setClientScopes, onConfirm, onReactivate, t }) => {
   const state = connectionState(status, client);
   const id = client.client_id;
+  const isPublic = client.client_type === 'public';
   return (
     <li className={`p-4 rounded-lg border flex flex-col gap-4 ${client.active ? 'border-slate-700 bg-slate-900/40' : 'border-slate-800 bg-slate-900/20'}`}
       data-testid={`oauth-client-${id}`}>
@@ -464,6 +613,9 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, onC
           <AppWindow size={16} className="text-gold shrink-0" aria-hidden="true" />
           <p className="text-white font-medium break-words min-w-0" data-testid={`oauth-client-name-${id}`}>{client.name}</p>
           <Badge className={STATE_STYLE[state]} testId={`oauth-client-state-${id}`}>{t.state[state]}</Badge>
+          <Badge className="border-slate-600 bg-slate-800/60 text-slate-300" testId={`oauth-client-type-${id}`}>
+            {t.typeBadge[isPublic ? 'public' : 'confidential']}
+          </Badge>
         </div>
         <p className="text-xs text-slate-400">{t.stateHelp[state]}</p>
         <p className="text-xs text-slate-500">{t.connections(client.active_grants ?? 0)}</p>
@@ -473,26 +625,38 @@ const ClientCard = ({ client, status, busy, addRedirectUri, setClientActive, onC
         <p className="text-sm text-white font-medium break-words">{t.valuesTitle(client.name)}</p>
         <CopyField label={t.mcpUrl} value={status.mcp_url} testId={`oauth-mcp-url-${id}`} t={t} />
         <CopyField label={t.clientId} value={id} testId={`oauth-client-id-${id}`} t={t} />
-        <p className="text-xs text-slate-400">{t.secretNote}</p>
-        <p className="text-xs text-slate-500">{t.authMethod}</p>
+        <p className="text-xs text-slate-400">{isPublic ? t.publicNoSecret : t.secretNote}</p>
+        <p className="text-xs text-slate-500">{isPublic ? t.authMethodPublic : t.authMethod}</p>
       </div>
 
       <div className="flex flex-col gap-2">
         <p className="text-xs text-slate-500 flex items-center gap-1.5"><Link2 size={12} aria-hidden="true" />{t.redirects}</p>
         <ul className="flex flex-col gap-1" data-testid={`oauth-redirect-list-${id}`}>
           {client.redirect_uris.map(uri => (
-            <li key={uri} className="font-mono text-xs text-slate-300 break-all">{uri}</li>
+            <li key={uri} className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs text-slate-300 break-all">{uri}</span>
+              <button type="button" onClick={() => onConfirm({ kind: 'removeRedirect', client, uri })}
+                disabled={client.redirect_uris.length <= 1} aria-label={t.removeRedirect(uri)}
+                className="p-1.5 rounded-md text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-30 disabled:pointer-events-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60"
+                data-testid={`oauth-redirect-remove-${id}-${uri}`}>
+                <Trash2 size={14} aria-hidden="true" />
+              </button>
+            </li>
           ))}
         </ul>
         <AddRedirectForm clientId={id} mutation={addRedirectUri} t={t} />
       </div>
 
+      <ClientScopes client={client} mutation={setClientScopes} t={t} />
+
       <div className="flex flex-col sm:flex-row gap-2">
-        <Button variant="outline" onClick={() => onConfirm({ kind: 'rotate', client })} disabled={busy}
-          className="h-10 border-slate-700 transition-colors" data-testid={`oauth-rotate-${id}`}>
-          {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
-          {t.rotate}
-        </Button>
+        {!isPublic && (
+          <Button variant="outline" onClick={() => onConfirm({ kind: 'rotate', client })} disabled={busy}
+            className="h-10 border-slate-700 transition-colors" data-testid={`oauth-rotate-${id}`}>
+            {busy ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            {t.rotate}
+          </Button>
+        )}
         {client.active ? (
           <Button variant="outline" onClick={() => onConfirm({ kind: 'deactivate', client })}
             disabled={setClientActive.isPending}
@@ -518,7 +682,8 @@ export const OAuthConnectionsPanel = () => {
   const { language } = useLanguage();
   const t = T[language];
   const {
-    status, clients, grants, createClient, rotateSecret, addRedirectUri, setClientActive, revokeGrant, setKillSwitch,
+    status, clients, grants, createClient, rotateSecret, addRedirectUri, removeRedirectUri, setClientScopes,
+    setClientActive, revokeGrant, setKillSwitch,
   } = useOAuthAdmin();
 
   // Le secret ne vit que dans ce state local : effacé à la fermeture, détruit au démontage.
@@ -566,9 +731,14 @@ export const OAuthConnectionsPanel = () => {
       } else if (current.kind === 'revoke') {
         await revokeGrant.mutateAsync(current.grant.id);
         toast.success(t.revoked);
+      } else if (current.kind === 'removeRedirect') {
+        await removeRedirectUri.mutateAsync({ clientId: current.client.client_id, redirectUri: current.uri });
+        toast.success(t.redirectRemoved);
       }
     } catch (err) {
-      const fallback = { open: t.switchError, cut: t.switchError, deactivate: t.activeError, revoke: t.revokeError }[current.kind];
+      const fallback = {
+        open: t.switchError, cut: t.switchError, deactivate: t.activeError, revoke: t.revokeError, removeRedirect: t.removeError,
+      }[current.kind];
       toast.error(errorDetail(err, fallback));
     }
   };
@@ -604,6 +774,7 @@ export const OAuthConnectionsPanel = () => {
     },
     rotate: { title: t.rotateTitle(confirm.client?.name), text: t.rotateText, confirmLabel: t.rotate, danger: false },
     revoke: { title: t.revokeTitle, text: t.revokeText(confirm.grant?.client_name), confirmLabel: t.revoke, danger: true },
+    removeRedirect: { title: t.removeRedirectTitle, text: t.removeRedirectText(confirm.uri), confirmLabel: t.removeLabel, danger: true },
   }[confirm.kind];
 
   return (
@@ -662,7 +833,7 @@ export const OAuthConnectionsPanel = () => {
           <ul className="flex flex-col gap-3">
             {clientList.map(c => (
               <ClientCard key={c.client_id} client={c} status={s} busy={busyClient === c.client_id}
-                addRedirectUri={addRedirectUri} setClientActive={setClientActive}
+                addRedirectUri={addRedirectUri} setClientActive={setClientActive} setClientScopes={setClientScopes}
                 onConfirm={setConfirm} onReactivate={reactivate} t={t} />
             ))}
           </ul>

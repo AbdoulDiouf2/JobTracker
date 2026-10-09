@@ -314,7 +314,7 @@ async def test_report_last_one_wins_with_observed_counts(api, db):
     error, out = await call(api, who, "report_watch_run",
                             {"run_id": rid, "status": "completed", "sent": 2, "notes": "Fin."})
     assert error is False
-    run = await db.watch_runs.find_one({"user_id": who["user_id"], "run_id": rid})
+    run = await db.watch_runs.find_one({"user_id": who["user_id"], "public_run_id": rid})
     assert run["report"]["status"] == "completed" and run["report_count"] == 2
     assert await db.opportunities.count_documents({}) == 1  # un rapport n'écrit aucune offre
 

@@ -5,7 +5,7 @@ Panel admin pour la gestion multi-tenant
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query, Response
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List
+from typing import Literal, Optional, List
 
 from models import (
     UserResponse, UserAdminResponse, UserRole, AdminDashboardStats,
@@ -601,8 +601,9 @@ NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
 def _client_presets() -> list:
     """Préréglages FACULTATIFS proposés à la création (P1.2). Aucun n'est imposé."""
-    from services.oauth_service import CHATGPT_DEFAULT_REDIRECT
-    return [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_DEFAULT_REDIRECT]}]
+    from services.oauth_service import CHATGPT_DEFAULT_REDIRECT, SUPPORTED_SCOPES
+    return [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_DEFAULT_REDIRECT],
+             "client_type": "confidential", "allowed_scopes": list(SUPPORTED_SCOPES)}]
 
 
 async def get_webapp_admin(
@@ -624,13 +625,25 @@ class OAuthRedirectUriAdd(BaseModel):
     redirect_uri: str
 
 
+OAuthScope = Literal["watch:read", "opportunities:write"]
+
+
 class OAuthClientCreate(BaseModel):
-    """Client confidentiel pré-enregistré : nom affiché au consentement et adresses de retour
-    EXACTES en HTTPS (validées par le service OAuth)."""
+    """Client pré-enregistré : nom affiché au consentement, type, scopes autorisés et adresses
+    de retour EXACTES (HTTPS ; locales loopback pour les clients publics), validées par le
+    service OAuth. Valeurs par défaut identiques à P1 : confidentiel, tous les scopes."""
     model_config = ConfigDict(extra="forbid")
 
     name: str = Field(..., max_length=200)
     redirect_uris: List[str] = Field(..., min_length=1, max_length=10)
+    client_type: Literal["confidential", "public"] = "confidential"
+    allowed_scopes: Optional[List[OAuthScope]] = Field(None, min_length=1, max_length=10)
+
+
+class OAuthClientScopesUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    allowed_scopes: List[OAuthScope] = Field(..., min_length=1, max_length=10)
 
 
 def _redirect_collisions(clients: list, uris: list, exclude_client_id: Optional[str] = None) -> list:
@@ -700,10 +713,10 @@ async def create_oauth_client(
     que créer un doublon. Adresse de retour déjà utilisée par un autre client : acceptée et
     signalée (`warnings`).
     """
-    from services.oauth_service import create_client, list_clients, validate_client_name, validate_redirect_uri
+    from services.oauth_service import create_client, list_clients, validate_client_name, validate_client_redirect
     try:
         name = validate_client_name(data.name)
-        uris = list(dict.fromkeys(validate_redirect_uri(u) for u in data.redirect_uris))
+        uris = list(dict.fromkeys(validate_client_redirect(u, data.client_type) for u in data.redirect_uris))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     clients = await list_clients(db)
@@ -714,10 +727,16 @@ async def create_oauth_client(
             detail=(f"Un client nommé « {taken['name']} » existe déjà"
                     + (" : réactivez-le plutôt que d'en créer un nouveau" if not taken["active"] else "")),
         )
-    created = await create_client(db, name, uris)
+    try:
+        created = await create_client(db, name, uris, client_type=data.client_type, allowed_scopes=data.allowed_scopes)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     response.headers.update(NO_STORE)
-    logger.info("oauth_client_created_by_admin admin_id=%s client_id=%s", admin_user["id"], created["client_id"])
+    logger.info("oauth_client_created_by_admin admin_id=%s client_id=%s type=%s",
+                admin_user["id"], created["client_id"], data.client_type)
+    # client_secret : None pour un client public (aucun secret n'existe)
     return {"client_id": created["client_id"], "client_secret": created["client_secret"], "name": name,
+            "client_type": created["client_type"], "allowed_scopes": created["allowed_scopes"],
             "redirect_uris": created["redirect_uris"], "warnings": _redirect_collisions(clients, uris)}
 
 
@@ -738,6 +757,41 @@ async def add_oauth_redirect_uri(
     logger.info("oauth_redirect_added_by_admin admin_id=%s client_id=%s", admin_user["id"], client_id)
     warnings = _redirect_collisions(await list_clients(db), [data.redirect_uri], exclude_client_id=client_id)
     return {"client_id": client_id, "redirect_uris": uris, "warnings": warnings}
+
+
+@router.delete("/oauth/clients/{client_id}/redirect-uris")
+async def remove_oauth_redirect_uri(
+    client_id: str,
+    redirect_uri: str = Query(..., max_length=512),
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Retire une adresse de retour (au moins une doit rester)."""
+    from services.oauth_service import remove_redirect_uri
+    await _oauth_client_or_404(db, client_id)
+    try:
+        uris = await remove_redirect_uri(db, client_id, redirect_uri)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    logger.warning("oauth_redirect_removed_by_admin admin_id=%s client_id=%s", admin_user["id"], client_id)
+    return {"client_id": client_id, "redirect_uris": uris}
+
+
+@router.put("/oauth/clients/{client_id}/scopes")
+async def set_oauth_client_scopes(
+    client_id: str,
+    data: OAuthClientScopesUpdate,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db)
+):
+    """Scopes autorisés au client. Réduction : effet immédiat sur les jetons existants.
+    Élargissement : nécessite une nouvelle connexion depuis l'application."""
+    from services.oauth_service import set_client_scopes
+    await _oauth_client_or_404(db, client_id)
+    scopes = await set_client_scopes(db, client_id, list(data.allowed_scopes))
+    logger.warning("oauth_client_scopes_by_admin admin_id=%s client_id=%s scopes=%s",
+                   admin_user["id"], client_id, ",".join(scopes))
+    return {"client": await _oauth_client_or_404(db, client_id)}
 
 
 @router.put("/oauth/clients/{client_id}/active")
@@ -770,7 +824,10 @@ async def rotate_oauth_client_secret(
     """Nouveau secret, affiché UNE fois ; l'ancien est refusé immédiatement."""
     from services.oauth_service import rotate_client_secret
     await _oauth_client_or_404(db, client_id)
-    secret = await rotate_client_secret(db, client_id)
+    try:
+        secret = await rotate_client_secret(db, client_id)
+    except ValueError as exc:  # client public : aucun secret
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     response.headers.update(NO_STORE)
     logger.warning("oauth_client_secret_rotated admin_id=%s client_id=%s", admin_user["id"], client_id)
     return {"client_id": client_id, "client_secret": secret}

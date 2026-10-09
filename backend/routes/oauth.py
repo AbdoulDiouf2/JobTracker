@@ -9,7 +9,7 @@ Points d'entrée :
   GET  /api/oauth/authorize            (ChatGPT, navigateur)  -> page de consentement
   GET  /api/oauth/requests/{id}        (JWT webapp)            détails pour le consentement
   POST /api/oauth/consent              (JWT webapp)            décision -> URL de retour
-  POST /api/oauth/token                (client authentifié)    code -> jetons, rotation
+  POST /api/oauth/token                (client authentifié ou public + PKCE)  code -> jetons, rotation
   POST /api/oauth/revoke               (client authentifié)    RFC 7009
   GET  /api/oauth/grants               (JWT webapp)            connexions de l'utilisateur
   DELETE /api/oauth/grants/{id}        (JWT webapp)            révocation par l'utilisateur
@@ -84,7 +84,7 @@ def oauth_error_response(err: OAuthError) -> JSONResponse:
 
 
 def client_credentials(request: Request, form: dict) -> tuple:
-    """client_secret_basic (prioritaire) ou client_secret_post (RFC 6749 §2.3.1)."""
+    """client_secret_basic (prioritaire), client_secret_post, ou identifiant seul pour un client public."""
     auth = request.headers.get("authorization", "")
     scheme, _, value = auth.partition(" ")
     if scheme.lower() == "basic" and value:
@@ -126,14 +126,15 @@ async def get_consent_request(request_id: str, db=Depends(oauth_available), curr
         code = {oauth_service.REQUEST_EXPIRED: 410, oauth_service.REQUEST_USED: 409}.get(error, 404)
         return JSONResponse(status_code=code, content={"error": error}, headers=SECURE)
     try:
-        # Domaine de retour REVALIDÉ côté serveur : l'utilisateur voit où il sera renvoyé (P1.1)
-        redirect_domain = oauth_service.redirect_host(req["redirect_uri"])
+        # Domaine de retour REVALIDÉ côté serveur : l'utilisateur voit où il sera renvoyé (P1.1).
+        # `redirect_local` : retour vers une application de cet appareil (loopback, P2.3)
+        redirect = oauth_service.describe_redirect(req["redirect_uri"])
     except ValueError:
         return JSONResponse(status_code=400, content={"error": "invalid_request"}, headers=SECURE)
     user = await db.users.find_one({"id": current_user["user_id"]}, {"_id": 0, "email": 1, "full_name": 1})
     return JSONResponse(headers=SECURE, content={
         "request_id": req["id"],
-        "client": {"name": req["client_name"], "redirect_domain": redirect_domain},
+        "client": {"name": req["client_name"], "redirect_domain": redirect["host"], "redirect_local": redirect["local"]},
         "scopes": [{"scope": s, "description": oauth_service.SCOPE_DESCRIPTIONS[s]} for s in req["scopes"]],
         "account": {"email": (user or {}).get("email"), "name": (user or {}).get("full_name")},
         "eligible": await oauth_service.user_is_eligible(db, current_user["user_id"]),

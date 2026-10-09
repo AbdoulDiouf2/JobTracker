@@ -255,7 +255,8 @@ async def test_status(api, db, admin, monkeypatch, vercel_env, enabled, allowed,
                     "production": vercel_env == "production",
                     "keys": {"mcp_enabled": enabled, "production_allowed": allowed},
                     "owner_watch_enabled": True, "mcp_url": RESOURCE,
-                    "presets": [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [REDIRECT]}]}
+                    "presets": [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [REDIRECT],
+                                 "client_type": "confidential", "allowed_scopes": ["watch:read", "opportunities:write"]}]}
 
 
 async def test_kill_switch_closed_by_default_in_status(api, db, admin):

@@ -128,7 +128,7 @@ async def test_consent_shows_real_client_and_redirect_domain(api, db):
     r = await api.get("/api/oauth/authorize", params=authorize_params(agent, challenge, redirect_uri=OTHER_REDIRECT))
     request_id = qs(r.headers["location"])["request"]
     body = (await api.get(f"/api/oauth/requests/{request_id}", headers=api.headers_for("a"))).json()
-    assert body["client"] == {"name": "Agent MAADEC", "redirect_domain": "agent.maadec.com"}
+    assert body["client"] == {"name": "Agent MAADEC", "redirect_domain": "agent.maadec.com", "redirect_local": False}
     assert "ChatGPT" not in json.dumps(body)
 
 
@@ -283,7 +283,8 @@ async def test_shared_redirect_is_allowed_but_reported(api, db, admin):
 
 async def test_status_offers_an_optional_chatgpt_preset(api, db, admin):
     presets = (await api.get(f"{BASE}/status", headers=admin)).json()["presets"]
-    assert presets == [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_REDIRECT]}]
+    assert presets == [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_REDIRECT],
+                        "client_type": "confidential", "allowed_scopes": ["watch:read", "opportunities:write"]}]
     assert await db.oauth_clients.count_documents({}) == 0  # rien n'est créé d'office
 
 
@@ -325,12 +326,14 @@ async def test_opportunities_and_runs_record_the_verified_client(api, db):
     assert err is False
     opp2 = await db.opportunities.find_one({"id": out["results"][0]["opportunity_id"]})
     assert opp2["watch"]["client_id"] == chatgpt["client_id"]
-    run = await db.watch_runs.find_one({"run_id": rid})
-    assert sorted(run["client_ids"]) == sorted([chatgpt["client_id"], agent["client_id"]])
+    # P2 : même run_id, deux clients -> deux exécutions ISOLÉES, chacune tracée à son client
+    runs = await db.watch_runs.find({"public_run_id": rid}).to_list(10)
+    assert sorted(r["client_ids"][0] for r in runs) == sorted([chatgpt["client_id"], agent["client_id"]])
+    assert all(len(r["client_ids"]) == 1 for r in runs)
 
     err, out = await tool(api, t1["access_token"], "report_watch_run", {"run_id": rid, "status": "completed"})
     assert err is False and set(out) == {"run_id", "recorded", "observed"}
-    run = await db.watch_runs.find_one({"run_id": rid})
+    run = await db.watch_runs.find_one({"public_run_id": rid, "client_ids": chatgpt["client_id"]})
     assert run["report_client_id"] == chatgpt["client_id"] and "client_id" not in run["report"]
     err, status = await tool(api, t1["access_token"], "get_watch_status", {})
     assert "client_id" not in json.dumps(status)
@@ -369,7 +372,10 @@ async def test_legacy_opportunities_and_runs_without_client_id(api, db):
     err, out = await tool(api, t1["access_token"], "create_opportunities", {"run_id": rid, "opportunities": [offer(1)]})
     opp_id = out["results"][0]["opportunity_id"]
     await db.opportunities.update_one({"id": opp_id}, {"$unset": {"watch.client_id": ""}})
-    await db.watch_runs.update_one({"run_id": rid}, {"$unset": {"client_ids": ""}})
+    # Exécution au format antérieur (clé = run_id brut, sans client) : runs ET éléments rejouables
+    key = (await db.watch_runs.find_one({"public_run_id": rid}))["run_id"]
+    await db.watch_runs.update_one({"run_id": key}, {"$set": {"run_id": rid}, "$unset": {"client_ids": "", "public_run_id": ""}})
+    await db.watch_run_items.update_many({"run_id": key}, {"$set": {"run_id": rid}})
     legacy = await db.opportunities.find_one({"id": opp_id})
     assert "client_id" not in legacy["watch"]
 

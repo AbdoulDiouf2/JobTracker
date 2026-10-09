@@ -132,8 +132,9 @@ def authorization_server_metadata() -> dict:
         "response_types_supported": ["code"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "code_challenge_methods_supported": ["S256"],
-        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
-        "revocation_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic"],
+        # "none" : clients PUBLICS (applications natives, P2), PKCE S256 obligatoire
+        "token_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
+        "revocation_endpoint_auth_methods_supported": ["client_secret_post", "client_secret_basic", "none"],
         "scopes_supported": list(SUPPORTED_SCOPES),
         "authorization_response_iss_parameter_supported": True,
         "client_id_metadata_document_supported": False,
@@ -231,10 +232,135 @@ def _validate_redirect_uri(uri: str) -> str:
     return validate_redirect_uri(uri)
 
 
+# ============================================
+# REDIRECTIONS LOCALES (clients natifs, P2.3 — RFC 8252 §7.3)
+# ============================================
+# Enregistrée SANS port : http://127.0.0.1/<chemin> ou http://[::1]/<chemin>.
+# À l'autorisation, n'importe quel port 1-65535 est accepté pour CES SEULS hôtes littéraux ;
+# schéma, hôte et chemin restent comparés à l'identique. Ni « localhost », ni autre IP, ni
+# encodage (%), ni requête, ni fragment, ni identifiants.
+LOOPBACK_HOSTS = ("127.0.0.1", "[::1]")
+_LOOPBACK_PATH = r"/[A-Za-z0-9._~!$&'()*+,;=:@/-]{0,200}"
+_LOOPBACK_REGISTERED_RE = re.compile(r"^http://(127\.0\.0\.1|\[::1\])(" + _LOOPBACK_PATH + r")$")
+_LOOPBACK_REQUEST_RE = re.compile(r"^http://(127\.0\.0\.1|\[::1\])(?::([1-9][0-9]{0,4}))?(" + _LOOPBACK_PATH + r")$")
+
+
+def _check_loopback_path(path: str) -> None:
+    segments = path.split("/")[1:]
+    if "//" in path or any(seg in (".", "..") for seg in segments):
+        raise ValueError("redirect_uri locale invalide : chemin ambigu")
+
+
+def is_loopback_uri(uri) -> bool:
+    """Adresse visant un hôte loopback littéral (127.0.0.1 ou [::1]) ; toute autre adresse http
+    relève de la règle HTTPS stricte (et sera refusée)."""
+    return isinstance(uri, str) and uri.startswith(("http://127.0.0.1", "http://[::1]"))
+
+
+def validate_loopback_redirect(uri: str) -> str:
+    """Adresse de retour LOCALE enregistrée : http://127.0.0.1/<chemin> ou http://[::1]/<chemin>,
+    SANS port (dynamique à l'usage). Refus de toute autre forme."""
+    if not isinstance(uri, str) or uri != uri.strip() or len(uri) > 512:
+        raise ValueError("redirect_uri locale invalide")
+    match = _LOOPBACK_REGISTERED_RE.fullmatch(uri)
+    if not match:
+        raise ValueError("redirect_uri locale invalide : http://127.0.0.1/<chemin> ou http://[::1]/<chemin>, "
+                         "sans port, requête, fragment ni encodage")
+    _check_loopback_path(match.group(2))
+    return uri
+
+
+def loopback_registration_form(uri: str) -> Optional[str]:
+    """Forme enregistrée (sans port) d'une adresse locale reçue à l'autorisation, ou None si
+    l'adresse n'est pas une adresse locale strictement conforme (port 1-65535 compris)."""
+    if not isinstance(uri, str) or len(uri) > 512:
+        return None
+    match = _LOOPBACK_REQUEST_RE.fullmatch(uri)
+    if not match:
+        return None
+    host, port, path = match.groups()
+    if port is not None and not 1 <= int(port) <= 65535:
+        return None
+    try:
+        _check_loopback_path(path)
+    except ValueError:
+        return None
+    return f"http://{host}{path}"
+
+
+def validate_client_redirect(uri: str, client_type: str) -> str:
+    """Adresse de retour enregistrable selon le type de client : HTTPS stricte pour tous ;
+    locale (loopback) réservée aux clients PUBLICS (applications natives)."""
+    if is_loopback_uri(uri):
+        if client_type != PUBLIC:
+            raise ValueError("redirect_uri locale réservée aux clients publics (applications natives)")
+        return validate_loopback_redirect(uri)
+    return validate_redirect_uri(uri)
+
+
+def match_redirect_uri(client: dict, uri) -> bool:
+    """L'adresse reçue est-elle autorisée pour ce client ? Égalité EXACTE avec une adresse
+    enregistrée ; pour un client public, une adresse locale correspond aussi à sa forme
+    enregistrée sans port (port dynamique). Jamais d'extension aux autres hôtes."""
+    if not isinstance(uri, str) or not uri:
+        return False
+    registered = client.get("redirect_uris") or []
+    if is_loopback_uri(uri):
+        if client_type_of(client) != PUBLIC:
+            return False
+        form = loopback_registration_form(uri)
+        return form is not None and form in registered
+    if uri not in registered:
+        return False
+    try:
+        validate_redirect_uri(uri)  # défense en profondeur : donnée enregistrée toujours conforme
+    except ValueError:
+        return False
+    return True
+
+
+def describe_redirect(uri: str) -> dict:
+    """Domaine de retour affiché au consentement (P1.1), revalidé côté serveur.
+    `local` : retour vers une application de CET appareil (adresse loopback)."""
+    if is_loopback_uri(uri):
+        form = loopback_registration_form(uri)
+        if form is None:
+            raise ValueError("redirect_uri invalide")
+        return {"host": _LOOPBACK_REQUEST_RE.fullmatch(uri).group(1), "local": True}
+    return {"host": urlsplit(validate_redirect_uri(uri)).hostname, "local": False}
+
+
 def redirect_host(uri: str) -> str:
-    """Domaine de retour affiché au consentement (P1.1) : l'adresse est REVALIDÉE (stricte),
-    puis seul le nom d'hôte est renvoyé. ValueError si l'adresse n'est pas conforme."""
-    return urlsplit(validate_redirect_uri(uri)).hostname
+    """Hôte de retour revalidé (P1.1). ValueError si l'adresse n'est pas conforme."""
+    return describe_redirect(uri)["host"]
+
+
+# ============================================
+# TYPES DE CLIENTS ET SCOPES PAR CLIENT (P2.1, P2.2)
+# ============================================
+CONFIDENTIAL, PUBLIC = "confidential", "public"
+CLIENT_TYPES = (CONFIDENTIAL, PUBLIC)
+
+
+def client_type_of(client: dict) -> str:
+    """Clients antérieurs à P2 (sans champ) : confidentiels."""
+    return PUBLIC if client.get("client_type") == PUBLIC else CONFIDENTIAL
+
+
+def client_scopes(client: dict) -> List[str]:
+    """Scopes autorisés au client ; clients antérieurs à P2 (sans champ) : tous les scopes."""
+    allowed = client.get("allowed_scopes")
+    if allowed is None:
+        return list(SUPPORTED_SCOPES)
+    return [s for s in SUPPORTED_SCOPES if s in allowed]
+
+
+def validate_allowed_scopes(scopes) -> List[str]:
+    if not isinstance(scopes, (list, tuple)) or not scopes:
+        raise ValueError("au moins un scope est requis")
+    if any(s not in SUPPORTED_SCOPES for s in scopes):
+        raise ValueError("scope inconnu")
+    return [s for s in SUPPORTED_SCOPES if s in scopes]
 
 
 MAX_REDIRECT_URIS = 10
@@ -252,31 +378,42 @@ def validate_client_name(name) -> str:
     return name
 
 
-async def create_client(db, name: str, redirect_uris: List[str]) -> dict:
-    """Crée un client confidentiel. Le secret brut n'est renvoyé QU'UNE fois."""
+async def create_client(db, name: str, redirect_uris: List[str], client_type: str = CONFIDENTIAL,
+                        allowed_scopes: Optional[List[str]] = None) -> dict:
+    """
+    Crée un client. Confidentiel : secret renvoyé UNE seule fois. Public (application native) :
+    aucun secret, PKCE S256 obligatoire, adresses locales (loopback) autorisées.
+    `allowed_scopes` : par défaut tous les scopes.
+    """
     await ensure_indexes(db)
+    if client_type not in CLIENT_TYPES:
+        raise ValueError("type de client invalide")
     name = validate_client_name(name)
-    uris = list(dict.fromkeys(_validate_redirect_uri(u) for u in redirect_uris))
+    uris = list(dict.fromkeys(validate_client_redirect(u, client_type) for u in redirect_uris))
     if not uris:
         raise ValueError("au moins une redirect_uri est requise")
     if len(uris) > MAX_REDIRECT_URIS:
         raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
+    scopes = validate_allowed_scopes(list(SUPPORTED_SCOPES) if allowed_scopes is None else allowed_scopes)
     client_id = CLIENT_PREFIX + secrets.token_urlsafe(16)
-    secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32)
+    secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32) if client_type == CONFIDENTIAL else None
     await db[CLIENTS].insert_one({
-        "client_id": client_id, "name": name, "secret_hash": hash_secret(secret),
-        "redirect_uris": uris, "active": True, "created_at": _now(), "secret_rotated_at": _now(),
+        "client_id": client_id, "name": name, "client_type": client_type, "allowed_scopes": scopes,
+        "secret_hash": hash_secret(secret) if secret else None,
+        "redirect_uris": uris, "active": True, "created_at": _now(),
+        "secret_rotated_at": _now() if secret else None,
     })
-    logger.info("oauth_client_created client_id=%s", client_id)
-    return {"client_id": client_id, "client_secret": secret, "redirect_uris": uris}
+    logger.info("oauth_client_created client_id=%s type=%s", client_id, client_type)
+    return {"client_id": client_id, "client_secret": secret, "redirect_uris": uris,
+            "client_type": client_type, "allowed_scopes": scopes}
 
 
 async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
-    """Ajoute une adresse de retour EXACTE à un client existant (validation stricte)."""
-    uri = validate_redirect_uri(uri)
-    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1})
+    """Ajoute une adresse de retour EXACTE à un client existant (validation selon son type)."""
+    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1, "client_type": 1})
     if not client:
         raise ValueError("client inconnu")
+    uri = validate_client_redirect(uri, client_type_of(client))
     if uri in client["redirect_uris"]:
         return client["redirect_uris"]
     if len(client["redirect_uris"]) >= MAX_REDIRECT_URIS:
@@ -286,12 +423,43 @@ async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
     return client["redirect_uris"] + [uri]
 
 
-async def rotate_client_secret(db, client_id: str) -> str:
-    secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32)
-    result = await db[CLIENTS].update_one(
-        {"client_id": client_id}, {"$set": {"secret_hash": hash_secret(secret), "secret_rotated_at": _now()}})
+async def remove_redirect_uri(db, client_id: str, uri: str) -> List[str]:
+    """Retire une adresse de retour ; au moins une doit rester. Les codes déjà émis vers cette
+    adresse deviennent inutilisables (l'échange revérifie le client et l'adresse)."""
+    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1})
+    if not client:
+        raise ValueError("client inconnu")
+    uris = list(client.get("redirect_uris") or [])
+    if uri not in uris:
+        raise ValueError("redirect_uri inconnue pour ce client")
+    if len(uris) == 1:
+        raise ValueError("au moins une redirect_uri doit rester enregistrée")
+    await db[CLIENTS].update_one({"client_id": client_id}, {"$pull": {"redirect_uris": uri}})
+    logger.info("oauth_client_redirect_removed client_id=%s", client_id)
+    return [u for u in uris if u != uri]
+
+
+async def set_client_scopes(db, client_id: str, scopes: List[str]) -> List[str]:
+    """Scopes autorisés au client. Une RÉDUCTION s'applique immédiatement aux jetons existants
+    (scopes effectifs recalculés à chaque appel) ; un ÉLARGISSEMENT n'étend jamais une
+    autorisation déjà donnée : il faut un nouveau consentement."""
+    scopes = validate_allowed_scopes(scopes)
+    result = await db[CLIENTS].update_one({"client_id": client_id}, {"$set": {"allowed_scopes": scopes}})
     if result.matched_count == 0:
         raise ValueError("client inconnu")
+    logger.info("oauth_client_scopes client_id=%s scopes=%s", client_id, ",".join(scopes))
+    return scopes
+
+
+async def rotate_client_secret(db, client_id: str) -> str:
+    client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "client_type": 1})
+    if not client:
+        raise ValueError("client inconnu")
+    if client_type_of(client) == PUBLIC:
+        raise ValueError("un client public n'a pas de secret")
+    secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32)
+    await db[CLIENTS].update_one(
+        {"client_id": client_id}, {"$set": {"secret_hash": hash_secret(secret), "secret_rotated_at": _now()}})
     return secret
 
 
@@ -320,10 +488,13 @@ async def list_clients(db) -> List[dict]:
     async for c in db[CLIENTS].find({}, {"_id": 0, "secret_hash": 0}).sort("created_at", 1).limit(50):
         active_grants = await db[GRANTS].count_documents(
             {"client_id": c["client_id"], "status": {"$in": list(USABLE_STATUSES)}})
+        kind = client_type_of(c)
         items.append({
             "client_id": c["client_id"], "name": c.get("name", ""), "redirect_uris": list(c.get("redirect_uris", [])),
             "active": c.get("active") is True, "created_at": _aware(c.get("created_at")),
             "secret_rotated_at": _aware(c.get("secret_rotated_at")), "active_grants": active_grants,
+            "client_type": kind, "allowed_scopes": client_scopes(c),
+            "token_endpoint_auth_method": "none" if kind == PUBLIC else "client_secret_basic",
         })
     return items
 
@@ -335,9 +506,19 @@ async def get_active_client(db, client_id: Optional[str]) -> Optional[dict]:
 
 
 async def authenticate_client(db, client_id: Optional[str], client_secret: Optional[str]) -> dict:
-    """client_secret_basic ou client_secret_post. Comparaison à temps constant."""
+    """
+    Confidentiel : client_secret_basic ou client_secret_post, comparaison à temps constant.
+    Public : identifiant seul (`none`), AUCUN secret accepté ; sa sécurité repose sur PKCE S256
+    (vérifié à l'échange), l'adresse de retour exacte et la rotation des refresh tokens.
+    """
     client = await get_active_client(db, client_id)
-    if not client or not client_secret:
+    if not client:
+        raise OAuthError("invalid_client", "Authentification du client refusée", status_code=401)
+    if client_type_of(client) == PUBLIC:
+        if client_secret:
+            raise OAuthError("invalid_client", "Un client public ne s'authentifie pas avec un secret", status_code=401)
+        return client
+    if not client_secret or not client.get("secret_hash"):
         raise OAuthError("invalid_client", "Authentification du client refusée", status_code=401)
     if not hmac.compare_digest(client["secret_hash"], hash_secret(client_secret)):
         raise OAuthError("invalid_client", "Authentification du client refusée", status_code=401)
@@ -359,12 +540,8 @@ async def create_authorization_request(db, params: dict) -> dict:
     if not client:
         raise OAuthError("invalid_client", "Client inconnu")
     redirect_uri = params.get("redirect_uri")
-    if not redirect_uri or redirect_uri not in client["redirect_uris"]:
-        raise OAuthError("invalid_request", "redirect_uri non autorisée")
-    try:
-        # Défense en profondeur : l'adresse enregistrée doit rester conforme (domaine affiché)
-        redirect_host(redirect_uri)
-    except ValueError:
+    # Correspondance exacte ; port dynamique toléré UNIQUEMENT pour l'adresse locale d'un client public
+    if not match_redirect_uri(client, redirect_uri):
         raise OAuthError("invalid_request", "redirect_uri non autorisée")
 
     if params.get("response_type") != "code":
@@ -380,6 +557,14 @@ async def create_authorization_request(db, params: dict) -> dict:
     if params.get("resource") != canonical_resource():
         raise OAuthError("invalid_target", "resource absente ou différente de la ressource protégée", redirectable=True)
     scopes = parse_scopes(params.get("scope"))
+    allowed = client_scopes(client)
+    if params.get("scope") and params.get("scope").strip():
+        # Demande réduite aux scopes autorisés au client ; rien d'autorisé -> refus
+        scopes = [s for s in scopes if s in allowed]
+        if not scopes:
+            raise OAuthError("invalid_scope", "Scope non autorisé pour ce client", redirectable=True)
+    else:
+        scopes = allowed
 
     request = {
         "id": secrets.token_urlsafe(24),
@@ -588,6 +773,14 @@ async def refresh(db, client: dict, form: dict) -> dict:
         requested = parse_scopes(form.get("scope"))
         if not set(requested) <= set(grant["scopes"]):
             raise OAuthError("invalid_scope", "Scope supérieur à l'autorisation")
+    # Scopes du client réduits depuis le consentement : l'autorisation est réduite d'autant
+    narrowed = [s for s in grant["scopes"] if s in client_scopes(client)]
+    if not narrowed:
+        await revoke_grant(db, grant["id"], REVOKED, "client_scopes_removed")
+        raise OAuthError("invalid_grant", "Plus aucun scope autorisé pour ce client : reconnexion nécessaire")
+    if narrowed != grant["scopes"]:
+        await db[GRANTS].update_one({"id": grant["id"]}, {"$set": {"scopes": narrowed}})
+        grant = {**grant, "scopes": narrowed}
     if not await user_is_eligible(db, grant["user_id"]):
         await revoke_grant(db, grant["id"], REVOKED, "user_not_eligible")
         raise OAuthError("invalid_grant", "Compte non autorisé")
@@ -646,7 +839,8 @@ async def validate_access_token(db, raw_token: Optional[str]) -> tuple:
         return None, "invalid"
     # Défense en profondeur : client désactivé -> jeton refusé, même si un grant a échappé
     # à la révocation (échange de code concurrent de la désactivation)
-    if not await get_active_client(db, grant["client_id"]):
+    client = await get_active_client(db, grant["client_id"])
+    if not client:
         return None, "invalid"
     now = _now()
     if _aware(token["expires_at"]) <= now:
@@ -657,8 +851,10 @@ async def validate_access_token(db, raw_token: Optional[str]) -> tuple:
         return None, "expired"
     if not await user_is_eligible(db, grant["user_id"]):
         return None, "not_eligible"
+    # Scopes EFFECTIFS à chaque appel : autorisation ∩ scopes actuels du client (P2.1)
+    allowed = client_scopes(client)
     return Principal(user_id=grant["user_id"], grant_id=grant["id"], client_id=grant["client_id"],
-                     scopes=tuple(grant["scopes"])), None
+                     scopes=tuple(s for s in grant["scopes"] if s in allowed)), None
 
 
 # ============================================

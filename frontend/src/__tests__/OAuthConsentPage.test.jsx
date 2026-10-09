@@ -253,3 +253,20 @@ describe('OAuthConsentPage — client générique (P1.1)', () => {
     expect(screen.getByText(/La veille n'est pas activée pour ce compte/)).toBeInTheDocument();
   });
 });
+
+describe('OAuthConsentPage — application locale (P2.3)', () => {
+  test('retour vers une adresse locale : avertissement explicite', async () => {
+    api.get.mockResolvedValue({ data: details({ client: { name: 'Agent local', redirect_domain: '127.0.0.1', redirect_local: true } }) });
+    renderPage();
+    await screen.findByTestId('consent-form');
+    expect(screen.getByTestId('consent-redirect-domain')).toHaveTextContent('127.0.0.1');
+    expect(screen.getByTestId('consent-local-warning')).toHaveTextContent('Application installée sur cet appareil');
+  });
+
+  test('retour web : aucun avertissement local', async () => {
+    api.get.mockResolvedValue({ data: details() });
+    renderPage();
+    await screen.findByTestId('consent-form');
+    expect(screen.queryByTestId('consent-local-warning')).toBeNull();
+  });
+});

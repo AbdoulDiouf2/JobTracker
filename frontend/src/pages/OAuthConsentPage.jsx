@@ -19,6 +19,7 @@ const T = {
     lead: (client) => `${client} demande l'autorisation d'accéder à ta veille d'opportunités JobTracker.`,
     unknownClient: 'Application non identifiée',
     redirectLabel: 'Après ta décision, tu seras renvoyé vers',
+    localWarning: "Application installée sur cet appareil : le retour se fait vers une adresse locale. N'autorise que si tu viens de lancer toi-même la connexion depuis cette application.",
     account: 'Compte concerné',
     permissions: (client) => `Ce que ${client} pourra faire`,
     notAllowed: (client) => `Ce que ${client} ne pourra jamais faire`,
@@ -56,6 +57,7 @@ const T = {
     lead: (client) => `${client} is requesting access to your JobTracker opportunity watch.`,
     unknownClient: 'Unidentified application',
     redirectLabel: 'After your decision, you will be sent back to',
+    localWarning: 'Application installed on this device: you will be sent back to a local address. Only authorize if you just started the connection from this application yourself.',
     account: 'Account',
     permissions: (client) => `What ${client} will be able to do`,
     notAllowed: (client) => `What ${client} will never be able to do`,
@@ -279,6 +281,12 @@ export default function OAuthConsentPage() {
           <p className="font-mono text-sm font-semibold text-white break-all" data-testid="consent-redirect-domain">
             {redirectDomain}
           </p>
+          {details.client?.redirect_local === true && (
+            <p className="mt-2 flex items-start gap-2 text-xs text-amber-300" role="note" data-testid="consent-local-warning">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              {t.localWarning}
+            </p>
+          )}
         </div>
 
         {account && (

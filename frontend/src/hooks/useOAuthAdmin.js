@@ -24,8 +24,11 @@ export const useOAuthAdmin = () => {
    * client_secret, qui ne doit jamais entrer dans le cache TanStack. Seul l'appelant le
    * reçoit, pour l'afficher une fois puis l'oublier.
    */
-  const createClient = async ({ name, redirectUris }) => {
-    const response = await api.post(`${BASE}/clients`, { name, redirect_uris: redirectUris });
+  const createClient = async ({ name, redirectUris, clientType = 'confidential', allowedScopes }) => {
+    const response = await api.post(`${BASE}/clients`, {
+      name, redirect_uris: redirectUris, client_type: clientType,
+      ...(allowedScopes ? { allowed_scopes: allowedScopes } : {}),
+    });
     invalidate();
     return response.data;
   };
@@ -40,6 +43,19 @@ export const useOAuthAdmin = () => {
     mutationFn: ({ clientId, redirectUri }) =>
       api.post(`${BASE}/clients/${encodeURIComponent(clientId)}/redirect-uris`, { redirect_uri: redirectUri })
         .then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const removeRedirectUri = useMutation({
+    mutationFn: ({ clientId, redirectUri }) =>
+      api.delete(`${BASE}/clients/${encodeURIComponent(clientId)}/redirect-uris`, { params: { redirect_uri: redirectUri } })
+        .then(r => r.data),
+    onSuccess: invalidate,
+  });
+
+  const setClientScopes = useMutation({
+    mutationFn: ({ clientId, scopes }) =>
+      api.put(`${BASE}/clients/${encodeURIComponent(clientId)}/scopes`, { allowed_scopes: scopes }).then(r => r.data),
     onSuccess: invalidate,
   });
 
@@ -61,6 +77,7 @@ export const useOAuthAdmin = () => {
 
   return {
     status, clients, grants,
-    createClient, rotateSecret, addRedirectUri, setClientActive, revokeGrant, setKillSwitch,
+    createClient, rotateSecret, addRedirectUri, removeRedirectUri, setClientScopes, setClientActive, revokeGrant,
+    setKillSwitch,
   };
 };

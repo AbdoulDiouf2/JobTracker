@@ -16,6 +16,7 @@ les plafonds ne sont jamais dépassés, même en concurrence (mises à jour cond
 """
 
 import asyncio
+import dataclasses
 import logging
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -122,12 +123,41 @@ async def require_enabled(db, user_id: str) -> None:
 # EXÉCUTIONS
 # ============================================
 
+RUN_KEY_SEPARATOR = "#"
+
+
+async def _run_storage_key(db, user_id: str, run_id: str, client_id: Optional[str]) -> str:
+    """
+    Clé de stockage d'une exécution, ISOLÉE PAR CLIENT (P2.1) : deux clients qui emploient le même
+    `run_id` (ex. le créneau 08:00 « prog ») ont deux exécutions distinctes (compteurs, plafond
+    de 20, éléments rejouables, rapport). Le quota journalier reste commun au compte.
+    - sans client (appel interne) : le run_id tel quel ;
+    - exécution antérieure à P2 sous ce run_id, ouverte par CE client ou sans client connu :
+      on la poursuit sous sa clé d'origine (aucune migration, reprise jusqu'à 24 h préservée) ;
+    - sinon : « run_id#client_id ».
+    Le run_id renvoyé aux clients reste toujours celui qu'ils ont envoyé.
+    """
+    if not client_id:
+        return run_id
+    legacy = await db[RUNS].find_one({"user_id": user_id, "run_id": run_id}, {"_id": 0, "client_ids": 1})
+    if legacy is not None and set(legacy.get("client_ids") or []) <= {client_id}:
+        return run_id
+    return f"{run_id}{RUN_KEY_SEPARATOR}{client_id}"
+
+
+def _public_run(doc: dict) -> dict:
+    """Document d'exécution tel qu'exposé : run_id d'origine, jamais la clé interne."""
+    return {**doc, "run_id": doc.get("public_run_id") or doc["run_id"]}
+
+
 async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime,
                     client_id: Optional[str] = None) -> ParsedRunId:
     """Valide le run_id (fenêtre « reprise » si déjà connu) et enregistre l'exécution.
-    `client_id` : client OAuth VÉRIFIÉ, ajouté à `client_ids` (traçabilité, P1.4)."""
+    `client_id` : client OAuth VÉRIFIÉ, ajouté à `client_ids` (traçabilité, P1.4).
+    Retourne le run_id analysé, dont `run_id` est la CLÉ DE STOCKAGE (isolée par client)."""
     runs = db[RUNS]
-    known = await runs.find_one({"user_id": user_id, "run_id": run_id}, {"_id": 1}) is not None
+    key = await _run_storage_key(db, user_id, run_id, client_id)
+    known = await runs.find_one({"user_id": user_id, "run_id": key}, {"_id": 1}) is not None
     try:
         parsed = parse_run_id(
             run_id, now,
@@ -140,11 +170,12 @@ async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime,
     except RunIdError as e:
         raise WatchRequestError(e.code)
 
-    query = {"user_id": user_id, "run_id": run_id}
+    query = {"user_id": user_id, "run_id": key}
     update = {
         "$setOnInsert": {
             "user_id": user_id,
-            "run_id": run_id,
+            "run_id": key,
+            "public_run_id": run_id,
             "kind": parsed.kind,
             "scheduled_for": parsed.scheduled_for.isoformat(),
             "quota_day": parsed.quota_day,
@@ -162,7 +193,7 @@ async def _open_run(db, user_id: str, run_id: str, prefs: dict, now: datetime,
     except DuplicateKeyError:
         # Premier appel concurrent de la même exécution : le document existe désormais
         await runs.update_one(query, {k: v for k, v in update.items() if k != "$setOnInsert"})
-    return parsed
+    return dataclasses.replace(parsed, run_id=key)
 
 
 async def _reserve_run(db, user_id: str, run_id: str, cap: int) -> bool:
@@ -329,9 +360,10 @@ async def _process_item(
         if reserved_run and reserved_day:
             # Reprise d'un traitement interrompu APRÈS la création : l'offre vient de cette exécution
             doc = await db[opportunity_service.COLLECTION].find_one(
-                {"user_id": user_id, "id": existing.opportunity_id}, {"_id": 0, "watch.run_id": 1},
+                {"user_id": user_id, "id": existing.opportunity_id}, {"_id": 0, "watch.run_id": 1, "watch.client_id": 1},
             )
-            if doc and (doc.get("watch") or {}).get("run_id") == run.run_id:
+            watch_doc = (doc or {}).get("watch") or {}
+            if watch_doc.get("run_id") == check.watch["run_id"] and watch_doc.get("client_id") == client_id:
                 return await finalize("created", opportunity_id=existing.opportunity_id)
         await release()
         return await finalize(
@@ -413,10 +445,10 @@ async def ingest_batch(db, user_id: str, payload: dict, now: Optional[datetime] 
     used_today = await _creations_on(db, user_id, run.quota_day)
     logger.info(
         "watch_ingest user_id=%s run_id=%s received=%d created=%d duplicate=%d rejected=%d error=%d",
-        user_id, run.run_id, summary.received, summary.created, summary.duplicate, summary.rejected, summary.error,
+        user_id, request.run_id, summary.received, summary.created, summary.duplicate, summary.rejected, summary.error,
     )
     return WatchBatchResult(
-        run_id=run.run_id,
+        run_id=request.run_id,
         summary=summary,
         run_totals=WatchRunTotals(
             created=run_doc["observed"]["created"],
@@ -454,15 +486,15 @@ async def report_watch_run(db, user_id: str, payload: dict, now: Optional[dateti
         return_document=ReturnDocument.AFTER,
     )
     observed = WatchRunCounts.model_validate(doc["observed"])
-    logger.info("watch_report user_id=%s run_id=%s status=%s", user_id, run.run_id, report.status)
-    return WatchRunReportResult(run_id=run.run_id, observed=observed)
+    logger.info("watch_report user_id=%s run_id=%s status=%s", user_id, report.run_id, report.status)
+    return WatchRunReportResult(run_id=report.run_id, observed=observed)
 
 
 async def list_runs(db, user_id: str, limit: int = 20) -> WatchRunListResponse:
     """Exécutions OBSERVÉES (faits reçus), les plus récentes d'abord."""
     await ensure_indexes(db)
     cursor = db[RUNS].find({"user_id": user_id}, {"_id": 0}).sort("last_seen_at", -1).limit(limit)
-    return WatchRunListResponse(items=[WatchRunSummary.model_validate(doc) async for doc in cursor])
+    return WatchRunListResponse(items=[WatchRunSummary.model_validate(_public_run(doc)) async for doc in cursor])
 
 
 async def _presumed_missing_slots(db, user_id: str, times: list, now: datetime) -> list:
@@ -497,6 +529,6 @@ async def get_status(db, user_id: str, now: Optional[datetime] = None) -> WatchS
         max_per_run=_run_cap(prefs),
         daily_quota=settings.WATCH_DAILY_CREATE_QUOTA,
         remaining_today=max(0, settings.WATCH_DAILY_CREATE_QUOTA - used_today),
-        last_run=WatchRunSummary.model_validate(last) if last else None,
+        last_run=WatchRunSummary.model_validate(_public_run(last)) if last else None,
         presumed_missing_slots=await _presumed_missing_slots(db, user_id, prefs["schedule"]["times"], now),
     )

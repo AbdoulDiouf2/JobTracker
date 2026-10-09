@@ -168,7 +168,8 @@ describe('Connexions OAuth / MCP — création', () => {
     await fill(user, within(dialog).getByTestId('oauth-client-uris'), ` ${AGENT_REDIRECT} \n\nhttps://agent.maadec.com/cb2`);
     await user.click(within(dialog).getByTestId('oauth-create-submit'));
     expect(api.post).toHaveBeenCalledWith('/api/admin/oauth/clients',
-      { name: 'Agent MAADEC', redirect_uris: [AGENT_REDIRECT, 'https://agent.maadec.com/cb2'] });
+      { name: 'Agent MAADEC', redirect_uris: [AGENT_REDIRECT, 'https://agent.maadec.com/cb2'],
+        client_type: 'confidential', allowed_scopes: ['watch:read', 'opportunities:write'] });
 
     const secretDialog = await screen.findByTestId('oauth-secret-dialog');
     expect(within(secretDialog).getByText('Identifiants de Agent MAADEC')).toBeInTheDocument();
@@ -364,5 +365,107 @@ describe('Connexions OAuth / MCP — gestion individuelle', () => {
     await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/api/admin/oauth/grants/grant-2'));
     await waitFor(() => expect(within(screen.getByTestId('oauth-grant-grant-2')).queryByRole('button')).toBeNull());
     expect(within(screen.getByTestId('oauth-grant-grant-1')).getByRole('button')).toBeInTheDocument();
+  });
+});
+
+describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () => {
+  const LOCAL = 'http://127.0.0.1/callback';
+  const PUB_ID = 'jt_oc_Public123456';
+  const publicOf = (over = {}) => clientOf({ client_id: PUB_ID, name: 'Agent local', redirect_uris: [LOCAL],
+    client_type: 'public', allowed_scopes: ['watch:read'], token_endpoint_auth_method: 'none', active_grants: 0, ...over });
+
+  test('création d’une application publique : type, permissions, aucun secret affiché', async () => {
+    const user = userEvent.setup();
+    api.post.mockImplementation(async (url, body) => {
+      server.clients = [publicOf()];
+      return { data: { client_id: PUB_ID, client_secret: null, name: body.name, client_type: 'public',
+        allowed_scopes: body.allowed_scopes, redirect_uris: body.redirect_uris, warnings: [] } };
+    });
+    renderPanel();
+    const dialog = await openCreate(user);
+    await user.click(within(dialog).getByTestId('oauth-client-type-public'));
+    expect(within(dialog).getByTestId('oauth-client-type-public')).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).getByTestId('oauth-client-type-help')).toHaveTextContent('aucun secret');
+    expect(within(dialog).getByText(/http:\/\/127\.0\.0\.1\/<chemin>/)).toBeInTheDocument();
+    await fill(user, within(dialog).getByTestId('oauth-client-name'), 'Agent local');
+    await fill(user, within(dialog).getByTestId('oauth-client-uris'), LOCAL);
+    // Retirer l'écriture : lecture seule
+    await user.click(within(dialog).getByTestId('oauth-create-scope-opportunities:write'));
+    await user.click(within(dialog).getByTestId('oauth-create-submit'));
+    expect(api.post).toHaveBeenCalledWith('/api/admin/oauth/clients',
+      { name: 'Agent local', redirect_uris: [LOCAL], client_type: 'public', allowed_scopes: ['watch:read'] });
+    const created = await screen.findByTestId('oauth-secret-dialog');
+    expect(within(created).getByTestId('oauth-public-created')).toHaveTextContent("il n'y a aucun secret");
+    expect(within(created).getByTestId('oauth-secret-client-id')).toHaveTextContent(PUB_ID);
+    expect(within(created).queryByTestId('oauth-secret-value')).toBeNull();
+  });
+
+  test('au moins une permission requise à la création', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const dialog = await openCreate(user);
+    await fill(user, within(dialog).getByTestId('oauth-client-name'), 'X');
+    await fill(user, within(dialog).getByTestId('oauth-client-uris'), AGENT_REDIRECT);
+    await user.click(within(dialog).getByTestId('oauth-create-scope-watch:read'));
+    await user.click(within(dialog).getByTestId('oauth-create-scope-opportunities:write'));
+    expect(within(dialog).getByText('Choisissez au moins une permission.')).toBeInTheDocument();
+    expect(within(dialog).getByTestId('oauth-create-submit')).toBeDisabled();
+  });
+
+  test('carte d’un client public : badge, pas de secret ni de régénération', async () => {
+    server.clients = [clientOf(), publicOf()];
+    renderPanel();
+    const card = await screen.findByTestId(`oauth-client-${PUB_ID}`);
+    expect(within(card).getByTestId(`oauth-client-type-${PUB_ID}`)).toHaveTextContent('Public');
+    expect(within(card).getByText(/Application publique : aucun secret/)).toBeInTheDocument();
+    expect(within(card).getByText(/aucune \(client public\)/)).toBeInTheDocument();
+    expect(within(card).queryByTestId(`oauth-rotate-${PUB_ID}`)).toBeNull();
+    expect(screen.getByTestId(`oauth-rotate-${GPT_ID}`)).toBeInTheDocument();
+    expect(screen.getByTestId(`oauth-client-type-${GPT_ID}`)).toHaveTextContent('Confidentiel');
+  });
+
+  test('modification des permissions d’un client existant', async () => {
+    const user = userEvent.setup();
+    server.clients = [clientOf()];
+    api.put.mockImplementation(async (url, body) => {
+      server.clients = [clientOf({ allowed_scopes: body.allowed_scopes })];
+      return { data: { client: server.clients[0] } };
+    });
+    renderPanel();
+    const scopes = await screen.findByTestId(`oauth-scopes-${GPT_ID}`);
+    expect(within(scopes).queryByTestId(`oauth-scopes-save-${GPT_ID}`)).toBeNull();
+    await user.click(within(scopes).getByTestId(`oauth-${GPT_ID}-scope-opportunities:write`));
+    await user.click(within(scopes).getByTestId(`oauth-scopes-save-${GPT_ID}`));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith(`/api/admin/oauth/clients/${GPT_ID}/scopes`,
+      { allowed_scopes: ['watch:read'] }));
+    expect(toast.success).toHaveBeenCalledWith('Permissions mises à jour');
+  });
+
+  test('retrait confirmé d’une adresse de retour ; la dernière ne peut pas être retirée', async () => {
+    const user = userEvent.setup();
+    server.clients = [publicOf({ redirect_uris: [LOCAL, 'http://[::1]/cb'] })];
+    api.delete.mockImplementation(async () => {
+      server.clients = [publicOf({ redirect_uris: ['http://[::1]/cb'] })];
+      return { data: { client_id: PUB_ID, redirect_uris: ['http://[::1]/cb'] } };
+    });
+    renderPanel();
+    await user.click(await screen.findByTestId(`oauth-redirect-remove-${PUB_ID}-${LOCAL}`));
+    const confirm = await screen.findByRole('alertdialog');
+    expect(confirm).toHaveTextContent('ne pourra plus servir à se connecter');
+    await user.click(within(confirm).getByTestId('oauth-confirm'));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`/api/admin/oauth/clients/${PUB_ID}/redirect-uris`,
+      { params: { redirect_uri: LOCAL } }));
+    await waitFor(() => expect(screen.getByTestId(`oauth-redirect-remove-${PUB_ID}-http://[::1]/cb`)).toBeDisabled());
+  });
+
+  test('préréglage : type et permissions repris', async () => {
+    const user = userEvent.setup();
+    server.status = statusOf({ presets: [{ ...PRESETS[0], client_type: 'confidential', allowed_scopes: ['watch:read', 'opportunities:write'] }] });
+    renderPanel();
+    const dialog = await openCreate(user);
+    await user.click(within(dialog).getByTestId('oauth-client-type-public'));
+    await user.click(within(dialog).getByTestId('oauth-preset-chatgpt'));
+    expect(within(dialog).getByTestId('oauth-client-type-confidential')).toHaveAttribute('aria-checked', 'true');
+    expect(within(dialog).getByTestId('oauth-create-scope-opportunities:write')).toHaveAttribute('aria-checked', 'true');
   });
 });

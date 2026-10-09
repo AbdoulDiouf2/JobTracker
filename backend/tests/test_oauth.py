@@ -180,7 +180,8 @@ async def test_authorization_server_metadata(api):
     assert m["code_challenge_methods_supported"] == ["S256"]
     assert m["response_types_supported"] == ["code"]
     assert m["authorization_response_iss_parameter_supported"] is True
-    assert "none" not in m["token_endpoint_auth_methods_supported"]
+    # P2 : clients publics (applications natives) -> "none" ; les méthodes confidentielles restent
+    assert m["token_endpoint_auth_methods_supported"] == ["client_secret_post", "client_secret_basic", "none"]
 
 
 async def test_openid_configuration_is_not_served(api):
@@ -299,7 +300,7 @@ async def test_consent_details(api, db):
     r = await api.get(f"/api/oauth/requests/{request_id}", headers=api.headers_for("a"))
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     body = r.json()
-    assert body["client"] == {"name": "ChatGPT", "redirect_domain": "chatgpt.com"} and body["eligible"] is True
+    assert body["client"] == {"name": "ChatGPT", "redirect_domain": "chatgpt.com", "redirect_local": False} and body["eligible"] is True
     assert [s["scope"] for s in body["scopes"]] == ["watch:read", "opportunities:write"]
     assert all(s["description"] for s in body["scopes"])
 
