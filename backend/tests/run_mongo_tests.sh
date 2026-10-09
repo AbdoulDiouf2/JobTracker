@@ -33,7 +33,10 @@ for _ in $(seq 1 30); do
   sleep 1
 done
 
-if [ -x venv/Scripts/python.exe ]; then PY=venv/Scripts/python.exe; else PY=venv/bin/python; fi
+# Interpréteur : variable PY si fournie, sinon le venv du projet
+if [ -z "${PY:-}" ]; then
+  if [ -x venv/Scripts/python.exe ]; then PY=venv/Scripts/python.exe; else PY=venv/bin/python; fi
+fi
 
 TESTS=("$@")
 if [ ${#TESTS[@]} -eq 0 ]; then
@@ -42,7 +45,8 @@ if [ ${#TESTS[@]} -eq 0 ]; then
          tests/test_agent_token_service.py tests/test_agent_api.py tests/test_lot1_e2e.py
          tests/test_security_settings.py
          tests/test_watch_validation.py tests/test_watch_preferences.py tests/test_watch_ingest.py
-         tests/test_watch_api.py)
+         tests/test_watch_api.py tests/test_vercel_routing.py tests/test_mcp_transport.py
+         tests/test_ai_sdk_offline.py)
 fi
 
 MONGO_TEST_URL="mongodb://127.0.0.1:${PORT}" PYTHONIOENCODING=utf-8 "$PY" -m pytest "${TESTS[@]}" -v -p no:cacheprovider

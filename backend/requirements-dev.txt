@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# Outils de test locaux (non installés sur Vercel)
+pytest==9.1.1

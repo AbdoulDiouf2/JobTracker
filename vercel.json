@@ -19,6 +19,18 @@
       "destination": "/backend/api/index.py"
     },
     {
+      "source": "/.well-known/oauth-protected-resource(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/.well-known/oauth-authorization-server(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/.well-known/openid-configuration(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
       "source": "/static/(.*)",
       "destination": "/frontend/static/$1"
     },

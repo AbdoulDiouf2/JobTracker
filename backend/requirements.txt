@@ -1,38 +1,41 @@
-fastapi>=0.110.0
-uvicorn>=0.25.0
-motor>=3.3.1
-python-dotenv>=1.0.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
+# Versions figées (Lot 2, étape 3, V3) : résolution Linux / Python 3.12 (runtime Vercel par défaut),
+# vérifiée avec la suite backend complète. Mettre à jour volontairement, jamais implicitement.
+
+fastapi==0.143.0
+starlette==1.7.0  # imposé par FastAPI ; figé pour aligner local et Vercel
+uvicorn==0.54.0
+motor==3.7.1
+python-dotenv==1.2.4
+python-jose[cryptography]==3.5.0
+passlib[bcrypt]==1.7.4
 bcrypt==3.2.2
-python-multipart>=0.0.6
-pydantic>=2.5.0
-pydantic-settings>=2.1.0
-requests>=2.31.0
-httpx>=0.26.0
-openai>=1.10.0
-google-genai>=0.3.0
-groq>=0.4.0
-PyPDF2>=3.0.0
-python-docx>=1.1.0
-openpyxl>=3.1.0
-email-validator>=2.1.0
-dnspython>=2.4.0
+python-multipart==0.0.32
+pydantic==2.14.0
+pydantic-settings==2.15.0
+requests==2.34.2
+httpx==0.28.1
+openai==3.26.1
+google-genai==2.29.0
+groq==1.7.0
+PyPDF2==3.0.1
+python-docx==1.2.0
+openpyxl==3.1.5
+email-validator==2.3.0
+dnspython==2.8.0
 pywebpush==2.3.0
 apscheduler==3.11.2
-authlib>=1.3.0
-itsdangerous>=2.1.0
-slowapi>=0.1.9
+authlib==1.8.0
+itsdangerous==2.2.0
+slowapi==0.1.10
 cloudinary==1.44.1
-reportlab>=4.2.5
-tzlocal>=5.0
+reportlab==4.5.1
+tzlocal==5.4.4
 # Base IANA des fuseaux (zoneinfo Europe/Paris de la veille Lot 2), absente de certains runtimes
 tzdata==2025.3
 # Public Suffix List embarquée (validation des domaines des offres, Lot 2) ; aucune requête réseau
 publicsuffixlist==1.0.2.20261007
 xhtml2pdf==0.2.16
 svglib==1.5.1
-Jinja2>=3.1.3
-
-
-
+Jinja2==3.1.6
+# SDK MCP officiel (Lot 2) : chargé à la demande par utils/mcp_transport.py
+mcp==2.3.0

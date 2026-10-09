@@ -59,6 +59,7 @@ from routes.agent import router as agent_router
 from routes.agent import get_db as agent_get_db
 from routes.watch import router as watch_router
 from routes.watch import get_db as watch_get_db
+from utils import mcp_transport
 from utils.agent_auth import get_db as agent_auth_get_db
 from utils.auth import get_current_user, security
 
@@ -217,6 +218,10 @@ api_router.include_router(watch_router)
 
 # Include main router
 app.include_router(api_router)
+
+# Transport MCP (Lot 2) : application ASGI brute, SDK chargé à la demande.
+# Aucune restriction de méthode ici : désactivé, il répond 404 comme une route absente.
+app.add_route("/api/mcp", mcp_transport.endpoint, include_in_schema=False)
 
 # Override dependencies
 app.dependency_overrides[auth_get_db] = override_get_db

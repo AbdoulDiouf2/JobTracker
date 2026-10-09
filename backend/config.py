@@ -174,6 +174,12 @@ class Settings(BaseSettings):
     WATCH_ITEM_STALE_SECONDS: int = _bounded_int('WATCH_ITEM_STALE_SECONDS', 60, 10, 600)  # reprise d'un élément pending
     WATCH_TIMEZONE: str = "Europe/Paris"  # fixe en v1
 
+    # MCP (Lot 2, étape 3). Désactivé par défaut. Tant que l'authentification OAuth
+    # n'existe pas, le transport reste BLOQUÉ en production Vercel (cf. utils/mcp_transport.py).
+    MCP_ENABLED: bool = os.environ.get('MCP_ENABLED', 'false').strip().lower() == 'true'
+    # Hôtes acceptés par la protection anti DNS-rebinding du SDK (liste séparée par des virgules)
+    MCP_ALLOWED_HOSTS: str = os.environ.get('MCP_ALLOWED_HOSTS', 'jobtracker.maadec.com')
+
     # App
     APP_NAME: str = "JobTracker SaaS"
     DEBUG: bool = os.environ.get('DEBUG', 'false').lower() == 'true'
