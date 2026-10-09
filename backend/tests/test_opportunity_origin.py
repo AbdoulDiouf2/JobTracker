@@ -159,3 +159,44 @@ async def test_isolation_between_users(api, db):
     _, _, _, t_claude = await setup_clients(api, db)
     await create(api, t_claude, 1)
     assert await listed(api, "b") == {}
+
+
+# ============================================
+# Sous-lot A : provenance calculée par le serveur (`origin`)
+# ============================================
+
+async def test_origin_is_consistent_for_every_kind_of_opportunity(api, db):
+    chatgpt, t_gpt, claude, t_claude = await setup_clients(api, db)
+    by_claude = (await create(api, t_claude, 1))["results"][0]["opportunity_id"]
+    by_gpt = (await create(api, t_gpt, 2))["results"][0]["opportunity_id"]
+    legacy = (await create(api, t_gpt, 3))["results"][0]["opportunity_id"]
+    await db.opportunities.update_one({"id": legacy}, {"$unset": {"watch.client_id": "", "watch.client_name": ""}})
+    manual = (await api.post("/api/opportunities", json={"title": "M", "company": "X", "url": "https://jobs.example-corp.fr/m"},
+                             headers=api.headers_for("a"))).json()["opportunity_id"]
+    items = await listed(api)
+    assert items[by_claude]["origin"] == {"kind": "client", "key": f"client:{claude['client_id']}",
+                                          "client_id": claude["client_id"], "client_name": "Claude", "source": None}
+    assert items[by_gpt]["origin"]["client_name"] == "ChatGPT"
+    assert items[legacy]["origin"] == {"kind": "watch_legacy", "key": "watch_legacy",
+                                       "client_id": None, "client_name": None, "source": None}
+    assert items[manual]["origin"] == {"kind": "source", "key": "source:manual",
+                                       "client_id": None, "client_name": None, "source": "manual"}
+    # Détail, modification, ignorer : même provenance
+    h = api.headers_for("a")
+    assert (await api.get(f"/api/opportunities/{by_claude}", headers=h)).json()["origin"] == items[by_claude]["origin"]
+    assert (await api.post(f"/api/opportunities/{by_claude}/ignore", headers=h)).json()["origin"]["client_name"] == "Claude"
+    # Aucun secret ni haché OAuth exposé
+    body = json.dumps(list(items.values()))
+    assert "jt_ocs_" not in body and "secret" not in body
+
+
+async def test_origin_for_deactivated_and_deleted_clients(api, db):
+    _, _, claude, t_claude = await setup_clients(api, db)
+    opp = (await create(api, t_claude, 1))["results"][0]["opportunity_id"]
+    await svc.deactivate_client(db, claude["client_id"])
+    assert (await listed(api))[opp]["origin"]["client_name"] == "Claude"
+    await db.oauth_clients.delete_one({"client_id": claude["client_id"]})
+    assert (await listed(api))[opp]["origin"]["client_name"] == "Claude"  # copie conservée
+    await db.opportunities.update_one({"id": opp}, {"$unset": {"watch.client_name": ""}})
+    origin = (await listed(api))[opp]["origin"]
+    assert origin["kind"] == "client" and origin["client_id"] == claude["client_id"] and origin["client_name"] is None

@@ -1126,6 +1126,19 @@ class Opportunity(BaseModel):
     watch: Optional[OpportunityWatchInfo] = None
 
 
+class OpportunityOrigin(BaseModel):
+    """Provenance calculée côté serveur (jamais stockée) ; `key` est aussi la valeur du filtre `origin`.
+    - kind=client       : veille MCP d'un client OAuth vérifié (key=client:<client_id>) ;
+    - kind=watch_legacy : veille antérieure à P1, sans client connu (key=watch_legacy) ;
+    - kind=source       : autre provenance (key=source:<source>).
+    `client_name` vaut None si le client n'existe plus et qu'aucune copie du nom n'a été conservée."""
+    kind: Literal["client", "watch_legacy", "source"]
+    key: str
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
+    source: Optional[str] = None
+
+
 class OpportunityResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -1147,6 +1160,7 @@ class OpportunityResponse(BaseModel):
     converted_at: Optional[datetime] = None
     metadata: dict = Field(default_factory=dict)
     watch: Optional[OpportunityWatchInfo] = None
+    origin: Optional[OpportunityOrigin] = None
 
 
 class OpportunityIngestResult(BaseModel):

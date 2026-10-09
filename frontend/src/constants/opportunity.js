@@ -22,7 +22,7 @@ export const OPPORTUNITY_FILTERS = [
 ];
 
 const SOURCE_LABELS = {
-  chatgpt_watch:    { fr: 'Veille ChatGPT',   en: 'ChatGPT watch' },
+  chatgpt_watch:    { fr: 'Veille (antérieure)', en: 'Watch (earlier)' },
   chrome_extension: { fr: 'Extension Chrome', en: 'Chrome extension' },
   manual:           { fr: 'Ajout manuel',     en: 'Manual' },
   external_agent:   { fr: 'Agent externe',    en: 'External agent' },
@@ -34,18 +34,35 @@ export const getSourceLabel = (source, language = 'fr') =>
 
 const WATCH_SOURCE = 'chatgpt_watch';
 
+const WATCH_LABELS = {
+  legacy: { fr: 'Veille (antérieure)', en: 'Watch (earlier)' },
+  unknown: { fr: 'Veille (client inconnu)', en: 'Watch (unknown client)' },
+  named: { fr: (n) => `Veille ${n}`, en: (n) => `${n} watch` },
+};
+
+/** Libellé d'une provenance calculée par le serveur (`origin`), aussi utilisé par les filtres. */
+export const getOriginLabel = (origin, language = 'fr') => {
+  const lang = language === 'en' ? 'en' : 'fr';
+  if (!origin) return SOURCE_LABELS.other[lang];
+  if (origin.kind === 'watch_legacy') return WATCH_LABELS.legacy[lang];
+  if (origin.kind === 'client') {
+    const name = typeof origin.client_name === 'string' ? origin.client_name.trim() : '';
+    return name ? WATCH_LABELS.named[lang](name) : WATCH_LABELS.unknown[lang];
+  }
+  return getSourceLabel(origin.source, lang);
+};
+
 /**
  * Libellé de provenance d'une opportunité. Pour la veille MCP, le nom vient du client OAuth
- * VÉRIFIÉ, résolu par le backend (`watch.client_name`) à partir de `watch.client_id` :
- * aucune liste de fournisseurs côté interface.
- * - offre antérieure sans `client_id` : libellé historique (« Veille ChatGPT ») ;
- * - client introuvable et sans nom conservé : « Veille (client inconnu) ».
+ * VÉRIFIÉ, résolu par le backend à partir de `watch.client_id` : aucune liste de fournisseurs
+ * côté interface. Veille antérieure sans client : « Veille (antérieure) », jamais attribuée
+ * d'office à un fournisseur.
  */
 export const getOpportunitySourceLabel = (opportunity, language = 'fr') => {
+  if (opportunity?.origin) return getOriginLabel(opportunity.origin, language);
   const source = opportunity?.source;
   const watch = opportunity?.watch;
-  if (source !== WATCH_SOURCE || !watch?.client_id) return getSourceLabel(source, language);
-  const name = typeof watch.client_name === 'string' ? watch.client_name.trim() : '';
-  if (!name) return language === 'en' ? 'Watch (unknown client)' : 'Veille (client inconnu)';
-  return language === 'en' ? `${name} watch` : `Veille ${name}`;
+  if (source !== WATCH_SOURCE) return getSourceLabel(source, language);
+  if (!watch?.client_id) return getOriginLabel({ kind: 'watch_legacy' }, language);
+  return getOriginLabel({ kind: 'client', client_name: watch.client_name }, language);
 };

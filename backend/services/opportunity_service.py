@@ -13,8 +13,10 @@ import logging
 import re
 import unicodedata
 import uuid
-from datetime import datetime, timezone, timedelta
-from typing import Optional
+from dataclasses import dataclass, field
+from datetime import date, datetime, timezone, timedelta
+from typing import List, Optional
+from zoneinfo import ZoneInfo
 
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
@@ -22,7 +24,7 @@ from pymongo.errors import DuplicateKeyError
 from models import (
     Opportunity, OpportunityCreate, OpportunityUpdate,
     OpportunityStatus, OpportunityIngestResult,
-    ApplicationStatus, JobApplicationCreate, JobType,
+    ApplicationStatus, JobApplicationCreate, JobType, WATCH_SOURCE,
 )
 from services.application_service import create_application_record
 from utils.job_urls import normalize_job_url, detect_platform
@@ -224,6 +226,96 @@ async def ingest_opportunity(
 # LECTURE
 # ============================================
 
+@dataclass
+class OpportunityFilters:
+    """Filtres de la liste (tous facultatifs, combinés en ET ; valeurs multiples en OU).
+    Les valeurs sont validées par la route avant d'arriver ici."""
+    status: Optional[str] = None
+    search: Optional[str] = None
+    origins: List[str] = field(default_factory=list)      # client:<id> | watch_legacy | source:<source>
+    countries: List[str] = field(default_factory=list)    # codes ISO 3166 alpha-2
+    min_score: Optional[int] = None
+    max_score: Optional[int] = None
+    discovered_from: Optional[date] = None                # jour de Paris, inclus
+    discovered_to: Optional[date] = None                  # jour de Paris, inclus
+    contracts: List[str] = field(default_factory=list)    # permanent | fixed_term | freelance | ...
+    seniorities: List[str] = field(default_factory=list)  # junior | entry_level | graduate | mid
+    location: Optional[str] = None
+    sort: str = "discovered"                              # discovered | relevance | company
+
+
+PARIS = ZoneInfo("Europe/Paris")
+_SORTS = {
+    # Critère secondaire déterministe : date puis identifiant (tri stable entre les pages)
+    "discovered": [("discovered_at", -1), ("created_at", -1), ("id", 1)],
+    # Score décroissant ; les offres sans score (absent ou null) viennent en dernier
+    "relevance": [("watch.relevance_score", -1), ("discovered_at", -1), ("id", 1)],
+    "company": [("_company_key", 1), ("discovered_at", -1), ("id", 1)],
+}
+
+
+def _paris_day_start_utc(day: date) -> str:
+    """Minuit (heure de Paris) du jour donné, en ISO UTC : même format que les dates stockées."""
+    return datetime.combine(day, datetime.min.time(), tzinfo=PARIS).astimezone(timezone.utc).isoformat()
+
+
+async def build_filter_query(db, user_id: str, filters: OpportunityFilters) -> dict:
+    """Requête MongoDB des filtres, TOUJOURS limitée au compte. Lecture seule : les pays et les
+    contrats en texte libre (ajouts manuels) sont normalisés à partir des valeurs distinctes du
+    compte, sans modifier les documents."""
+    from utils.watch_validation import normalize_contract, normalize_country
+
+    conds: list = [{"user_id": user_id}]
+    if filters.status:
+        conds.append({"status": OpportunityStatus(filters.status).value})
+    if filters.search and filters.search.strip():
+        regex = {"$regex": re.escape(filters.search.strip()), "$options": "i"}
+        conds.append({"$or": [{"title": regex}, {"company": regex}]})
+    if filters.origins:
+        alternatives = []
+        for key in filters.origins:
+            if key == "watch_legacy":
+                # {champ: None} couvre « absent » et « null »
+                alternatives.append({"source": WATCH_SOURCE, "watch.client_id": None})
+            elif key.startswith("client:"):
+                alternatives.append({"source": WATCH_SOURCE, "watch.client_id": key[len("client:"):]})
+            else:
+                alternatives.append({"source": key[len("source:"):]})
+        conds.append({"$or": alternatives})
+    if filters.countries:
+        wanted = set(filters.countries)
+        raws = await db[COLLECTION].distinct("country", {"user_id": user_id})
+        conds.append({"country": {"$in": [r for r in raws if normalize_country(r) in wanted]}})
+    if filters.min_score is not None or filters.max_score is not None:
+        score: dict = {"$type": "number"}
+        if filters.min_score is not None:
+            score["$gte"] = filters.min_score
+        if filters.max_score is not None:
+            score["$lte"] = filters.max_score
+        conds.append({"watch.relevance_score": score})
+    if filters.discovered_from or filters.discovered_to:
+        bounds: dict = {}
+        if filters.discovered_from:
+            bounds["$gte"] = _paris_day_start_utc(filters.discovered_from)
+        if filters.discovered_to:
+            bounds["$lt"] = _paris_day_start_utc(filters.discovered_to + timedelta(days=1))
+        conds.append({"discovered_at": bounds})
+    if filters.contracts:
+        kinds = set(filters.contracts)
+        raws = await db[COLLECTION].distinct("contract_type", {"user_id": user_id, "watch.contract_category": None})
+        conds.append({"$or": [
+            {"watch.contract_category": {"$in": list(kinds)}},
+            {"watch.contract_category": None,
+             "contract_type": {"$in": [r for r in raws if normalize_contract(r) in kinds]}},
+        ]})
+    if filters.seniorities:
+        # Séniorité non renseignée : jamais assimilée à un niveau
+        conds.append({"watch.seniority": {"$in": list(filters.seniorities)}})
+    if filters.location and filters.location.strip():
+        conds.append({"location": {"$regex": re.escape(filters.location.strip()), "$options": "i"}})
+    return conds[0] if len(conds) == 1 else {"$and": conds}
+
+
 async def list_opportunities(
     db,
     user_id: str,
@@ -231,31 +323,101 @@ async def list_opportunities(
     search: Optional[str] = None,
     page: int = 1,
     per_page: int = 20,
+    filters: Optional[OpportunityFilters] = None,
 ) -> dict:
-    """Liste paginée (format PaginatedResponse), plus récentes d'abord."""
+    """Liste paginée (format PaginatedResponse). Les filtres s'appliquent AVANT la pagination ;
+    `total` est le nombre de résultats filtrés. Tri stable (critère secondaire déterministe)."""
     await ensure_indexes(db)
-    query: dict = {"user_id": user_id}
-    if status:
-        query["status"] = OpportunityStatus(status).value
-    if search and search.strip():
-        regex = {"$regex": re.escape(search.strip()), "$options": "i"}
-        query["$or"] = [{"title": regex}, {"company": regex}]
+    filters = filters or OpportunityFilters()
+    if status and not filters.status:
+        filters.status = OpportunityStatus(status).value
+    if search and not filters.search:
+        filters.search = search
+    query = await build_filter_query(db, user_id, filters)
+    sort = _SORTS.get(filters.sort, _SORTS["discovered"])
 
     total = await db[COLLECTION].count_documents(query)
-    cursor = (
-        db[COLLECTION]
-        .find(query, {"_id": 0, "url_normalized": 0})
-        .sort([("discovered_at", -1), ("created_at", -1)])
-        .skip((page - 1) * per_page)
-        .limit(per_page)
-    )
-    items = await cursor.to_list(length=per_page)
+    pipeline = [{"$match": query}]
+    if filters.sort == "company":
+        pipeline.append({"$addFields": {"_company_key": {"$toLower": "$company"}}})
+    pipeline += [
+        {"$sort": dict(sort)},
+        {"$skip": (page - 1) * per_page},
+        {"$limit": per_page},
+        {"$project": {"_id": 0, "url_normalized": 0, "_company_key": 0}},
+    ]
+    items = await db[COLLECTION].aggregate(pipeline).to_list(length=per_page)
     return {
         "items": items,
         "total": total,
         "page": page,
         "per_page": per_page,
         "total_pages": (total + per_page - 1) // per_page,
+    }
+
+
+async def opportunity_facets(db, user_id: str) -> dict:
+    """
+    Valeurs RÉELLEMENT présentes dans les opportunités du compte, avec leurs effectifs.
+    Sémantique : effectifs GLOBAUX au compte (`scope: "account"`, tous statuts confondus,
+    indépendants des filtres en cours). Lecture seule, une agrégation.
+    """
+    from utils.watch_validation import normalize_contract, normalize_country
+
+    await ensure_indexes(db)
+    result = (await db[COLLECTION].aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$facet": {
+            "total": [{"$count": "n"}],
+            "origins": [{"$group": {"_id": {"source": "$source", "client_id": "$watch.client_id"},
+                                    "count": {"$sum": 1}, "name": {"$max": "$watch.client_name"}}}],
+            "countries": [{"$group": {"_id": "$country", "count": {"$sum": 1}}}],
+            "contracts": [{"$group": {"_id": {"category": "$watch.contract_category", "raw": "$contract_type"},
+                                      "count": {"$sum": 1}}}],
+            "seniorities": [{"$match": {"watch.seniority": {"$type": "string"}}},
+                            {"$group": {"_id": "$watch.seniority", "count": {"$sum": 1}}}],
+            "scores": [{"$match": {"watch.relevance_score": {"$type": "number"}}},
+                       {"$group": {"_id": None, "count": {"$sum": 1}, "min": {"$min": "$watch.relevance_score"},
+                                   "max": {"$max": "$watch.relevance_score"}}}],
+        }},
+    ]).to_list(length=1))[0]
+
+    # Origines : même clé et même résolution du nom que la provenance des opportunités
+    origins = {}
+    for g in result["origins"]:
+        doc = {"source": g["_id"].get("source"), "watch": {"client_id": g["_id"].get("client_id"),
+                                                          "client_name": g.get("name")}}
+        await attach_client_names(db, [doc])
+        origin = doc["origin"]
+        entry = origins.setdefault(origin["key"], {**origin, "count": 0})
+        entry["count"] += g["count"]
+
+    countries, unrecognized = {}, 0
+    for g in result["countries"]:
+        code = normalize_country(g["_id"]) if g["_id"] else None
+        if code:
+            countries[code] = countries.get(code, 0) + g["count"]
+        elif g["_id"]:
+            unrecognized += g["count"]
+
+    contracts = {}
+    for g in result["contracts"]:
+        kind = g["_id"].get("category") or normalize_contract(g["_id"].get("raw"))
+        if kind:
+            contracts[kind] = contracts.get(kind, 0) + g["count"]
+
+    by_count = lambda items: sorted(items, key=lambda e: (-e["count"], e["key"]))  # noqa: E731
+    scores = result["scores"][0] if result["scores"] else None
+    return {
+        "scope": "account",
+        "total": result["total"][0]["n"] if result["total"] else 0,
+        "origins": by_count(origins.values()),
+        "countries": by_count([{"key": k, "count": v} for k, v in countries.items()]),
+        "countries_unrecognized": unrecognized,
+        "contracts": by_count([{"key": k, "count": v} for k, v in contracts.items()]),
+        "seniorities": by_count([{"key": g["_id"], "count": g["count"]} for g in result["seniorities"]]),
+        "scores": ({"count": scores["count"], "min": scores["min"], "max": scores["max"]} if scores
+                   else {"count": 0, "min": None, "max": None}),
     }
 
 
@@ -313,7 +475,21 @@ async def attach_client_names(db, documents: list) -> list:
         watch = d.get("watch")
         if watch and watch.get("client_id"):
             watch["client_name"] = names.get(watch["client_id"]) or watch.get("client_name")
+        d["origin"] = opportunity_origin(d)
     return documents
+
+
+def opportunity_origin(document: dict) -> dict:
+    """Provenance d'une opportunité (calculée, jamais stockée). Sa `key` est la valeur du filtre
+    `origin` : client:<client_id> | watch_legacy | source:<source>."""
+    source = document.get("source") or "other"
+    watch = document.get("watch") or {}
+    if source == WATCH_SOURCE:
+        if watch.get("client_id"):
+            return {"kind": "client", "key": f"client:{watch['client_id']}", "client_id": watch["client_id"],
+                    "client_name": watch.get("client_name")}
+        return {"kind": "watch_legacy", "key": "watch_legacy"}
+    return {"kind": "source", "key": f"source:{source}", "source": source}
 
 
 async def get_opportunity(db, user_id: str, opportunity_id: str) -> dict:

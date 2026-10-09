@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Inbox, Search, ChevronLeft, ChevronRight, AlertTriangle, SearchX } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Inbox, Search, ChevronLeft, ChevronRight, AlertTriangle, SearchX, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
-import { useOpportunities, useOpportunityActions } from '../hooks/useOpportunities';
+import { useOpportunities, useOpportunityActions, useOpportunityFacets } from '../hooks/useOpportunities';
 import { useLanguage } from '../i18n';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Skeleton } from '../components/ui/skeleton';
 import { OpportunityCard } from '../components/opportunities/OpportunityCard';
 import { OpportunityDetailDialog } from '../components/opportunities/OpportunityDetailDialog';
+import { OpportunityFilters } from '../components/opportunities/OpportunityFilters';
 import { OPPORTUNITY_FILTERS } from '../constants/opportunity';
+import { DEFAULT_FILTERS, hasActiveFilters, parseFilters, toApiParams, toSearchParams } from '../lib/opportunityFilters';
 
 const PER_PAGE = 20;
 const SEARCH_DEBOUNCE_MS = 300;
@@ -25,6 +27,7 @@ const T = {
     emptyText: 'Les offres détectées par vos outils et agents apparaîtront ici.',
     noResultTitle: 'Aucun résultat',
     noResultText: 'Modifiez la recherche ou le filtre.',
+    resetFilters: 'Réinitialiser les filtres',
     error: 'Impossible de charger les opportunités.',
     retry: 'Réessayer',
     previous: 'Page précédente',
@@ -49,6 +52,7 @@ const T = {
     emptyText: 'Offers detected by your tools and agents will appear here.',
     noResultTitle: 'No results',
     noResultText: 'Change the search or the filter.',
+    resetFilters: 'Reset filters',
     error: 'Unable to load opportunities.',
     retry: 'Retry',
     previous: 'Previous page',
@@ -70,33 +74,44 @@ export default function OpportunitiesPage() {
   const t = T[language];
   const navigate = useNavigate();
 
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
+  // L'URL est la source de vérité des filtres, du tri et de la page : l'état est conservé
+  // lors de la navigation (ex. vers une candidature) et restauré au retour arrière.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filters = useMemo(() => parseFilters(searchParams), [searchParams]);
+  const [searchInput, setSearchInput] = useState(filters.q);
   const [selected, setSelected] = useState(null);
   const [convertingId, setConvertingId] = useState(null);
   const [ignoringId, setIgnoringId] = useState(null);
 
+  /** Met à jour l'URL ; tout changement de filtre revient à la première page. */
+  const updateFilters = useCallback((partial) => {
+    setSearchParams((prev) => {
+      const current = parseFilters(prev);
+      return toSearchParams({ ...current, ...partial, page: partial.page ?? 1 });
+    }, { replace: true });
+  }, [setSearchParams]);
+  const resetFilters = useCallback(() => {
+    setSearchInput('');
+    setSearchParams((prev) => toSearchParams({ ...DEFAULT_FILTERS, status: parseFilters(prev).status }), { replace: true });
+  }, [setSearchParams]);
+
+  // Champ de recherche : saisie locale, URL mise à jour après une courte pause
+  useEffect(() => { setSearchInput(filters.q); }, [filters.q]);
   useEffect(() => {
-    const timer = setTimeout(() => setSearch(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    if (searchInput.trim() === filters.q.trim()) return undefined;
+    const timer = setTimeout(() => updateFilters({ q: searchInput }), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [searchInput]);
+  }, [searchInput, filters.q, updateFilters]);
 
-  useEffect(() => { setPage(1); }, [statusFilter, search]);
-
-  const params = {
-    page,
-    per_page: PER_PAGE,
-    ...(statusFilter !== 'all' ? { status: statusFilter } : {}),
-    ...(search ? { search } : {}),
-  };
+  const params = useMemo(() => toApiParams(filters, PER_PAGE), [filters]);
   const { data, isLoading, isError, refetch } = useOpportunities(params);
+  const { data: facets } = useOpportunityFacets();
   const { ignore, restore, convert } = useOpportunityActions();
 
   const items = data?.items ?? [];
+  const page = filters.page;
   const totalPages = data?.total_pages ?? 0;
-  const isFiltered = statusFilter !== 'all' || !!search;
+  const isFiltered = filters.status !== 'all' || hasActiveFilters(filters);
 
   // Garder le détail synchronisé avec la liste (statut mis à jour après action)
   const selectedFresh = selected ? items.find(o => o.id === selected.id) || selected : null;
@@ -172,10 +187,10 @@ export default function OpportunitiesPage() {
             <button
               key={filter.value}
               type="button"
-              aria-pressed={statusFilter === filter.value}
-              onClick={() => setStatusFilter(filter.value)}
+              aria-pressed={filters.status === filter.value}
+              onClick={() => updateFilters({ status: filter.value })}
               className={`flex-1 lg:flex-none whitespace-nowrap px-3 sm:px-4 h-10 sm:h-9 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/60
-                ${statusFilter === filter.value ? 'bg-gold/15 text-gold' : 'text-slate-400 hover:text-white'}`}
+                ${filters.status === filter.value ? 'bg-gold/15 text-gold' : 'text-slate-400 hover:text-white'}`}
               data-testid={`opportunity-filter-${filter.value}`}
             >
               {filter.label[language]}
@@ -198,6 +213,15 @@ export default function OpportunitiesPage() {
         </div>
       </div>
 
+      <OpportunityFilters
+        filters={filters}
+        onChange={updateFilters}
+        onReset={resetFilters}
+        facets={facets}
+        total={data?.total}
+        language={language}
+      />
+
       {/* Contenu */}
       {isLoading && !data ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" aria-busy="true">
@@ -218,6 +242,12 @@ export default function OpportunitiesPage() {
           </div>
           <h2 className="text-white font-semibold text-lg">{isFiltered ? t.noResultTitle : t.emptyTitle}</h2>
           <p className="text-slate-400 mt-1">{isFiltered ? t.noResultText : t.emptyText}</p>
+          {isFiltered && hasActiveFilters(filters) && (
+            <Button variant="outline" className="mt-4 border-slate-700" onClick={resetFilters} data-testid="opportunities-empty-reset">
+              <RotateCcw aria-hidden="true" />
+              {t.resetFilters}
+            </Button>
+          )}
         </div>
       ) : (
         <>
@@ -236,7 +266,7 @@ export default function OpportunitiesPage() {
             <nav className="flex items-center justify-center gap-3" aria-label="Pagination">
               <Button
                 variant="outline" size="icon" className="h-10 w-10 border-slate-700"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
+                onClick={() => updateFilters({ page: Math.max(1, page - 1) })}
                 disabled={page <= 1}
                 aria-label={t.previous}
               >
@@ -245,7 +275,7 @@ export default function OpportunitiesPage() {
               <span className="text-sm text-slate-400" aria-live="polite">{t.page(page, totalPages)}</span>
               <Button
                 variant="outline" size="icon" className="h-10 w-10 border-slate-700"
-                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                onClick={() => updateFilters({ page: Math.min(totalPages, page + 1) })}
                 disabled={page >= totalPages}
                 aria-label={t.next}
               >

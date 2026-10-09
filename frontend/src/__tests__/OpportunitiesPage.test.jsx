@@ -68,7 +68,7 @@ describe('OpportunitiesPage — liste', () => {
     expect(within(card).getByText('Orange')).toBeInTheDocument();
     expect(within(card).getByText('Paris, France')).toBeInTheDocument();
     expect(within(card).getByText('CDI')).toBeInTheDocument();
-    expect(within(card).getByText(/Veille ChatGPT/)).toBeInTheDocument();
+    expect(within(card).getByText(/Veille \(antérieure\)/)).toBeInTheDocument();
     expect(within(card).getByText("Trouvée aujourd'hui")).toBeInTheDocument();
     expect(within(card).getByText('Nouvelle')).toBeInTheDocument();
     // Mobile : de vraies cartes, pas de tableau desktop compressé
@@ -274,7 +274,7 @@ describe('OpportunitiesPage — provenance de la veille', () => {
     renderPage();
     expect(await screen.findByTestId('opportunity-card-opp-claude')).toHaveTextContent('Source : Veille Claude');
     expect(screen.getByTestId('opportunity-card-opp-gpt')).toHaveTextContent('Source : Veille ChatGPT');
-    expect(screen.getByTestId('opportunity-card-opp-old')).toHaveTextContent('Source : Veille ChatGPT');
+    expect(screen.getByTestId('opportunity-card-opp-old')).toHaveTextContent('Source : Veille (antérieure)');
     expect(screen.getByTestId('opportunity-card-opp-gone')).toHaveTextContent('Source : Veille (client inconnu)');
     expect(screen.getByTestId('opportunity-card-opp-manual')).toHaveTextContent('Source : Ajout manuel');
   });

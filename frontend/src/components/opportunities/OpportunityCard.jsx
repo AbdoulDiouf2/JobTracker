@@ -135,7 +135,18 @@ export const OpportunityCard = ({ opportunity, onOpen, ...actionProps }) => {
           </h3>
           <p className="text-gold text-sm truncate">{opportunity.company}</p>
         </div>
-        <OpportunityStatusBadge status={opportunity.status} />
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          <OpportunityStatusBadge status={opportunity.status} />
+          {typeof opportunity.watch?.relevance_score === 'number' && (
+            <span
+              className="px-2 py-0.5 rounded-full border border-slate-700 bg-slate-900/60 text-xs font-mono text-slate-200 tabular-nums"
+              aria-label={`${language === 'fr' ? 'Pertinence' : 'Relevance'} ${opportunity.watch.relevance_score} / 100`}
+              data-testid={`opportunity-score-${opportunity.id}`}
+            >
+              {opportunity.watch.relevance_score}/100
+            </span>
+          )}
+        </div>
       </div>
 
       {(location || opportunity.contract_type) && (
