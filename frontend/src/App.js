@@ -35,6 +35,7 @@ const ResetPasswordPage  = lazy(() => import("./pages/ResetPasswordPage"));
 const LegalNoticePage    = lazy(() => import("./pages/LegalNoticePage"));
 const PrivacyPolicyPage  = lazy(() => import("./pages/PrivacyPolicyPage"));
 const TermsOfServicePage = lazy(() => import("./pages/TermsOfServicePage"));
+const OAuthConsentPage   = lazy(() => import("./pages/OAuthConsentPage"));
 
 // Admin Pages
 const AdminDashboardPage = lazy(() => import("./pages/admin/AdminDashboardPage"));
@@ -78,6 +79,9 @@ function AppRouter() {
       <Route path="/support" element={<SupportPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      {/* Consentement OAuth du connecteur ChatGPT (Lot 2). Sensible à la casse : seul
+          /oauth/consent reçoit les en-têtes anti-clickjacking définis dans vercel.json */}
+      <Route path="/oauth/consent" caseSensitive element={<OAuthConsentPage />} />
       <Route path="/onboarding" element={
         <OnboardingGuard>
           <OnboardingPage />

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { consumeOAuthReturn } from '../lib/oauthReturn';
 
 /**
  * AuthCallback - Gère le retour de l'authentification Google
@@ -37,7 +38,11 @@ export default function AuthCallback() {
         if (result.success) {
           // Redirect to onboarding if not yet completed, otherwise dashboard
           const user = result.user;
-          if (user && user.onboarding_completed === false) {
+          const oauthReturn = consumeOAuthReturn();
+          if (oauthReturn) {
+            // Demande d'autorisation OAuth en cours : on y revient en priorité
+            navigate(oauthReturn, { replace: true });
+          } else if (user && user.onboarding_completed === false) {
             navigate('/onboarding', { replace: true });
           } else {
             navigate('/dashboard', { replace: true });

@@ -81,3 +81,34 @@ def test_oauth_rules_precede_frontend_rules():
                    "/.well-known/openid-configuration"):
         assert sources.index(prefix + "(.*)") < first_frontend
 
+
+# ============================================
+# En-têtes anti-clickjacking de la page de consentement OAuth (frontend statique)
+# ============================================
+
+def _headers_for(path: str) -> dict:
+    with open(VERCEL_JSON, encoding="utf-8") as f:
+        rules = json.load(f).get("headers", [])
+    found = {}
+    for rule in rules:
+        if re.match(to_regex(rule["source"]), path):
+            found.update({h["key"]: h["value"] for h in rule["headers"]})
+    return found
+
+
+@pytest.mark.parametrize("path", ["/oauth/consent", "/oauth/consent/", "/oauth"])
+def test_consent_page_forbids_framing(path):
+    headers = _headers_for(path)
+    assert headers["X-Frame-Options"] == "DENY"
+    assert headers["Content-Security-Policy"] == "frame-ancestors 'none'"
+    assert headers["Cache-Control"] == "no-store"
+    assert headers["Referrer-Policy"] == "no-referrer"
+
+
+@pytest.mark.parametrize("path", ["/", "/dashboard", "/login", "/static/js/main.js"])
+def test_other_pages_keep_their_headers(path):
+    assert _headers_for(path) == {}
+
+
+def test_consent_page_is_still_served_by_frontend():
+    assert route("/oauth/consent") == "/frontend/index.html"

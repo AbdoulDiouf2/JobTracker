@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { useLanguage } from '../i18n';
+import { consumeOAuthReturn } from '../lib/oauthReturn';
 
 const loginSchema = z.object({
   email: z.string().email('Email invalide'),
@@ -62,7 +63,8 @@ export default function LoginPage() {
     setServerError('');
     const result = await login(data.email, data.password);
     if (result.success) {
-      navigate('/dashboard');
+      // Retour vers une demande d'autorisation OAuth en cours, sinon tableau de bord
+      navigate(consumeOAuthReturn() || '/dashboard');
     } else {
       setServerError(result.error);
     }
