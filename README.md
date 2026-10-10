@@ -52,6 +52,7 @@ Détails : [installation, variables et tests](Doc/INSTALLATION-ET-CONFIGURATION.
 | Veille programmée | [Doc/VEILLE-PROGRAMMEE.md](Doc/VEILLE-PROGRAMMEE.md) |
 | Sécurité | [Doc/SECURITE.md](Doc/SECURITE.md) |
 | Déploiement et exploitation | [Doc/DEPLOIEMENT-ET-EXPLOITATION.md](Doc/DEPLOIEMENT-ET-EXPLOITATION.md) |
+| Déploiement auto-hébergé (Hetzner + GitHub Actions) | [Doc/DEPLOIEMENT-SELF-HOSTED.md](Doc/DEPLOIEMENT-SELF-HOSTED.md) |
 | Historique, décisions, état réel | [Doc/HISTORIQUE-ET-DECISIONS.md](Doc/HISTORIQUE-ET-DECISIONS.md) |
 
 ## Organisation du dépôt

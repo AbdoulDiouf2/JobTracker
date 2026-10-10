@@ -1,0 +1,57 @@
+services:
+  jobtracker-api:
+    container_name: jobtracker-api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    expose:
+      - "8001"
+    networks:
+      - prod-net
+      - jobtracker-internal
+    mem_limit: 2g
+    healthcheck:
+      test: ["CMD", "python", "-c", "import json,urllib.request; d=json.load(urllib.request.urlopen('http://127.0.0.1:8001/api/health',timeout=5)); exit(0 if d.get('status')=='healthy' else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      - homepage.group=Apps
+      - homepage.name=JobTracker API
+      - homepage.icon=fastapi.png
+      - homepage.href=https://jobtracker.maadec.com
+      - homepage.description=API FastAPI et serveur MCP
+
+  jobtracker-web:
+    container_name: jobtracker-web
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+      args:
+        REACT_APP_BACKEND_URL: https://jobtracker.maadec.com
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - prod-net
+      - jobtracker-internal
+    depends_on:
+      jobtracker-api:
+        condition: service_healthy
+    labels:
+      - homepage.group=Apps
+      - homepage.name=JobTracker
+      - homepage.icon=react.png
+      - homepage.href=https://jobtracker.maadec.com
+      - homepage.description=Suivi des candidatures et agent de carrière
+
+networks:
+  prod-net:
+    external: true
+  jobtracker-internal:
+    name: jobtracker-internal
+    internal: true
