@@ -77,11 +77,30 @@ def exchange_form(code, verifier, redirect):
             "redirect_uri": redirect, "resource": RESOURCE}
 
 
-async def connect_public(api, db, client, redirect="http://127.0.0.1:53682/callback", who="a"):
-    code, verifier = await get_code(api, client, redirect, who)
+async def connect_public(api, db, client, redirect="http://127.0.0.1:53682/callback", who="a", **over):
+    code, verifier = await get_code(api, client, redirect, who, **over)
     r = await public_token(api, client["client_id"], exchange_form(code, verifier, redirect))
     assert r.status_code == 200, r.text
     return r.json()
+
+
+async def test_admin_public_client_interview_write_pkce_and_scope_gate(api, db, admin):
+    created = await api.post(f"{BASE}/clients", headers=admin, json={"name": "Interview public",
+        "client_type": "public", "redirect_uris": [LOOPBACK], "allowed_scopes": ["interviews:write"]})
+    assert created.status_code == 201, created.text
+    client = created.json()
+    assert client["client_secret"] is None and client["allowed_scopes"] == ["interviews:write"]
+    tokens = await connect_public(api, db, client, scope="interviews:write")
+    assert tokens["scope"] == "interviews:write"
+    catalogue = await mcp(api, LIST, tokens["access_token"])
+    assert catalogue.status_code == 200
+    assert len(catalogue.json()["result"]["tools"]) == 16
+    read = await tool(api, tokens["access_token"], "list_interviews")
+    assert read.status_code == 403 and read.json()["scope"] == "interviews:read"
+    write = await tool(api, tokens["access_token"], "delete_interview", {"interview_id": "missing"})
+    assert write.status_code == 200
+    assert write.json()["result"]["isError"] is True
+    assert (await db.oauth_grants.find_one({"client_id": client["client_id"]}))["scopes"] == ["interviews:write"]
 
 
 async def tool(api, access, name, arguments=None):

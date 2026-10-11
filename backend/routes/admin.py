@@ -625,7 +625,8 @@ class OAuthRedirectUriAdd(BaseModel):
     redirect_uri: str
 
 
-OAuthScope = Literal["watch:read", "opportunities:write", "applications:read", "applications:write"]
+OAuthScope = Literal["watch:read", "opportunities:write", "applications:read", "applications:write",
+                     "interviews:read", "interviews:write"]
 
 
 class OAuthClientCreate(BaseModel):

@@ -99,6 +99,8 @@ const T = {
       'opportunities:write': 'Ajouter des offres et les comptes-rendus de veille',
       'applications:read': 'Lire les candidatures, y compris notes et contacts',
       'applications:write': 'Créer, modifier et supprimer les candidatures',
+      'interviews:read': 'Lire les entretiens et leur historique de statuts',
+      'interviews:write': 'Créer, modifier et supprimer les entretiens',
     },
     scopesRequired: 'Choisissez au moins une permission.',
     scopesHelp: "Retirer une permission s'applique immédiatement ; en ajouter une demande une nouvelle connexion depuis l'application.",
@@ -226,6 +228,8 @@ const T = {
       'opportunities:write': 'Add offers and watch reports',
       'applications:read': 'Read applications, including notes and contacts',
       'applications:write': 'Create, update and delete applications',
+      'interviews:read': 'Read interviews and their status history',
+      'interviews:write': 'Create, update and delete interviews',
     },
     scopesRequired: 'Choose at least one permission.',
     scopesHelp: 'Removing a permission applies immediately; adding one requires a new connection from the application.',
@@ -279,7 +283,8 @@ const T = {
 };
 
 const USABLE = ['active', 'access_expired_observed'];
-const SCOPES = ['watch:read', 'opportunities:write', 'applications:read', 'applications:write'];
+const SCOPES = ['watch:read', 'opportunities:write', 'applications:read', 'applications:write',
+  'interviews:read', 'interviews:write'];
 const DEFAULT_SCOPES = ['watch:read', 'opportunities:write'];
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
