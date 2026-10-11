@@ -90,6 +90,7 @@ async def process_interview_reminders(db):
             settings = await db.notification_settings.find_one({"user_id": user_id}) or {}
             reminder_24h_enabled = settings.get("reminder_24h", True)
             reminder_1h_enabled = settings.get("reminder_1h", True)
+            browser_notifications_enabled = settings.get("browser_notifications", True)
             
             if not reminder_24h_enabled and not reminder_1h_enabled:
                 continue
@@ -154,7 +155,10 @@ async def process_interview_reminders(db):
                         body = f"Votre entretien {type_entretien} pour {poste} est prévu demain. Préparez-vous !"
                         
                         # Envoyer push
-                        subscriptions = await db.push_subscriptions.find({"user_id": user_id}).to_list(10)
+                        subscriptions = (
+                            await db.push_subscriptions.find({"user_id": user_id}).to_list(10)
+                            if browser_notifications_enabled else []
+                        )
                         for sub in subscriptions:
                             payload = {
                                 "title": title,
@@ -202,7 +206,10 @@ async def process_interview_reminders(db):
                         body = f"Votre entretien chez {entreprise} commence bientôt ! Bonne chance ! 🍀"
                         
                         # Envoyer push
-                        subscriptions = await db.push_subscriptions.find({"user_id": user_id}).to_list(10)
+                        subscriptions = (
+                            await db.push_subscriptions.find({"user_id": user_id}).to_list(10)
+                            if browser_notifications_enabled else []
+                        )
                         for sub in subscriptions:
                             payload = {
                                 "title": title,

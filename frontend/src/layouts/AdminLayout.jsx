@@ -53,14 +53,10 @@ const AdminSidebar = ({ isOpen, onClose }) => {
       >
         {/* Logo - Fixed at top */}
         <div className="flex-shrink-0 p-6 border-b border-red-900/30">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
-              <ShieldCheck size={24} className="text-red-400" />
-            </div>
-            <div>
-              <h2 className="font-heading font-bold text-white">Admin Panel</h2>
-              <p className="text-red-400/70 text-xs">JobTracker</p>
-            </div>
+          <img src="/JobTracker-Dark-Mode-Logo.png" alt="JobTracker" className="w-full h-auto" />
+          <div className="mt-3 flex items-center gap-2 text-red-400/80 text-sm">
+            <ShieldCheck size={16} aria-hidden="true" />
+            <span>Admin Panel</span>
           </div>
         </div>
 

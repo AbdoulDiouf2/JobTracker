@@ -101,7 +101,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex-shrink-0 p-6 border-b border-slate-800 flex justify-center">
           <Link to="/" className="flex items-center gap-3">
             <img 
-              src="/JobTracker-Logo.png"
+              src="/JobTracker-Dark-Mode-Logo.png"
               alt="JobTracker"
               className="w-full h-auto"
             />
@@ -125,12 +125,12 @@ const Sidebar = ({ isOpen, onClose }) => {
                     : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                 }`}
             >
-              <item.icon size={20} />
-              <span className="font-medium">{item.label}</span>
+              <item.icon size={20} className="shrink-0" aria-hidden="true" />
+              <span className="min-w-0 flex-1 truncate font-medium">{item.label}</span>
               {(item.badge || isActive(item.path)) && (
-                <span className="ml-auto flex items-center gap-2">
+                <span className="ml-auto flex shrink-0 items-center gap-2">
                   {item.badge}
-                  {isActive(item.path) && <ChevronRight size={16} />}
+                  {isActive(item.path) && <ChevronRight size={16} className="shrink-0" />}
                 </span>
               )}
             </Link>
@@ -293,7 +293,7 @@ export default function DashboardLayout() {
           </button>
           <Link to="/" className="hover:opacity-80 transition-opacity">
             <img 
-              src="/JobTracker-Logo.png"
+              src="/JobTracker-Dark-Mode-Logo.png"
               alt="JobTracker"
               className="h-10 w-auto"
             />

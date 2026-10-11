@@ -31,6 +31,7 @@ export default function SettingsPage() {
     unsubscribe: unsubscribePush,
     sendTestNotification 
   } = usePushNotifications();
+  const [activeSection, setActiveSection] = useState('account');
   const [loading, setLoading] = useState(false);
   const [resetting, setResetting] = useState(null);
   const [message, setMessage] = useState('');
@@ -204,6 +205,15 @@ export default function SettingsPage() {
       contactSupport: 'Contact Support'
     }
   }[language];
+
+  const settingsSections = [
+    { id: 'account', label: language === 'fr' ? 'Compte & profil' : 'Account & profile', icon: User },
+    { id: 'notifications', label: language === 'fr' ? 'Notifications' : 'Notifications', icon: Bell },
+    { id: 'integrations', label: language === 'fr' ? 'Intégrations & API' : 'Integrations & API', icon: Key },
+    { id: 'agents', label: language === 'fr' ? 'API & agents' : 'API & agents', icon: Globe },
+    { id: 'support', label: t.support, icon: Smartphone },
+    { id: 'danger', label: t.dangerZone, icon: AlertTriangle },
+  ];
 
   // Fetch notification settings
   useEffect(() => {
@@ -460,13 +470,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="space-y-8" data-testid="settings-page">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6" data-testid="settings-page">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-heading text-2xl lg:text-3xl font-bold text-white">{t.title}</h1>
           <p className="text-slate-400 mt-1">{t.subtitle}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           {message && <span className="text-green-400 text-sm">{message}</span>}
           <Button 
             onClick={handleSave}
@@ -479,15 +489,48 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
+        <nav aria-label={language === 'fr' ? 'Rubriques des paramètres' : 'Settings sections'} className="min-w-0 lg:sticky lg:top-6 lg:self-start">
+          <div className="flex gap-2 overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/70 p-2 lg:flex-col lg:overflow-visible" role="tablist">
+            {settingsSections.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                id={`settings-tab-${id}`}
+                aria-selected={activeSection === id}
+                aria-controls={`settings-panel-${id}`}
+                tabIndex={activeSection === id ? 0 : -1}
+                onClick={() => setActiveSection(id)}
+                onKeyDown={(event) => {
+                  const direction = event.key === 'ArrowRight' || event.key === 'ArrowDown' ? 1
+                    : event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 0;
+                  if (!direction) return;
+                  event.preventDefault();
+                  const currentIndex = settingsSections.findIndex((section) => section.id === id);
+                  const next = settingsSections[(currentIndex + direction + settingsSections.length) % settingsSections.length];
+                  setActiveSection(next.id);
+                  document.getElementById(`settings-tab-${next.id}`)?.focus();
+                }}
+                data-testid={`settings-tab-${id}`}
+                className={`flex shrink-0 items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold lg:w-full ${activeSection === id ? 'bg-gold/15 text-gold' : 'text-slate-400 hover:bg-slate-800 hover:text-white'} ${id === 'danger' && activeSection !== id ? 'lg:mt-2 text-red-400/80 hover:text-red-300' : ''}`}
+              >
+                <Icon size={18} className="shrink-0" aria-hidden="true" />
+                <span className="whitespace-nowrap">{label}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+        <div className="min-w-0">
       {/* ============================================
           SECTION 1: COMPTE & PROFIL
           ============================================ */}
-      <section>
+      <section id="settings-panel-account" role="tabpanel" aria-labelledby="settings-tab-account" className={activeSection === 'account' ? 'space-y-5' : 'hidden'} aria-label={settingsSections[0].label}>
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
           <User size={20} className="text-gold" />
-          Compte & Profil
+          {settingsSections[0].label}
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* Profile */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h3 className="font-medium text-white mb-4">{t.profile}</h3>
@@ -579,10 +622,10 @@ export default function SettingsPage() {
       {/* ============================================
           SECTION 2: NOTIFICATIONS
           ============================================ */}
-      <section>
+      <section id="settings-panel-notifications" role="tabpanel" aria-labelledby="settings-tab-notifications" className={activeSection === 'notifications' ? 'space-y-5' : 'hidden'} aria-label={settingsSections[1].label}>
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
           <Bell size={20} className="text-gold" />
-          Notifications & Alertes
+          {settingsSections[1].label}
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
           {/* Reminders */}
@@ -635,7 +678,7 @@ export default function SettingsPage() {
                     className="bg-gold hover:bg-gold-light text-[#020817]"
                   >
                     {pushLoading ? <Loader2 className="animate-spin mr-2" size={14} /> : <Bell size={14} className="mr-2" />}
-                    {t.enablePush}
+                    {t.pushEnable}
                   </Button>
                 ) : (
                   <>
@@ -647,7 +690,7 @@ export default function SettingsPage() {
                       className="border-slate-700 text-slate-300"
                     >
                       {pushLoading ? <Loader2 className="animate-spin mr-2" size={14} /> : null}
-                      {t.disablePush}
+                      {t.pushDisable}
                     </Button>
                     <Button
                       onClick={sendTestNotification}
@@ -656,7 +699,7 @@ export default function SettingsPage() {
                       size="sm"
                       className="border-gold/50 text-gold"
                     >
-                      {t.testPush}
+                      {t.pushTest}
                     </Button>
                   </>
                 )}
@@ -669,12 +712,12 @@ export default function SettingsPage() {
       {/* ============================================
           SECTION 3: INTÉGRATIONS
           ============================================ */}
-      <section>
+      <section id="settings-panel-integrations" role="tabpanel" aria-labelledby="settings-tab-integrations" className={activeSection === 'integrations' ? 'space-y-5' : 'hidden'} aria-label={settingsSections[2].label}>
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
           <Key size={20} className="text-gold" />
-          Intégrations & API
+          {settingsSections[2].label}
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
           {/* Chrome Extension */}
           <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h3 className="font-medium text-white mb-2 flex items-center gap-2">
@@ -767,7 +810,7 @@ export default function SettingsPage() {
           </div>
 
           {/* API Keys */}
-          <div className="glass-card rounded-xl p-6 border border-slate-800 lg:row-span-2">
+          <div className="glass-card rounded-xl p-6 border border-slate-800">
             <h3 className="font-medium text-white mb-2">{t.apiKeys}</h3>
             {/* Quota display */}
             {aiUsage && (
@@ -850,17 +893,19 @@ export default function SettingsPage() {
       {/* ============================================
           SECTION 3.2: API / AGENTS (tokens API ; connexions OAuth / MCP pour l'admin)
           ============================================ */}
-      <ApiAgentsSection />
+      <div id="settings-panel-agents" role="tabpanel" aria-labelledby="settings-tab-agents" className={activeSection === 'agents' ? '' : 'hidden'}>
+        <ApiAgentsSection />
+      </div>
 
       {/* ============================================
           SECTION 3.5: SUPPORT
           ============================================ */}
-      <section>
+      <section id="settings-panel-support" role="tabpanel" aria-labelledby="settings-tab-support" className={activeSection === 'support' ? 'space-y-5' : 'hidden'} aria-label={settingsSections[4].label}>
         <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2 border-b border-slate-800 pb-2">
           <Smartphone size={20} className="text-gold" />
           {t.support}
         </h2>
-        <div className="glass-card rounded-xl p-6 border border-slate-800 flex items-center justify-between">
+        <div className="glass-card rounded-xl p-6 border border-slate-800 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="font-medium text-white mb-1">{t.support}</h3>
             <p className="text-slate-500 text-sm">{t.supportDesc}</p>
@@ -876,7 +921,7 @@ export default function SettingsPage() {
       {/* ============================================
           SECTION 4: ZONE DANGER
           ============================================ */}
-      <section>
+      <section id="settings-panel-danger" role="tabpanel" aria-labelledby="settings-tab-danger" className={activeSection === 'danger' ? 'space-y-5' : 'hidden'} aria-label={settingsSections[5].label}>
         <h2 className="text-lg font-semibold text-red-400 mb-4 flex items-center gap-2 border-b border-red-900/50 pb-2">
           <AlertTriangle size={20} />
           {t.dangerZone}
@@ -935,6 +980,9 @@ export default function SettingsPage() {
           </div>
         </div>
       </section>
+
+        </div>
+      </div>
 
       {/* Confirm Dialog */}
       {ConfirmDialog}

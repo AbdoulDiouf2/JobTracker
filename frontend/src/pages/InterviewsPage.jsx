@@ -998,7 +998,7 @@ export default function InterviewsPage() {
   const [editingInterview, setEditingInterview] = useState(null);
   const [prefillApp, setPrefillApp] = useState(null);
   const [viewingInterview, setViewingInterview] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => searchParams.has('id') ? 'all' : 'planned');
   const [submitting, setSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState('card');
   const [currentMonth, setCurrentMonth] = useState(new Date());

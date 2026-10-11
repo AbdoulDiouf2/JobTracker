@@ -786,16 +786,11 @@ export default function OnboardingPage() {
       }}>
         {/* Logo + bouton déconnexion */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{
-              width: '28px', height: '28px', borderRadius: '7px',
-              background: 'linear-gradient(135deg,#c4a052,#d4b472)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
-              <span style={{ color: '#020817', fontSize: '14px', fontWeight: '800' }}>J</span>
-            </div>
-            <span style={{ fontWeight: '700', fontSize: '16px', color: css.gold }}>JobTracker</span>
-          </div>
+          <img
+            src="/JobTracker-Dark-Mode-Logo.png"
+            alt="JobTracker"
+            style={{ width: 'clamp(112px, 25vw, 160px)', height: 'auto' }}
+          />
           <button
             onClick={() => setShowSaveLeave(true)}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)'; e.currentTarget.style.color = css.text; }}

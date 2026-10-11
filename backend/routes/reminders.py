@@ -102,6 +102,7 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
     settings = await db.notification_settings.find_one({"user_id": user_id}) or {}
     reminder_24h_enabled = settings.get("reminder_24h", True)
     reminder_1h_enabled = settings.get("reminder_1h", True)
+    browser_notifications_enabled = settings.get("browser_notifications", True)
     
     if not reminder_24h_enabled and not reminder_1h_enabled:
         return results
@@ -175,7 +176,11 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
                 body = f"Votre entretien {type_entretien} pour le poste {poste} est prévu demain. Préparez-vous !"
                 
                 # Envoyer push
-                push_count = await send_push_to_user(db, user_id, title, body, "/dashboard/interviews", f"interview-24h-{interview_id}")
+                push_count = 0
+                if browser_notifications_enabled:
+                    push_count = await send_push_to_user(
+                        db, user_id, title, body, "/dashboard/interviews", f"interview-24h-{interview_id}"
+                    )
                 results["push_sent"] += push_count
                 
                 # Créer notification in-app
@@ -203,7 +208,11 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
                 body = f"Votre entretien {type_entretien} chez {entreprise} commence bientôt ! Bonne chance ! 🍀"
                 
                 # Envoyer push
-                push_count = await send_push_to_user(db, user_id, title, body, "/dashboard/interviews", f"interview-1h-{interview_id}")
+                push_count = 0
+                if browser_notifications_enabled:
+                    push_count = await send_push_to_user(
+                        db, user_id, title, body, "/dashboard/interviews", f"interview-1h-{interview_id}"
+                    )
                 results["push_sent"] += push_count
                 
                 # Créer notification in-app

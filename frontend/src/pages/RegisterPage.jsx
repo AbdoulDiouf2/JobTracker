@@ -109,7 +109,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <Link to="/" className="flex justify-center mb-8">
           <img 
-            src="/JobTracker-Logo.png"
+            src="/JobTracker-Dark-Mode-Logo.png"
             alt="JobTracker"
             className="h-24 w-auto"
           />
