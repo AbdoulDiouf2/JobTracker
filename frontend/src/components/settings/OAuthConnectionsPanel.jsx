@@ -97,6 +97,8 @@ const T = {
     scopeNames: {
       'watch:read': "Lire les critères, l'état de la veille et les offres récentes",
       'opportunities:write': 'Ajouter des offres et les comptes-rendus de veille',
+      'applications:read': 'Lire les candidatures, y compris notes et contacts',
+      'applications:write': 'Créer, modifier et supprimer les candidatures',
     },
     scopesRequired: 'Choisissez au moins une permission.',
     scopesHelp: "Retirer une permission s'applique immédiatement ; en ajouter une demande une nouvelle connexion depuis l'application.",
@@ -222,6 +224,8 @@ const T = {
     scopeNames: {
       'watch:read': 'Read the criteria, the watch status and recent offers',
       'opportunities:write': 'Add offers and watch reports',
+      'applications:read': 'Read applications, including notes and contacts',
+      'applications:write': 'Create, update and delete applications',
     },
     scopesRequired: 'Choose at least one permission.',
     scopesHelp: 'Removing a permission applies immediately; adding one requires a new connection from the application.',
@@ -275,7 +279,8 @@ const T = {
 };
 
 const USABLE = ['active', 'access_expired_observed'];
-const SCOPES = ['watch:read', 'opportunities:write'];
+const SCOPES = ['watch:read', 'opportunities:write', 'applications:read', 'applications:write'];
+const DEFAULT_SCOPES = ['watch:read', 'opportunities:write'];
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 
 const STATE_STYLE = {
@@ -457,13 +462,13 @@ const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t
   const [name, setName] = useState('');
   const [uris, setUris] = useState('');
   const [clientType, setClientType] = useState('confidential');
-  const [scopes, setScopes] = useState(SCOPES);
+  const [scopes, setScopes] = useState(DEFAULT_SCOPES);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setName(''); setUris(''); setClientType('confidential'); setScopes(SCOPES); setError(''); setSubmitting(false);
+      setName(''); setUris(''); setClientType('confidential'); setScopes(DEFAULT_SCOPES); setError(''); setSubmitting(false);
     }
   }, [open]);
 
@@ -501,7 +506,7 @@ const CreateClientDialog = ({ open, onClose, onCreate, presets, existingNames, t
                   <Button key={p.key} type="button" variant="outline" size="sm" disabled={used}
                     onClick={() => {
                       setName(p.name); setUris(p.redirect_uris.join('\n'));
-                      setClientType(p.client_type || 'confidential'); setScopes(p.allowed_scopes || SCOPES);
+                      setClientType(p.client_type || 'confidential'); setScopes(p.allowed_scopes || DEFAULT_SCOPES);
                     }}
                     className="h-8 border-slate-700 transition-colors" data-testid={`oauth-preset-${p.key}`}>
                     <Sparkles size={14} aria-hidden="true" />
@@ -612,7 +617,7 @@ const AddRedirectForm = ({ clientId, mutation, t }) => {
 
 /** Permissions d'un client existant : modification explicite (bouton Enregistrer). */
 const ClientScopes = ({ client, mutation, t }) => {
-  const current = client.allowed_scopes || SCOPES;
+  const current = client.allowed_scopes || DEFAULT_SCOPES;
   const [value, setValue] = useState(current);
   const currentKey = current.join(' ');
   useEffect(() => { setValue(currentKey ? currentKey.split(' ') : []); }, [currentKey]);

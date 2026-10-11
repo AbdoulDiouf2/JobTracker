@@ -40,7 +40,7 @@ const T = {
     loginText: "Connecte-toi à JobTracker pour examiner la demande d'autorisation de l'application. Tu reviendras ensuite sur cette page.",
     login: 'Se connecter',
     notEligibleTitle: 'Compte non autorisé',
-    notEligibleText: "La veille n'est pas activée pour ce compte. Seul le compte propriétaire peut autoriser cette connexion.",
+    notEligibleText: "Ce compte n'est pas actif et ne peut pas autoriser cette connexion.",
     backToClient: (client) => `Refuser et revenir à ${client}`,
     expiredTitle: 'Demande expirée',
     expiredText: "Cette demande a expiré. Relance la connexion depuis l'application qui l'a demandée.",
@@ -80,7 +80,7 @@ const T = {
     loginText: "Sign in to JobTracker to review the application's authorization request. You will come back to this page afterwards.",
     login: 'Sign in',
     notEligibleTitle: 'Account not authorized',
-    notEligibleText: 'The watch is not enabled for this account. Only the owner account can authorize this connection.',
+    notEligibleText: 'This account is not active and cannot authorize this connection.',
     backToClient: (client) => `Deny and return to ${client}`,
     expiredTitle: 'Request expired',
     expiredText: 'This request has expired. Start the connection again from the application that requested it.',
@@ -96,7 +96,8 @@ const T = {
   },
 };
 
-const SCOPE_ICONS = { 'watch:read': Eye, 'opportunities:write': PlusCircle };
+const SCOPE_ICONS = { 'watch:read': Eye, 'opportunities:write': PlusCircle,
+  'applications:read': Eye, 'applications:write': PlusCircle };
 const STATUS_ERRORS = { 410: 'expired', 409: 'used', 404: 'notFound' };
 const DECISION_ERRORS = { request_expired: 'expired', request_already_used: 'used', request_not_found: 'notFound' };
 

@@ -44,7 +44,7 @@ async def list_applications(
 ):
     """Liste les candidatures avec filtres et pagination"""
     # Construire le filtre
-    filter_query = {"user_id": current_user["user_id"]}
+    filter_query = {"user_id": current_user["user_id"], "deleting": {"$ne": True}}
     
     if search:
         search_regex = {"$regex": re.escape(search), "$options": "i"}
@@ -71,14 +71,11 @@ async def list_applications(
     if is_favorite is not None:
         filter_query["is_favorite"] = is_favorite
     
-    if date_from:
-        filter_query["date_candidature"] = {"$gte": date_from}
-    
-    if date_to:
-        if "date_candidature" in filter_query:
-            filter_query["date_candidature"]["$lte"] = date_to
-        else:
-            filter_query["date_candidature"] = {"$lte": date_to}
+    date_bounds = {}
+    for key, raw in (("$gte", date_from), ("$lte", date_to)):
+        if raw:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            date_bounds[key] = parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
 
     if needs_followup:
         now = datetime.now(timezone.utc)
@@ -88,16 +85,25 @@ async def list_applications(
         filter_query["followup_count"] = {"$lt": 2}
         filter_query["date_candidature"] = {"$lt": followup_max_date, "$gt": followup_min_date}
 
-    # Compter le total
-    total = await db.applications.count_documents(filter_query)
-    
-    # Tri
     sort_direction = -1 if sort_order == "desc" else 1
-    
-    # Récupérer les candidatures
     skip = (page - 1) * per_page
-    cursor = db.applications.find(filter_query, {"_id": 0}).sort(sort_by, sort_direction).skip(skip).limit(per_page)
-    applications = await cursor.to_list(length=per_page)
+    if date_bounds:
+        # Les dates historiques sont des chaînes ISO avec décalages variés : une comparaison
+        # lexicographique ne reflète pas l'ordre des instants.
+        pipeline = [{"$match": filter_query}, {"$addFields": {"_normalized_application_date": {
+            "$convert": {"input": "$date_candidature", "to": "date", "onError": None, "onNull": None}
+        }}}, {"$match": {"_normalized_application_date": date_bounds}}]
+        counts = await db.applications.aggregate(pipeline + [{"$count": "total"}]).to_list(length=1)
+        total = counts[0]["total"] if counts else 0
+        sort_field = "_normalized_application_date" if sort_by == "date_candidature" else sort_by
+        applications = await db.applications.aggregate(pipeline + [
+            {"$sort": {sort_field: sort_direction}}, {"$skip": skip}, {"$limit": per_page},
+            {"$project": {"_id": 0, "_normalized_application_date": 0}},
+        ]).to_list(length=per_page)
+    else:
+        total = await db.applications.count_documents(filter_query)
+        cursor = db.applications.find(filter_query, {"_id": 0}).sort(sort_by, sort_direction).skip(skip).limit(per_page)
+        applications = await cursor.to_list(length=per_page)
     
     # Enrichir avec les infos d'entretiens
     enriched_apps = []
@@ -172,7 +178,7 @@ async def get_application(
 ):
     """Récupère une candidature par ID"""
     application = await db.applications.find_one(
-        {"id": application_id, "user_id": current_user["user_id"]},
+        {"id": application_id, "user_id": current_user["user_id"], "deleting": {"$ne": True}},
         {"_id": 0}
     )
     
@@ -231,74 +237,52 @@ async def update_application(
     db = Depends(get_db)
 ):
     """Met à jour une candidature"""
-    # Vérifier que la candidature existe
-    existing = await db.applications.find_one(
-        {"id": application_id, "user_id": current_user["user_id"]}
-    )
-    
-    if not existing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Candidature non trouvée"
-        )
-    
-    # Préparer les données de mise à jour
-    update_data = {k: v for k, v in app_update.model_dump().items() if v is not None}
-    
-    if not update_data:
+    # Une valeur absente conserve le champ ; null efface seulement les champs facultatifs.
+    supplied = app_update.model_dump(exclude_unset=True)
+    non_nullable = {"entreprise", "poste", "type_poste", "reponse", "date_candidature",
+                    "is_favorite", "days_before_reminder", "competences"}
+    if any(key in non_nullable and value is None for key, value in supplied.items()):
+        raise HTTPException(status_code=422, detail="Champ obligatoire non effaçable")
+    if not supplied:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Aucune donnée à mettre à jour"
         )
-    
-    # Préparer l'événement d'historique pour les changements de statut
-    history_event = None
-    if "reponse" in update_data and update_data["reponse"] != existing.get("reponse"):
+    for _ in range(3):
+        existing = await db.applications.find_one(
+            {"id": application_id, "user_id": current_user["user_id"], "deleting": {"$ne": True}}
+        )
+        if not existing:
+            raise HTTPException(status_code=404, detail="Candidature non trouvée")
         old_status = existing.get("reponse", "pending")
-        new_status = update_data["reponse"]
-        if hasattr(new_status, 'value'):
+        new_status = supplied.get("reponse")
+        if hasattr(new_status, "value"):
             new_status = new_status.value
-        
-        history_event = {
-            "event_type": "status_change",
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "old_value": old_status,
-            "new_value": new_status,
-            "details": f"Statut changé de {old_status} à {new_status}"
-        }
-
-        # Sortie de to_apply : la vraie date d'envoi doit être fournie
-        try:
-            check_to_apply_exit(old_status, new_status, update_data.get("date_candidature"))
-        except ApplicationTransitionError as e:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail=str(e)
-            )
-
-    # Convertir les enums et dates
-    for key, value in update_data.items():
-        if hasattr(value, 'value'):
-            update_data[key] = value.value
-        elif isinstance(value, datetime):
-            update_data[key] = value.isoformat()
-    
-    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
-    
-    # Construire la requête de mise à jour
-    update_query = {"$set": update_data}
-    
-    # Ajouter l'événement à l'historique si changement de statut
-    if history_event:
-        update_query["$push"] = {"history": history_event}
-    
-    await db.applications.update_one(
-        {"id": application_id},
-        update_query
-    )
-    
-    # Récupérer la candidature mise à jour
-    return await get_application(application_id, current_user, db)
+        if new_status is not None and new_status != old_status:
+            try:
+                check_to_apply_exit(old_status, new_status, supplied.get("date_candidature"))
+            except ApplicationTransitionError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+        update_data = {key: value.value if hasattr(value, "value") else
+                       value.isoformat() if isinstance(value, datetime) else value
+                       for key, value in supplied.items()}
+        update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        update_query = {"$set": update_data, "$inc": {"revision": 1}}
+        if new_status is not None and new_status != old_status:
+            update_query["$push"] = {"history": {
+                "event_type": "status_change", "timestamp": datetime.now(timezone.utc).isoformat(),
+                "old_value": old_status, "new_value": new_status,
+                "details": f"Statut changé de {old_status} à {new_status}",
+            }}
+        revision = existing.get("revision")
+        revision_filter = {"revision": revision} if revision is not None else {"revision": {"$exists": False}}
+        result = await db.applications.update_one(
+            {"id": application_id, "user_id": current_user["user_id"],
+             "deleting": {"$ne": True}, **revision_filter}, update_query,
+        )
+        if result.matched_count:
+            return await get_application(application_id, current_user, db)
+    raise HTTPException(status_code=409, detail="Candidature modifiée simultanément ; réessayez")
 
 
 @router.delete("/{application_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -308,18 +292,20 @@ async def delete_application(
     db = Depends(get_db)
 ):
     """Supprime une candidature et ses entretiens associés"""
-    result = await db.applications.delete_one(
-        {"id": application_id, "user_id": current_user["user_id"]}
-    )
-    
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Candidature non trouvée"
-        )
-    
-    # Supprimer les entretiens associés
-    await db.interviews.delete_many({"candidature_id": application_id})
+    # Marque récupérable : un nouvel appel reprend la suppression après une panne.
+    owner_filter = {"id": application_id, "user_id": current_user["user_id"]}
+    claimed = await db.applications.update_one(owner_filter, {"$set": {"deleting": True}})
+    receipt_id = f'{current_user["user_id"]}:{application_id}'
+    if not claimed.matched_count:
+        if await db.application_deletion_receipts.find_one({"_id": receipt_id}):
+            return
+        raise HTTPException(status_code=404, detail="Candidature non trouvée")
+    await db.interviews.delete_many({"candidature_id": application_id, "user_id": current_user["user_id"]})
+    await db.application_deletion_receipts.update_one(
+        {"_id": receipt_id}, {"$setOnInsert": {"user_id": current_user["user_id"],
+                                             "application_id": application_id,
+                                             "created_at": datetime.now(timezone.utc).isoformat()}}, upsert=True)
+    await db.applications.delete_one({**owner_filter, "deleting": True})
 
 
 @router.post("/{application_id}/favorite")

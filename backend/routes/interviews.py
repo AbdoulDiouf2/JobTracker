@@ -156,7 +156,7 @@ async def create_interview(
     """Crée un nouvel entretien"""
     # Vérifier que la candidature existe et appartient à l'utilisateur
     application = await db.applications.find_one(
-        {"id": interview_data.candidature_id, "user_id": current_user["user_id"]}
+        {"id": interview_data.candidature_id, "user_id": current_user["user_id"], "deleting": {"$ne": True}}
     )
     
     if not application:
@@ -179,6 +179,14 @@ async def create_interview(
     interview_dict['format_entretien'] = interview_dict['format_entretien'].value if hasattr(interview_dict['format_entretien'], 'value') else interview_dict['format_entretien']
     
     await db.interviews.insert_one(interview_dict)
+    # Une suppression peut avoir commencé entre la vérification et l'insertion.
+    still_active = await db.applications.find_one(
+        {"id": interview_data.candidature_id, "user_id": current_user["user_id"],
+         "deleting": {"$ne": True}}, {"_id": 1}
+    )
+    if not still_active:
+        await db.interviews.delete_one({"id": interview.id, "user_id": current_user["user_id"]})
+        raise HTTPException(status_code=404, detail="Candidature non trouvée")
     
     # Retourner enrichi
     response = interview.model_dump()

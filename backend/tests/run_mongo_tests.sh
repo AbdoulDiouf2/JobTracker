@@ -47,7 +47,7 @@ if [ ${#TESTS[@]} -eq 0 ]; then
          tests/test_watch_validation.py tests/test_watch_preferences.py tests/test_watch_ingest.py
          tests/test_watch_api.py tests/test_vercel_routing.py tests/test_mcp_transport.py
          tests/test_ai_sdk_offline.py tests/test_oauth.py tests/test_a0_activation.py
-         tests/test_admin_oauth.py tests/test_mcp_tools.py tests/test_p1_multiclient.py
+         tests/test_admin_oauth.py tests/test_mcp_tools.py tests/test_mcp_applications.py tests/test_p1_multiclient.py
          tests/test_opportunity_origin.py tests/test_opportunity_filters.py
          tests/test_p2_public_clients.py tests/test_p3_cimd.py)
 fi

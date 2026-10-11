@@ -326,16 +326,17 @@ async def issue_access_token(db):
     await db.users.insert_one({"id": user_id, "is_active": True, "watch_enabled": True})
     now = datetime.now(timezone.utc)
     grant = {"id": str(uuid.uuid4()), "user_id": user_id, "client_id": "jt_oc_test",
-             "scopes": ["watch:read", "opportunities:write"], "resource": svc.canonical_resource(),
+             "scopes": list(svc.SUPPORTED_SCOPES), "resource": svc.canonical_resource(),
              "status": "active", "created_at": now, "absolute_expires_at": now + timedelta(days=1)}
     # Client enregistré et actif : un jeton d'un client inconnu ou désactivé est refusé
-    await db[svc.CLIENTS].update_one({"client_id": grant["client_id"]}, {"$set": {"active": True, "name": "ChatGPT", "redirect_uris": []}}, upsert=True)
+    await db[svc.CLIENTS].update_one({"client_id": grant["client_id"]}, {"$set": {"active": True, "name": "ChatGPT", "redirect_uris": [], "allowed_scopes": list(svc.SUPPORTED_SCOPES)}}, upsert=True)
     await db[svc.GRANTS].insert_one(dict(grant))
     return (await svc._issue_tokens(db, grant))["access_token"]
 
 
 BUSINESS_TOOLS = ["get_watch_preferences", "create_opportunities", "list_recent_opportunities",
-                  "get_watch_status", "report_watch_run"]
+                  "get_watch_status", "report_watch_run", "list_applications", "get_application",
+                  "create_application", "update_application", "delete_application"]
 
 
 def test_declared_tools_and_scopes():
@@ -344,6 +345,9 @@ def test_declared_tools_and_scopes():
         "jobtracker_ping": "watch:read", "get_watch_preferences": "watch:read",
         "list_recent_opportunities": "watch:read", "get_watch_status": "watch:read",
         "create_opportunities": "opportunities:write", "report_watch_run": "opportunities:write",
+        "list_applications": "applications:read", "get_application": "applications:read",
+        "create_application": "applications:write", "update_application": "applications:write",
+        "delete_application": "applications:write",
     }
 
 

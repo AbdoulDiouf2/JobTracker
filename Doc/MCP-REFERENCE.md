@@ -27,7 +27,8 @@ Dans cet ordre (avant tout outil) :
 2. **Interrupteur d'urgence** (`platform_settings.mcp_kill_switch`, fermé par défaut) : fermé
    → **503**.
 3. **Jeton d'accès OAuth** (`Authorization: Bearer jt_oat_…`) : opaque, lié à la ressource
-   `…/api/mcp`, autorisation active, client actif, compte actif avec veille activée. Sinon
+   `…/api/mcp`, autorisation active, client actif, compte actif. Les outils de veille vérifient
+   séparément `watch_enabled`. Sinon
    **401** + `WWW-Authenticate: Bearer resource_metadata="…/.well-known/oauth-protected-resource/api/mcp", scope="…"`.
 4. **Limite de débit** : `MCP_RATE_LIMIT_PER_MINUTE` (30) par autorisation et par instance →
    **429** + `Retry-After`.
@@ -53,6 +54,34 @@ donnent l'emplacement et le type de l'erreur, **jamais la valeur reçue**.
 | `insufficient_scope` | Scope manquant (défense en profondeur) |
 | `temporarily_unavailable` | Base indisponible ; `retryable: true` |
 | `unknown_tool` | Outil inconnu |
+| `not_found` | Candidature absente ou appartenant à un autre compte |
+
+## Candidatures
+
+Les candidatures utilisent les scopes `applications:read` et `applications:write`.
+Une autorisation existante doit être renouvelée par un nouveau consentement pour recevoir ces
+scopes. La désactivation de la veille ne bloque pas ces outils.
+
+| Outil | Scope | Paramètres | Effet |
+|---|---|---|---|
+| `list_applications` | `applications:read` | `page` (1), `per_page` (20, max 100), `search`, `status`, `job_type`, `method`, `is_favorite`, `date_from`, `date_to` | Liste paginée, triée par date d'envoi décroissante |
+| `get_application` | `applications:read` | `application_id` | Tous les champs, y compris notes et contacts |
+| `create_application` | `applications:write` | `status` (`to_apply` ou `pending`), `application` (`entreprise`, `poste`, autres champs de candidature) | Crée uniquement un enregistrement JobTracker ; aucun envoi à l'employeur |
+| `update_application` | `applications:write` | `application_id`, `changes` | Modifie les champs de candidature et ajoute l'historique de statut |
+| `delete_application` | `applications:write` | `application_id` | Suppression définitive de la candidature et de ses entretiens associés |
+
+`pending` exige `application.date_candidature`, date réelle d'envoi. Pour `to_apply`, la date
+technique est définie par le serveur et ne vaut pas date d'envoi. Passer de `to_apply` à un statut
+envoyé exige `changes.date_candidature`. L'identité et la source sont fixées par le serveur.
+Dans `changes`, un champ absent est conservé ; `null` efface seulement un champ facultatif.
+Les champs requis et les listes/paramètres non nullables refusent `null`. Les bornes de dates
+sont comparées après conversion en UTC, y compris pour les anciennes dates ISO avec décalage.
+La suppression marque d'abord la candidature comme en cours de suppression, la masque aux
+lectures, puis supprime ses entretiens, écrit un reçu lié à l'utilisateur et supprime la
+candidature. Si une étape échoue, répéter l'appel reprend l'opération ; le reçu rend les
+répétitions idempotentes sans exposer les candidatures d'un autre compte. Cette stratégie
+évite de dépendre des transactions MongoDB : l'environnement de test utilise un serveur
+autonome, et la topologie de la base cible n'a pas été interrogée.
 
 ## Outils
 

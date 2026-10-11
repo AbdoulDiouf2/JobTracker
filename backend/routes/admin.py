@@ -601,9 +601,9 @@ NO_STORE = {"Cache-Control": "no-store", "Pragma": "no-cache"}
 
 def _client_presets() -> list:
     """Préréglages FACULTATIFS proposés à la création (P1.2). Aucun n'est imposé."""
-    from services.oauth_service import CHATGPT_DEFAULT_REDIRECT, SUPPORTED_SCOPES
+    from services.oauth_service import CHATGPT_DEFAULT_REDIRECT, LEGACY_SCOPES
     return [{"key": "chatgpt", "name": "ChatGPT", "redirect_uris": [CHATGPT_DEFAULT_REDIRECT],
-             "client_type": "confidential", "allowed_scopes": list(SUPPORTED_SCOPES)}]
+             "client_type": "confidential", "allowed_scopes": list(LEGACY_SCOPES)}]
 
 
 async def get_webapp_admin(
@@ -625,7 +625,7 @@ class OAuthRedirectUriAdd(BaseModel):
     redirect_uri: str
 
 
-OAuthScope = Literal["watch:read", "opportunities:write"]
+OAuthScope = Literal["watch:read", "opportunities:write", "applications:read", "applications:write"]
 
 
 class OAuthClientCreate(BaseModel):

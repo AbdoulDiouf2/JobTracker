@@ -19,12 +19,13 @@ from typing import Awaitable, Callable, Optional
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pymongo.errors import PyMongoError
 
-from services import opportunity_service, watch_ingest_service, watch_preferences_service
+from services import mcp_application_service, opportunity_service, watch_ingest_service, watch_preferences_service
 from services.watch_ingest_service import WatchNotEnabled, WatchRequestError
 
 logger = logging.getLogger("jobtracker.mcp")
 
 READ, WRITE = "watch:read", "opportunities:write"
+APP_READ, APP_WRITE = "applications:read", "applications:write"
 
 RUN_ID_HELP = (
     "run_id : `veille-AAAAMMJJ-HHMM-prog` (tâche programmée ; HHMM = heure PRÉVUE du créneau) ou "
@@ -52,6 +53,7 @@ class ToolSpec:
     read_only: bool
     idempotent: bool
     handler: Callable[..., Awaitable[dict]]
+    destructive: bool = False
 
 
 def _details(error: ValidationError) -> list:
@@ -111,6 +113,10 @@ async def _report_watch_run(db, user_id: str, arguments: dict, client_id: str) -
     return result.model_dump(mode="json")
 
 
+async def _application_action(db, user_id: str, arguments: dict, client_id: str, action) -> dict:
+    return await action(db, user_id, arguments)
+
+
 # ============================================
 # SCHÉMAS D'ENTRÉE (exposés à ChatGPT ; la validation réelle est côté serveur)
 # ============================================
@@ -144,6 +150,27 @@ _OPPORTUNITY_ITEM = {
         "uncertain_fields": {"type": "array", "items": {"type": "string", "maxLength": 50}},
     },
 }
+
+_APP_ID = {"type": "object", "additionalProperties": False, "required": ["application_id"],
+           "properties": {"application_id": {"type": "string", "minLength": 1, "maxLength": 100}}}
+_APP_FIELDS = {
+    "entreprise": {"type": "string", "minLength": 1, "maxLength": 200},
+    "poste": {"type": "string", "minLength": 1, "maxLength": 200},
+    "type_poste": {"type": "string", "enum": ["cdi", "cdd", "stage", "alternance", "freelance", "interim", "mastere"]},
+    "lieu": _STR(100), "moyen": {"type": "string", "enum": ["linkedin", "company_website", "email", "indeed", "apec", "pole_emploi", "welcome_to_jungle", "jobteaser", "hello_work", "meteojob", "cadremploi", "glassdoor", "workable", "spontanee", "other"]},
+    "date_candidature": {"type": "string", "format": "date-time"}, "lien": _STR(500),
+    "commentaire": _STR(2000), "description_poste": _STR(5000),
+    "contact_email": _STR(200), "contact_name": _STR(100),
+    "salaire_min": {"type": "integer"}, "salaire_max": {"type": "integer"},
+    "days_before_reminder": {"type": "integer"},
+    "competences": {"type": "array", "items": {"type": "string"}},
+    "experience_requise": _STR(100), "cv_id": _STR(100),
+}
+_APP_CHANGES = {**_APP_FIELDS, "reponse": {"type": "string", "enum": ["to_apply", "pending", "contacted", "positive", "negative", "no_response", "cancelled"]},
+                "date_reponse": {"type": "string", "format": "date-time"}, "is_favorite": {"type": "boolean"}}
+for _nullable in ("lieu", "moyen", "lien", "commentaire", "description_poste", "contact_email",
+                  "contact_name", "salaire_min", "salaire_max", "experience_requise", "cv_id", "date_reponse"):
+    _APP_CHANGES[_nullable] = {"anyOf": [_APP_CHANGES[_nullable], {"type": "null"}]}
 
 TOOLS = [
     ToolSpec(
@@ -227,6 +254,53 @@ TOOLS = [
         },
         read_only=False, idempotent=True, handler=_report_watch_run,
     ),
+    ToolSpec(
+        name="list_applications", title="JobTracker : lister les candidatures",
+        description="Liste paginée des candidatures du compte, avec filtres. Inclut les notes et contacts.",
+        scope=APP_READ, input_schema={"type": "object", "additionalProperties": False, "properties": {
+            "page": {"type": "integer", "minimum": 1, "default": 1},
+            "per_page": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20},
+            "search": _STR(200), "status": _APP_CHANGES["reponse"], "job_type": _STR(50),
+            "method": _STR(50), "is_favorite": {"type": "boolean"},
+            "date_from": {"type": "string", "format": "date-time"},
+            "date_to": {"type": "string", "format": "date-time"},
+        }}, read_only=True, idempotent=True,
+        handler=lambda db, uid, args, cid: _application_action(db, uid, args, cid, mcp_application_service.list_applications),
+    ),
+    ToolSpec(
+        name="get_application", title="JobTracker : lire une candidature",
+        description="Lit tous les champs d'une candidature du compte, y compris notes et contacts.",
+        scope=APP_READ, input_schema=_APP_ID, read_only=True, idempotent=True,
+        handler=lambda db, uid, args, cid: _application_action(db, uid, args, cid, mcp_application_service.get_application),
+    ),
+    ToolSpec(
+        name="create_application", title="JobTracker : créer une candidature",
+        description="Enregistre une candidature dans JobTracker ; n'envoie rien à l'employeur. Statut to_apply ou pending ; pending exige la date réelle d'envoi.",
+        scope=APP_WRITE, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["status", "application"], "properties": {
+                "status": {"type": "string", "enum": ["to_apply", "pending"]},
+                "application": {"type": "object", "additionalProperties": False,
+                                "required": ["entreprise", "poste"], "properties": _APP_FIELDS},
+            }}, read_only=False, idempotent=False,
+        handler=lambda db, uid, args, cid: _application_action(db, uid, args, cid, mcp_application_service.create_application),
+    ),
+    ToolSpec(
+        name="update_application", title="JobTracker : modifier une candidature",
+        description="Modifie une candidature. Quitter to_apply exige la vraie date d'envoi.",
+        scope=APP_WRITE, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["application_id", "changes"], "properties": {
+                "application_id": _APP_ID["properties"]["application_id"],
+                "changes": {"type": "object", "additionalProperties": False,
+                            "minProperties": 1, "properties": _APP_CHANGES},
+            }}, read_only=False, idempotent=True,
+        handler=lambda db, uid, args, cid: _application_action(db, uid, args, cid, mcp_application_service.update_application),
+    ),
+    ToolSpec(
+        name="delete_application", title="JobTracker : supprimer une candidature",
+        description="Supprime définitivement une candidature et tous ses entretiens associés.",
+        scope=APP_WRITE, input_schema=_APP_ID, read_only=False, idempotent=True, destructive=True,
+        handler=lambda db, uid, args, cid: _application_action(db, uid, args, cid, mcp_application_service.delete_application),
+    ),
 ]
 
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
@@ -262,6 +336,8 @@ async def call_tool(db, user_id: str, name: str, arguments, client_id: Optional[
         error = {"code": e.code, "details": e.details}
     except WatchNotEnabled:
         error = {"code": "watch_not_enabled"}
+    except mcp_application_service.ApplicationToolError as e:
+        error = {"code": e.code, "details": e.details}
     except PyMongoError as e:
         logger.warning("mcp_tool name=%s user_id=%s db_error=%s", name, user_id, type(e).__name__)
         error = {"code": "temporarily_unavailable", "retryable": True}

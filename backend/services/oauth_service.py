@@ -38,10 +38,13 @@ CODES = "oauth_codes"
 GRANTS = "oauth_grants"
 TOKENS = "oauth_tokens"
 
-SUPPORTED_SCOPES = ("watch:read", "opportunities:write")
+LEGACY_SCOPES = ("watch:read", "opportunities:write")
+SUPPORTED_SCOPES = (*LEGACY_SCOPES, "applications:read", "applications:write")
 SCOPE_DESCRIPTIONS = {
     "watch:read": "Lire tes critères de veille, l'état du service et un résumé de tes opportunités récentes",
     "opportunities:write": "Ajouter de nouvelles opportunités (statut « nouveau ») et le compte-rendu de chaque veille",
+    "applications:read": "Lire toutes les données de tes candidatures, y compris notes et contacts",
+    "applications:write": "Créer, modifier et supprimer définitivement tes candidatures et leurs entretiens associés",
 }
 ACCESS_PREFIX = "jt_oat_"
 REFRESH_PREFIX = "jt_ort_"
@@ -186,9 +189,9 @@ async def ensure_indexes(db) -> None:
 
 
 async def user_is_eligible(db, user_id: str) -> bool:
-    """MVP propriétaire uniquement : compte actif ET veille activée par l'admin (D7)."""
+    """Un compte actif peut autoriser le MCP ; chaque outil de veille vérifie watch_enabled."""
     user = await db.users.find_one({"id": user_id}, {"_id": 0, "is_active": 1, "watch_enabled": 1})
-    return bool(user) and user.get("is_active", True) and user.get("watch_enabled") is True
+    return bool(user) and user.get("is_active", True)
 
 
 # ============================================
@@ -359,10 +362,10 @@ def client_type_of(client: dict) -> str:
 
 
 def client_scopes(client: dict) -> List[str]:
-    """Scopes autorisés au client ; clients antérieurs à P2 (sans champ) : tous les scopes."""
+    """Scopes autorisés ; les anciens clients sans champ gardent seulement les scopes historiques."""
     allowed = client.get("allowed_scopes")
     if allowed is None:
-        return list(SUPPORTED_SCOPES)
+        return list(LEGACY_SCOPES)
     return [s for s in SUPPORTED_SCOPES if s in allowed]
 
 
@@ -394,7 +397,7 @@ async def create_client(db, name: str, redirect_uris: List[str], client_type: st
     """
     Crée un client. Confidentiel : secret renvoyé UNE seule fois. Public (application native) :
     aucun secret, PKCE S256 obligatoire, adresses locales (loopback) autorisées.
-    `allowed_scopes` : par défaut tous les scopes.
+    `allowed_scopes` : par défaut les scopes historiques ; les candidatures sont opt-in.
     """
     await ensure_indexes(db)
     if client_type not in CLIENT_TYPES:
@@ -405,7 +408,7 @@ async def create_client(db, name: str, redirect_uris: List[str], client_type: st
         raise ValueError("au moins une redirect_uri est requise")
     if len(uris) > MAX_REDIRECT_URIS:
         raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
-    scopes = validate_allowed_scopes(list(SUPPORTED_SCOPES) if allowed_scopes is None else allowed_scopes)
+    scopes = validate_allowed_scopes(list(LEGACY_SCOPES) if allowed_scopes is None else allowed_scopes)
     client_id = CLIENT_PREFIX + secrets.token_urlsafe(16)
     secret = CLIENT_SECRET_PREFIX + secrets.token_urlsafe(32) if client_type == CONFIDENTIAL else None
     await db[CLIENTS].insert_one({

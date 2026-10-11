@@ -490,8 +490,8 @@ async def test_client_is_created_only_after_approved_consent(api, db, web):
     assert denied.get("error") == "access_denied" and await db.oauth_clients.count_documents({}) == 0
     await enable_watch(db, api, enabled=False)
     r, _ = await authorize(api, CLAUDE_CODE, redirect)
-    assert qs(await consent_redirect(api, qs(r.headers["location"])["request"], True)).get("error") == "access_denied"
-    assert await db.oauth_clients.count_documents({}) == 0
+    assert "code" in qs(await consent_redirect(api, qs(r.headers["location"])["request"], True))
+    assert await db.oauth_clients.count_documents({}) == 1
     await enable_watch(db, api)
     await connect(api, CLAUDE_CODE, redirect)
     stored = await db.oauth_clients.find_one({"client_id": CLAUDE_CODE})
@@ -535,4 +535,4 @@ async def test_effective_scopes_bound_to_client_grant_and_user(api, db, web):
     stored = await db.oauth_clients.find_one({"client_id": CLAUDE_CODE})
     assert stored["allowed_scopes"] == ["watch:read", "opportunities:write"]  # document relu : scopes intacts
     await enable_watch(db, api, enabled=False)
-    assert (await mcp(api, LIST, tokens["access_token"])).status_code == 401
+    assert (await mcp(api, LIST, tokens["access_token"])).status_code == 200

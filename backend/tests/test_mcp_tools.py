@@ -32,7 +32,8 @@ HOST = "jobtracker.maadec.com"
 MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": "application/json", "Host": HOST}
 BOTH = ("watch:read", "opportunities:write")
 BUSINESS = ["get_watch_preferences", "create_opportunities", "list_recent_opportunities",
-            "get_watch_status", "report_watch_run"]
+            "get_watch_status", "report_watch_run", "list_applications", "get_application",
+            "create_application", "update_application", "delete_application"]
 
 
 @pytest.fixture(autouse=True)
@@ -52,7 +53,7 @@ async def owner(db, scopes=BOTH, watch_enabled=True) -> dict:
     user_id = "owner-" + uuid.uuid4().hex[:8]
     await db.users.insert_one({"id": user_id, "email": f"{user_id}@test.local", "is_active": True,
                                "role": "standard", "watch_enabled": watch_enabled})
-    client = await svc.create_client(db, "ChatGPT", [svc.CHATGPT_DEFAULT_REDIRECT])
+    client = await svc.create_client(db, "ChatGPT", [svc.CHATGPT_DEFAULT_REDIRECT], allowed_scopes=list(scopes))
     now = datetime.now(timezone.utc)
     grant = {"id": str(uuid.uuid4()), "user_id": user_id, "client_id": client["client_id"], "scopes": list(scopes),
              "resource": svc.canonical_resource(), "status": "active", "created_at": now,
@@ -111,6 +112,13 @@ async def test_catalogue_annotations_and_schemas(api, db):
     for name in ("create_opportunities", "report_watch_run"):
         assert tools[name]["annotations"]["readOnlyHint"] is False
         assert tools[name]["annotations"]["destructiveHint"] is False
+    expected_scopes = {"list_applications": "applications:read", "get_application": "applications:read",
+                       "create_application": "applications:write", "update_application": "applications:write",
+                       "delete_application": "applications:write"}
+    for name, scope in expected_scopes.items():
+        assert mcp_tools.TOOLS_BY_NAME[name].scope == scope
+        assert tools[name]["annotations"]["readOnlyHint"] == (scope == "applications:read")
+        assert tools[name]["annotations"]["destructiveHint"] == (name == "delete_application")
     for name in BUSINESS:
         schema = tools[name]["inputSchema"]
         assert schema["additionalProperties"] is False and "user_id" not in json.dumps(schema)
@@ -383,7 +391,8 @@ async def test_owner_no_longer_eligible_is_refused(api, db):
     await db.users.update_one({"id": who["user_id"]}, {"$set": {"watch_enabled": False}})
     r = await rpc(api, who["token"], "tools/call", {"name": "create_opportunities",
                                                   "arguments": {"run_id": run_id(), "opportunities": [offer(1)]}})
-    assert r.status_code == 401
+    assert r.status_code == 200
+    assert json.loads(r.json()["result"]["content"][0]["text"])["error"]["code"] == "watch_not_enabled"
     assert await db.opportunities.count_documents({}) == 0
 
 

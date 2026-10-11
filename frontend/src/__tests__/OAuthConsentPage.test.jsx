@@ -250,7 +250,7 @@ describe('OAuthConsentPage — client générique (P1.1)', () => {
     api.get.mockResolvedValue({ data: details({ eligible: false, client: { name: 'Agent MAADEC', redirect_domain: 'agent.maadec.com' } }) });
     renderPage();
     expect(await screen.findByRole('button', { name: 'Refuser et revenir à Agent MAADEC' })).toBeInTheDocument();
-    expect(screen.getByText(/La veille n'est pas activée pour ce compte/)).toBeInTheDocument();
+    expect(screen.getByText(/Ce compte n'est pas actif/)).toBeInTheDocument();
   });
 });
 

@@ -334,7 +334,7 @@ async def test_pre_p2_clients_keep_all_scopes_and_confidential_type(api, db):
     await db.oauth_clients.update_one({"client_id": legacy["client_id"]},
                                       {"$unset": {"client_type": "", "allowed_scopes": ""}})
     stored = await db.oauth_clients.find_one({"client_id": legacy["client_id"]})
-    assert svc.client_type_of(stored) == "confidential" and svc.client_scopes(stored) == list(svc.SUPPORTED_SCOPES)
+    assert svc.client_type_of(stored) == "confidential" and svc.client_scopes(stored) == list(svc.LEGACY_SCOPES)
     code, verifier = await get_code(api, legacy, svc.CHATGPT_DEFAULT_REDIRECT)
     r = await api.post("/api/oauth/token", data={**exchange_form(code, verifier, svc.CHATGPT_DEFAULT_REDIRECT),
                                                  "client_id": legacy["client_id"], "client_secret": legacy["client_secret"]})

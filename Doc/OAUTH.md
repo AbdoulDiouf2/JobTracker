@@ -40,8 +40,8 @@ est fermé. Les routes d'administration (`/api/admin/oauth/*`) restent accessibl
   `frame-ancestors 'none'`), décision par **ticket de continuation** à usage unique, de sorte que
   le code ne transite jamais par le JavaScript du frontend. La page affiche le nom du client, le
   **domaine de retour** et les permissions.
-- **Propriétaire uniquement** : seul un compte actif avec `watch_enabled` (activé par un admin)
-  peut consentir et utiliser les jetons ; vérifié au consentement, à l'émission et à chaque appel.
+- **Compte actif** requis au consentement, à l'émission et à chaque appel. Les outils de veille
+  vérifient en plus `watch_enabled` ; les outils de candidature restent disponibles sans veille.
 - **Limites** : `/authorize` et `/token` limités à 10 requêtes par minute et par IP.
 
 ## Scopes
@@ -50,11 +50,17 @@ est fermé. Les routes d'administration (`/api/admin/oauth/*`) restent accessibl
 |---|---|
 | `watch:read` | `jobtracker_ping`, `get_watch_preferences`, `list_recent_opportunities`, `get_watch_status` |
 | `opportunities:write` | `create_opportunities`, `report_watch_run` |
+| `applications:read` | `list_applications`, `get_application` |
+| `applications:write` | `create_application`, `update_application`, `delete_application` |
 
 **Scopes effectifs** à chaque appel = scopes de l'autorisation **∩** scopes actuellement permis au
 client. Une réduction par l'admin s'applique immédiatement ; au renouvellement, l'autorisation est
 réduite d'autant (révoquée si plus rien ne reste). Un élargissement **n'étend jamais** une
 autorisation existante : il faut un nouveau consentement.
+Les clients historiques sans `allowed_scopes` gardent uniquement les deux scopes de veille.
+Une veille désactivée laisse désormais le jeton valide : les outils de veille renvoient
+`watch_not_enabled` dans le résultat MCP au lieu d'un HTTP 401. Les clients qui utilisaient
+401 comme signal de déconnexion doivent adapter ce cas.
 
 ## P1 — Multi-client (clients confidentiels)
 
@@ -83,7 +89,7 @@ autorisation existante : il faut un nouveau consentement.
   1-65535 est accepté pour ces deux hôtes, chemin comparé à l'identique. Refus de `localhost`
   (sauf CIMD, voir P3), autres IP, encodages, requête, fragment, identifiants, segments `..`.
   Le consentement affiche alors un avertissement « application installée sur cet appareil ».
-- **Scopes par client** (`allowed_scopes`, défaut : les deux).
+- **Scopes par client** (`allowed_scopes`, défaut : les deux scopes de veille pour un nouveau client manuel ; candidatures sur choix explicite).
 - **Isolation des exécutions par client** : voir [MCP-REFERENCE.md](./MCP-REFERENCE.md#run_id-idempotence-et-quotas).
 - La découverte annonce `none` parmi les méthodes d'authentification.
 

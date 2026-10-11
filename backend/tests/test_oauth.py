@@ -167,7 +167,7 @@ async def test_protected_resource_metadata(api):
         r = await api.get(path)
         assert r.status_code == 200
         assert r.json() == {"resource": RESOURCE, "authorization_servers": [ISSUER],
-                            "scopes_supported": ["watch:read", "opportunities:write"],
+                            "scopes_supported": list(svc.SUPPORTED_SCOPES),
                             "bearer_methods_supported": ["header"], "resource_name": "JobTracker"}
 
 
@@ -272,7 +272,7 @@ async def test_scope_subset_and_default(api, db):
     r = await api.get("/api/oauth/authorize", params=authorize_params(client, challenge, scope="watch:read"))
     assert (await db[svc.REQUESTS].find_one({"id": qs(r.headers["location"])["request"]}))["scopes"] == ["watch:read"]
     r = await api.get("/api/oauth/authorize", params=authorize_params(client, challenge, scope=None))
-    assert (await db[svc.REQUESTS].find_one({"id": qs(r.headers["location"])["request"]}))["scopes"] == list(svc.SUPPORTED_SCOPES)
+    assert (await db[svc.REQUESTS].find_one({"id": qs(r.headers["location"])["request"]}))["scopes"] == list(svc.LEGACY_SCOPES)
 
 
 async def test_authorize_rate_limit(api, db, monkeypatch):
@@ -368,12 +368,12 @@ async def test_deny(api, db):
 
 
 async def test_non_owner_account_is_denied(api, db):
-    """MVP propriétaire : un compte sans watch_enabled ne peut pas autoriser."""
+    """Un compte actif peut autoriser le MCP même sans veille."""
     _, _, request_id = await start(api, db)
     details = await api.get(f"/api/oauth/requests/{request_id}", headers=api.headers_for("b"))
-    assert details.json()["eligible"] is False
-    assert qs(await consent_redirect(api, request_id, True, "b"))["error"] == "access_denied"
-    assert await db[svc.CODES].count_documents({}) == 0
+    assert details.json()["eligible"] is True
+    assert "code" in qs(await consent_redirect(api, request_id, True, "b"))
+    assert await db[svc.CODES].count_documents({}) == 1
 
 
 async def test_owner_disabled_between_consent_and_continue(api, db):
@@ -381,8 +381,8 @@ async def test_owner_disabled_between_consent_and_continue(api, db):
     _, _, request_id = await start(api, db)
     continue_url = (await decide(api, request_id, True)).json()["continue_url"]
     await enable_watch(db, api, enabled=False)
-    assert qs((await follow(api, continue_url)).headers["location"])["error"] == "access_denied"
-    assert await db[svc.CODES].count_documents({}) == 0
+    assert "code" in qs((await follow(api, continue_url)).headers["location"])
+    assert await db[svc.CODES].count_documents({}) == 1
 
 
 async def test_expired_request(api, db):
@@ -539,7 +539,7 @@ async def test_owner_disabled_between_consent_and_exchange(api, db):
     await enable_watch(db, api, enabled=False)
     r = await token_call(api, client, {"grant_type": "authorization_code", "code": code,
                                        "code_verifier": verifier, "redirect_uri": REDIRECT})
-    assert r.json()["error"] == "invalid_grant"
+    assert r.status_code == 200 and r.json()["access_token"].startswith(svc.ACCESS_PREFIX)
 
 
 async def test_new_consent_supersedes_previous_grant(api, db):
@@ -624,8 +624,8 @@ async def test_refresh_by_other_client_is_refused(api, db):
 async def test_refresh_after_owner_disabled_revokes(api, db):
     client, tokens = await full_flow(api, db)
     await enable_watch(db, api, enabled=False)
-    assert (await do_refresh(api, client, tokens["refresh_token"])).json()["error"] == "invalid_grant"
-    assert (await db[svc.GRANTS].find_one({}))["status"] == "revoked"
+    assert (await do_refresh(api, client, tokens["refresh_token"])).status_code == 200
+    assert (await db[svc.GRANTS].find_one({}))["status"] == "active"
 
 
 # ============================================
@@ -686,7 +686,7 @@ async def test_mcp_without_token_challenges_with_resource_metadata(api, db):
     challenge = r.headers["www-authenticate"]
     assert challenge.startswith("Bearer ")
     assert f'resource_metadata="{ISSUER}/.well-known/oauth-protected-resource/api/mcp"' in challenge
-    assert 'scope="watch:read opportunities:write"' in challenge and "error=" not in challenge
+    assert ('scope="' + ' '.join(svc.SUPPORTED_SCOPES) + '"') in challenge and "error=" not in challenge
 
 
 @pytest.mark.parametrize("token", ["jt_oat_faux", "n'importe quoi", "jt_agent_" + "a" * 43])
@@ -741,7 +741,7 @@ async def test_insufficient_scope(api, db):
 async def test_owner_disabled_after_issuance_loses_mcp(api, db):
     _, tokens = await full_flow(api, db)
     await enable_watch(db, api, enabled=False)
-    assert (await mcp(api, LIST, tokens["access_token"])).status_code == 401
+    assert (await mcp(api, LIST, tokens["access_token"])).status_code == 200
     await db.users.update_one({"id": api.users["a"]}, {"$set": {"watch_enabled": True, "is_active": False}})
     assert (await mcp(api, LIST, tokens["access_token"])).status_code == 401
 
