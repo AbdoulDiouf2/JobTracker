@@ -49,9 +49,9 @@ async def get_dashboard_stats(
     pipeline = [
         {"$match": sent_applications_filter(user_id)},
         {"$lookup": {
-            "from": "interviews",
-            "localField": "id",
-            "foreignField": "candidature_id",
+            "from": "interviews", "let": {"application_id": "$id"},
+            "pipeline": [{"$match": {"user_id": user_id,
+                "$expr": {"$eq": ["$candidature_id", "$$application_id"]}}}],
             "as": "interviews"
         }},
         {"$match": {"interviews": {"$ne": []}}},
@@ -409,7 +409,9 @@ async def get_statistics_overview(
     cancelled = await db.applications.count_documents({**date_filter, "reponse": "cancelled"})
     wi_result = await db.applications.aggregate([
         {"$match": date_filter},
-        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$lookup": {"from": "interviews", "let": {"application_id": "$id"},
+                     "pipeline": [{"$match": {"user_id": user_id,
+                         "$expr": {"$eq": ["$candidature_id", "$$application_id"]}}}], "as": "_ivs"}},
         {"$match": {"_ivs": {"$ne": []}}},
         {"$count": "count"}
     ]).to_list(1)
@@ -524,19 +526,11 @@ async def get_statistics_overview(
     avg_response_time = round(rt_result[0]["avg"], 1) if rt_result else None
 
     # --- Interviews (filtre sur date_entretien si période définie) ---
-    interview_filter: dict = {"user_id": user_id}
-    if date_from or date_to:
-        dr: dict = {}
-        if date_from:
-            dr["$gte"] = date_from
-        if date_to:
-            dr["$lte"] = date_to + "T23:59:59"
-        interview_filter["date_entretien"] = dr
-
-    interviews_total = await db.interviews.count_documents(interview_filter)
-    interviews_planned = await db.interviews.count_documents({**interview_filter, "statut": "planned"})
-    interviews_completed = await db.interviews.count_documents({**interview_filter, "statut": "completed"})
-    interviews_cancelled = await db.interviews.count_documents({**interview_filter, "statut": "cancelled"})
+    from services.interview_service import count_interviews_for_period
+    interviews_total = await count_interviews_for_period(db, user_id, date_from, date_to)
+    interviews_planned = await count_interviews_for_period(db, user_id, date_from, date_to, status="planned")
+    interviews_completed = await count_interviews_for_period(db, user_id, date_from, date_to, status="completed")
+    interviews_cancelled = await count_interviews_for_period(db, user_id, date_from, date_to, status="cancelled")
 
     return StatisticsOverview(
         dashboard=dashboard,
@@ -629,7 +623,9 @@ async def get_dashboard_v2(
     cancelled = await db.applications.count_documents({**period_filter, "reponse": "cancelled"})
     wi_result = await db.applications.aggregate([
         {"$match": period_filter},
-        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$lookup": {"from": "interviews", "let": {"application_id": "$id"},
+                     "pipeline": [{"$match": {"user_id": user_id,
+                         "$expr": {"$eq": ["$candidature_id", "$$application_id"]}}}], "as": "_ivs"}},
         {"$match": {"_ivs": {"$ne": []}}},
         {"$count": "count"}
     ]).to_list(1)
@@ -741,15 +737,8 @@ async def get_dashboard_v2(
         response_rate_score = 5 if total_apps > 0 else 0
     
     # 3.3 Ratio entretiens/candidatures (25 pts)
-    interview_filter: dict = {"user_id": user_id}
-    if date_from or date_to:
-        idr: dict = {}
-        if date_from:
-            idr["$gte"] = date_from
-        if date_to:
-            idr["$lte"] = date_to + "T23:59:59"
-        interview_filter["date_entretien"] = idr
-    interview_count = await db.interviews.count_documents(interview_filter)
+    from services.interview_service import count_interviews_for_period
+    interview_count = await count_interviews_for_period(db, user_id, date_from, date_to)
     interview_ratio = (interview_count / total_apps * 100) if total_apps > 0 else 0
     
     if interview_ratio >= 30:
@@ -883,11 +872,10 @@ async def get_dashboard_v2(
     # Entretiens dans les 48h
     now_str = now.isoformat()
     in_48h_str = (now + timedelta(hours=48)).isoformat()
-    upcoming_48h = await db.interviews.count_documents({
-        "user_id": user_id,
-        "statut": "planned",
-        "date_entretien": {"$gte": now_str, "$lte": in_48h_str}
-    })
+    from services.interview_service import count_interviews_between
+    upcoming_48h = await count_interviews_between(
+        db, user_id, datetime.now(timezone.utc), datetime.now(timezone.utc) + timedelta(hours=48),
+        status="planned", end_inclusive=True)
     if upcoming_48h > 0:
         priority_actions.append(PriorityAction(
             type="interview_soon",
@@ -937,11 +925,9 @@ async def get_dashboard_v2(
     
     # Entretiens cette semaine
     week_end_str = (start_of_week + timedelta(weeks=1)).isoformat()
-    interviews_this_week = await db.interviews.count_documents({
-        "user_id": user_id,
-        "statut": "planned",
-        "date_entretien": {"$gte": start_of_week_str, "$lt": week_end_str}
-    })
+    interviews_this_week = await count_interviews_between(
+        db, user_id, start_of_week.replace(tzinfo=timezone.utc),
+        (start_of_week + timedelta(weeks=1)).replace(tzinfo=timezone.utc), status="planned")
     if interviews_this_week > 0 and upcoming_48h == 0:
         priority_actions.append(PriorityAction(
             type="interviews_week",
@@ -972,10 +958,9 @@ async def get_dashboard_v2(
             "date_reponse": {"$gte": week_start_str, "$lt": week_end_str}
         })
         
-        interviews_count = await db.interviews.count_documents({
-            "user_id": user_id,
-            "date_entretien": {"$gte": week_start_str, "$lt": week_end_str}
-        })
+        interviews_count = await count_interviews_between(
+            db, user_id, week_start.replace(tzinfo=timezone.utc),
+            week_end.replace(tzinfo=timezone.utc))
         
         week_label = f"Sem {4-i}"
         if i == 0:
@@ -1073,7 +1058,9 @@ async def analyze_statistics_with_ai(
     no_response = await db.applications.count_documents({**period_filter, "reponse": "no_response"})
     wi_result = await db.applications.aggregate([
         {"$match": period_filter},
-        {"$lookup": {"from": "interviews", "localField": "id", "foreignField": "candidature_id", "as": "_ivs"}},
+        {"$lookup": {"from": "interviews", "let": {"application_id": "$id"},
+                     "pipeline": [{"$match": {"user_id": user_id,
+                         "$expr": {"$eq": ["$candidature_id", "$$application_id"]}}}], "as": "_ivs"}},
         {"$match": {"_ivs": {"$ne": []}}},
         {"$count": "count"}
     ]).to_list(1)
@@ -1081,17 +1068,9 @@ async def analyze_statistics_with_ai(
     responded = positive + negative
     response_rate = round(responded / total * 100, 1) if total > 0 else 0
 
-    interview_filter: dict = {"user_id": user_id}
-    if date_from or date_to:
-        idr: dict = {}
-        if date_from:
-            idr["$gte"] = date_from
-        if date_to:
-            idr["$lte"] = date_to + "T23:59:59"
-        interview_filter["date_entretien"] = idr
-
-    interviews_total = await db.interviews.count_documents(interview_filter)
-    interviews_completed = await db.interviews.count_documents({**interview_filter, "statut": "completed"})
+    from services.interview_service import count_interviews_for_period
+    interviews_total = await count_interviews_for_period(db, user_id, date_from, date_to)
+    interviews_completed = await count_interviews_for_period(db, user_id, date_from, date_to, status="completed")
 
     # Top méthodes (par volume)
     method_pipeline = [

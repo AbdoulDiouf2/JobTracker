@@ -98,7 +98,7 @@ async def process_interview_reminders(db):
             stats["users"] += 1
             
             for interview in user_interviews:
-                interview_id = str(interview.get("_id", interview.get("id", "")))
+                interview_id = str(interview.get("id", interview.get("_id", "")))
                 date_str = interview.get("date_entretien")
                 
                 if not date_str:
@@ -128,10 +128,11 @@ async def process_interview_reminders(db):
                     candidature_id = interview.get("candidature_id") or interview.get("application_id")
                     if candidature_id:
                         try:
-                            from bson import ObjectId
-                            candidature = await db.applications.find_one({"_id": ObjectId(candidature_id)})
+                            candidature = await db.applications.find_one({"id": candidature_id, "user_id": user_id})
                             if not candidature:
-                                candidature = await db.applications.find_one({"id": candidature_id})
+                                from bson import ObjectId
+                                if ObjectId.is_valid(candidature_id):
+                                    candidature = await db.applications.find_one({"_id": ObjectId(candidature_id), "user_id": user_id})
                             if candidature:
                                 entreprise = entreprise or candidature.get("entreprise", "Entreprise")
                                 poste = poste or candidature.get("poste", "Poste")

@@ -111,8 +111,8 @@ async def authorize(api, client_id, redirect, **over):
     return r, verifier
 
 
-async def connect(api, client_id, redirect, who="a"):
-    r, verifier = await authorize(api, client_id, redirect)
+async def connect(api, client_id, redirect, who="a", **over):
+    r, verifier = await authorize(api, client_id, redirect, **over)
     assert r.status_code == 302, r.text
     code = qs(await consent_redirect(api, qs(r.headers["location"])["request"], True, who))["code"]
     tok = await api.post("/api/oauth/token", data={"grant_type": "authorization_code", "code": code,
@@ -124,6 +124,28 @@ async def connect(api, client_id, redirect, who="a"):
 
 async def discovery(api):
     return (await api.get("/.well-known/oauth-authorization-server")).json()
+
+
+async def test_admin_cimd_interview_scope_requires_approved_host_and_explicit_policy(api, db, web, admin):
+    assert (await cimd_service.get_policy(db)) == cimd_service.default_policy()
+    policy = await api.put("/api/admin/oauth/cimd-policy", headers=admin, json={
+        "enabled": True, "allowed_hosts": ["claude.ai"], "default_scopes": ["interviews:read"]})
+    assert policy.status_code == 200 and policy.json()["default_scopes"] == ["interviews:read"]
+    blocked, _ = await authorize(api, CODEX, "http://127.0.0.1:49152/callback", scope="interviews:read")
+    assert blocked.status_code == 400 and await db.oauth_clients.count_documents({"client_id": CODEX}) == 0
+    tokens = await connect(api, CLAUDE_CODE, "http://localhost:3118/callback", scope="interviews:read")
+    assert tokens["scope"] == "interviews:read"
+    assert (await db.oauth_clients.find_one({"client_id": CLAUDE_CODE}))["allowed_scopes"] == ["interviews:read"]
+    listed = await mcp(api, LIST, tokens["access_token"])
+    assert listed.status_code == 200 and len(listed.json()["result"]["tools"]) == 16
+    denied = await mcp(api, {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "create_interview", "arguments": {}}}, tokens["access_token"])
+    assert denied.status_code == 403 and denied.json()["scope"] == "interviews:write"
+    changed = await api.put("/api/admin/oauth/cimd-policy", headers=admin, json={
+        "enabled": True, "allowed_hosts": ["claude.ai"], "default_scopes": ["interviews:write"]})
+    assert changed.status_code == 200
+    assert (await db.oauth_clients.find_one({"client_id": CLAUDE_CODE}))["allowed_scopes"] == ["interviews:read"]
+    assert (await db.oauth_grants.find_one({"client_id": CLAUDE_CODE}))["scopes"] == ["interviews:read"]
 
 
 # ============================================

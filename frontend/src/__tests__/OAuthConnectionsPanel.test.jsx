@@ -395,6 +395,21 @@ describe('Connexions OAuth / MCP — clients publics et permissions (P2)', () =>
   const publicOf = (over = {}) => clientOf({ client_id: PUB_ID, name: 'Agent local', redirect_uris: [LOCAL],
     client_type: 'public', allowed_scopes: ['watch:read'], token_endpoint_auth_method: 'none', active_grants: 0, ...over });
 
+  test('les deux permissions Entretiens sont explicites, séparées et désactivées par défaut', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+    const dialog = await openCreate(user);
+    const read = within(dialog).getByTestId('oauth-create-scope-interviews:read');
+    const write = within(dialog).getByTestId('oauth-create-scope-interviews:write');
+    expect(read).toHaveTextContent('Lire les entretiens et leur historique de statuts');
+    expect(write).toHaveTextContent('Créer, modifier et supprimer les entretiens');
+    expect(read).toHaveAttribute('aria-checked', 'false');
+    expect(write).toHaveAttribute('aria-checked', 'false');
+    await user.click(read);
+    expect(read).toHaveAttribute('aria-checked', 'true');
+    expect(write).toHaveAttribute('aria-checked', 'false');
+  });
+
   test('création d’une application publique : type, permissions, aucun secret affiché', async () => {
     const user = userEvent.setup();
     api.post.mockImplementation(async (url, body) => {

@@ -21,6 +21,20 @@ def get_db():
     pass
 
 
+async def _sorted_interviews(db, user_id: str):
+    """Sort mixed ISO offsets by instant, with malformed historical dates last."""
+    return await db.interviews.aggregate([
+        {"$match": {"user_id": user_id}},
+        {"$addFields": {"_sort_date": {"$convert": {"input": "$date_entretien", "to": "date",
+                                                   "onError": None, "onNull": None}}}},
+        {"$addFields": {"_invalid_date": {"$cond": [{"$eq": ["$_sort_date", None]}, 1, 0]}}},
+        {"$sort": {"_invalid_date": 1, "_sort_date": -1, "id": 1}},
+        {"$limit": 10000},
+        {"$project": {"_id": 0, "user_id": 0, "status_history": 0, "revision": 0,
+                      "_sort_date": 0, "_invalid_date": 0}},
+    ]).to_list(10000)
+
+
 @router.get("/json")
 async def export_json(
     current_user: dict = Depends(get_current_user),
@@ -38,8 +52,8 @@ async def export_json(
     # Récupérer les entretiens et les associer
     for app in applications:
         interviews = await db.interviews.find(
-            {"candidature_id": app["id"]},
-            {"_id": 0, "user_id": 0, "candidature_id": 0}
+            {"candidature_id": app["id"], "user_id": user_id},
+            {"_id": 0, "user_id": 0, "candidature_id": 0, "status_history": 0, "revision": 0}
         ).to_list(100)
         app["entretiens"] = interviews
     
@@ -72,7 +86,7 @@ async def export_csv(
     # Récupérer les candidatures
     applications = await db.applications.find(
         {"user_id": user_id},
-        {"_id": 0, "user_id": 0}
+        {"_id": 0, "user_id": 0, "status_history": 0, "revision": 0}
     ).sort("date_candidature", -1).to_list(10000)
     
     # Créer le CSV
@@ -173,7 +187,7 @@ async def export_excel(
     # Données
     for row_idx, app in enumerate(applications, 2):
         # Compter les entretiens
-        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"]})
+        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"], "user_id": user_id})
         
         data = [
             app.get("entreprise", ""),
@@ -316,16 +330,13 @@ async def export_interviews_json(
     user_id = current_user["user_id"]
     
     # Récupérer les entretiens avec les infos de candidature
-    interviews = await db.interviews.find(
-        {"user_id": user_id},
-        {"_id": 0, "user_id": 0}
-    ).sort("date_entretien", -1).to_list(10000)
+    interviews = await _sorted_interviews(db, user_id)
     
     # Enrichir avec les infos de candidature
     for interview in interviews:
         if interview.get("candidature_id"):
             app = await db.applications.find_one(
-                {"id": interview["candidature_id"]},
+                {"id": interview["candidature_id"], "user_id": user_id},
                 {"_id": 0, "entreprise": 1, "poste": 1}
             )
             if app:
@@ -357,10 +368,7 @@ async def export_interviews_csv(
     """Export tous les entretiens en CSV"""
     user_id = current_user["user_id"]
     
-    interviews = await db.interviews.find(
-        {"user_id": user_id},
-        {"_id": 0}
-    ).sort("date_entretien", -1).to_list(10000)
+    interviews = await _sorted_interviews(db, user_id)
     
     output = io.StringIO()
     writer = csv.writer(output, delimiter=';', quoting=csv.QUOTE_ALL)
@@ -377,7 +385,7 @@ async def export_interviews_csv(
         poste = ""
         if interview.get("candidature_id"):
             app = await db.applications.find_one(
-                {"id": interview["candidature_id"]},
+                {"id": interview["candidature_id"], "user_id": user_id},
                 {"_id": 0, "entreprise": 1, "poste": 1}
             )
             if app:
@@ -427,10 +435,7 @@ async def export_interviews_excel(
     
     user_id = current_user["user_id"]
     
-    interviews = await db.interviews.find(
-        {"user_id": user_id},
-        {"_id": 0}
-    ).sort("date_entretien", -1).to_list(10000)
+    interviews = await _sorted_interviews(db, user_id)
     
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -464,7 +469,7 @@ async def export_interviews_excel(
         poste = ""
         if interview.get("candidature_id"):
             app = await db.applications.find_one(
-                {"id": interview["candidature_id"]},
+                {"id": interview["candidature_id"], "user_id": user_id},
                 {"_id": 0, "entreprise": 1, "poste": 1}
             )
             if app:

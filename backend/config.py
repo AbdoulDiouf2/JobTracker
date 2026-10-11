@@ -150,6 +150,8 @@ class Settings(BaseSettings):
     SMTP_SECURE: bool = os.environ.get('SMTP_SECURE', 'true').lower() == 'true'
     SMTP_USER: str = os.environ.get('SMTP_USER', '')
     SMTP_PASSWORD_APP: str = os.environ.get('SMTP_PASSWORD_APP', '')
+    # Authentification du cron de rappels global (requis pour /reminders/process-all).
+    CRON_SECRET: str = os.environ.get('CRON_SECRET', '')
     SMTP_FROM_NAME: str = os.environ.get('SMTP_FROM_NAME', 'JobTracker Support')
     SMTP_FROM_EMAIL: str = os.environ.get('SMTP_FROM_EMAIL', '')
     SUPPORT_EMAIL: str = os.environ.get('SUPPORT_EMAIL', 'abdoulam.diouf@maadec.com')

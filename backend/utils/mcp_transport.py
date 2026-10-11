@@ -23,8 +23,8 @@ Contrôles à CHAQUE requête (spécification §8 bis.2), dans cet ordre :
 4. rafale par grant (spécification §6.2), sinon 429 + `Retry-After` ;
 5. scope de l'outil appelé, sinon 403 `insufficient_scope` ;
 6. hôtes et origines (protection anti DNS-rebinding du SDK).
-Outils : `jobtracker_ping`, les cinq outils de veille et les cinq outils de candidature
-(`services/mcp_tools.py`), exécutés pour le seul `user_id` du grant.
+Outils : `jobtracker_ping`, cinq outils de veille, cinq outils de candidature et cinq
+outils Entretiens (`services/mcp_tools.py`), exécutés pour le seul `user_id` du grant.
 """
 
 import asyncio
@@ -113,6 +113,7 @@ def _build_server():
                 read_only_hint=spec.read_only, destructive_hint=spec.destructive, idempotent_hint=spec.idempotent,
                 open_world_hint=False,
             ),
+            **({"output_schema": spec.output_schema} if spec.output_schema is not None else {}),
         )
         for spec in mcp_tools.TOOLS
     ]

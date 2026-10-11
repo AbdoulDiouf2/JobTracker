@@ -61,6 +61,62 @@ async def create(api, admin):
     return r.json()
 
 
+@pytest.mark.parametrize("scopes", [
+    ["interviews:read"], ["interviews:write"], ["interviews:read", "interviews:write"],
+])
+async def test_admin_can_create_client_with_explicit_interview_scopes(api, db, admin, scopes):
+    response = await api.post(f"{BASE}/clients", headers=admin,
+        json={"name": "Interview agent", "redirect_uris": [REDIRECT], "allowed_scopes": scopes})
+    assert response.status_code == 201, response.text
+    client = response.json()
+    assert client["allowed_scopes"] == scopes
+    assert (await db.oauth_clients.find_one({"client_id": client["client_id"]}))["allowed_scopes"] == scopes
+    assert await db.oauth_grants.count_documents({}) == 0
+
+
+async def test_admin_rejects_unknown_scope_and_preserves_legacy_defaults(api, db, admin):
+    invalid = await api.post(f"{BASE}/clients", headers=admin,
+        json={"name": "Invalid", "redirect_uris": [REDIRECT], "allowed_scopes": ["interviews:admin"]})
+    assert invalid.status_code == 422
+    created = await create(api, admin)
+    assert created["allowed_scopes"] == list(svc.LEGACY_SCOPES)
+    invalid_update = await api.put(f"{BASE}/clients/{created['client_id']}/scopes", headers=admin,
+        json={"allowed_scopes": ["interviews:admin"]})
+    assert invalid_update.status_code == 422
+    assert (await db.oauth_clients.find_one({"client_id": created["client_id"]}))["allowed_scopes"] == list(svc.LEGACY_SCOPES)
+
+
+async def test_interview_scope_update_requires_new_consent_and_refresh_cannot_expand(api, db, admin, service_open):
+    created = await api.post(f"{BASE}/clients", headers=admin,
+        json={"name": "Interview agent", "redirect_uris": [REDIRECT], "allowed_scopes": ["interviews:read"]})
+    assert created.status_code == 201
+    client = created.json()
+    code, verifier = await get_code(api, db, client, scope="interviews:read")
+    form = {"grant_type": "authorization_code", "code": code, "code_verifier": verifier,
+            "redirect_uri": REDIRECT, "resource": RESOURCE}
+    first = await token_call(api, client, form)
+    assert first.status_code == 200 and first.json()["scope"] == "interviews:read"
+    old = first.json()
+    grant = await db.oauth_grants.find_one({"client_id": client["client_id"]})
+    updated = await api.put(f"{BASE}/clients/{client['client_id']}/scopes", headers=admin,
+        json={"allowed_scopes": ["interviews:read", "interviews:write"]})
+    assert updated.status_code == 200
+    assert (await db.oauth_grants.find_one({"id": grant["id"]}))["scopes"] == ["interviews:read"]
+    denied = await mcp(api, {"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+        "params": {"name": "create_interview", "arguments": {}}}, old["access_token"])
+    assert denied.status_code == 403 and denied.json()["scope"] == "interviews:write"
+    refresh = await do_refresh(api, client, old["refresh_token"])
+    assert refresh.status_code == 200 and refresh.json()["scope"] == "interviews:read"
+    code, verifier = await get_code(api, db, client, scope="interviews:read interviews:write")
+    second = await token_call(api, client, {**form, "code": code, "code_verifier": verifier})
+    assert second.status_code == 200 and second.json()["scope"] == "interviews:read interviews:write"
+    assert (await db.oauth_grants.find_one({"id": grant["id"]}))["status"] == svc.SUPERSEDED
+    revoked = await api.post("/api/oauth/revoke", data={"client_id": client["client_id"],
+        "client_secret": client["client_secret"], "token": second.json()["refresh_token"]})
+    assert revoked.status_code == 200
+    assert (await mcp(api, LIST, second.json()["access_token"])).status_code == 401
+
+
 # ============================================
 # Accès
 # ============================================

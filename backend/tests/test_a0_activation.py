@@ -336,7 +336,8 @@ async def issue_access_token(db):
 
 BUSINESS_TOOLS = ["get_watch_preferences", "create_opportunities", "list_recent_opportunities",
                   "get_watch_status", "report_watch_run", "list_applications", "get_application",
-                  "create_application", "update_application", "delete_application"]
+                  "create_application", "update_application", "delete_application", "list_interviews",
+                  "get_interview", "create_interview", "update_interview", "delete_interview"]
 
 
 def test_declared_tools_and_scopes():
@@ -348,6 +349,9 @@ def test_declared_tools_and_scopes():
         "list_applications": "applications:read", "get_application": "applications:read",
         "create_application": "applications:write", "update_application": "applications:write",
         "delete_application": "applications:write",
+        "list_interviews": "interviews:read", "get_interview": "interviews:read",
+        "create_interview": "interviews:write", "update_interview": "interviews:write",
+        "delete_interview": "interviews:write",
     }
 
 

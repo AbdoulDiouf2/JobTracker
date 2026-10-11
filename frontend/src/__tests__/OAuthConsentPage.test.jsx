@@ -58,6 +58,18 @@ afterAll(() => {
 });
 
 describe('OAuthConsentPage — consentement réussi', () => {
+  test('décrit les scopes Entretiens sans affirmer que les entretiens restent inaccessibles', async () => {
+    api.get.mockResolvedValue({ data: details({ scopes: [
+      { scope: 'interviews:read', description: 'Lire tes entretiens et leur historique de statuts' },
+      { scope: 'interviews:write', description: 'Créer, modifier et supprimer tes entretiens' },
+    ] }) });
+    renderPage();
+    expect(await screen.findByTestId('consent-scope-interviews:read')).toHaveTextContent(/historique de statuts/);
+    expect(screen.getByTestId('consent-scope-interviews:write')).toHaveTextContent(/modifier et supprimer/);
+    expect(screen.getByTestId('consent-lead')).toHaveTextContent('tes données JobTracker');
+    expect(screen.queryByText(/Lire ou modifier tes candidatures, documents, CV et entretiens/)).toBeNull();
+  });
+
   test('présente clairement la demande, le compte et les permissions', async () => {
     api.get.mockResolvedValue({ data: details() });
     renderPage();

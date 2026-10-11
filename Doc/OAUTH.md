@@ -52,12 +52,21 @@ est fermé. Les routes d'administration (`/api/admin/oauth/*`) restent accessibl
 | `opportunities:write` | `create_opportunities`, `report_watch_run` |
 | `applications:read` | `list_applications`, `get_application` |
 | `applications:write` | `create_application`, `update_application`, `delete_application` |
+| `interviews:read` | `list_interviews`, `get_interview` |
+| `interviews:write` | `create_interview`, `update_interview`, `delete_interview` |
 
 **Scopes effectifs** à chaque appel = scopes de l'autorisation **∩** scopes actuellement permis au
 client. Une réduction par l'admin s'applique immédiatement ; au renouvellement, l'autorisation est
 réduite d'autant (révoquée si plus rien ne reste). Un élargissement **n'étend jamais** une
 autorisation existante : il faut un nouveau consentement.
 Les clients historiques sans `allowed_scopes` gardent uniquement les deux scopes de veille.
+Les nouveaux clients manuels gardent les mêmes deux scopes par défaut ; les permissions
+Entretiens sont attribuées explicitement, séparément pour la lecture et l'écriture.
+La politique CIMD reste désactivée par défaut avec `watch:read` comme seul scope proposé.
+Un administrateur peut autoriser les scopes Entretiens pour un hôte CIMD approuvé ; modifier
+les scopes par défaut de cette politique ne change pas les clients CIMD déjà enregistrés.
+Une demande mélangeant scopes autorisés et non autorisés est réduite aux scopes autorisés ;
+si aucun ne reste, elle est refusée par `invalid_scope`.
 Une veille désactivée laisse désormais le jeton valide : les outils de veille renvoient
 `watch_not_enabled` dans le résultat MCP au lieu d'un HTTP 401. Les clients qui utilisaient
 401 comme signal de déconnexion doivent adapter ce cas.

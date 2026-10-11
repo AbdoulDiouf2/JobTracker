@@ -16,7 +16,7 @@ import {
 const T = {
   fr: {
     title: (client) => `Autoriser ${client}`,
-    lead: (client) => `${client} demande l'autorisation d'accéder à ta veille d'opportunités JobTracker.`,
+    lead: (client, extended) => `${client} demande l'autorisation d'accéder à ${extended ? 'tes données JobTracker' : "ta veille d'opportunités JobTracker"}.`,
     unknownClient: 'Application non identifiée',
     redirectLabel: 'Après ta décision, tu seras renvoyé vers',
     identityLabel: (host) => `Identité publiée par ${host}`,
@@ -56,7 +56,7 @@ const T = {
   },
   en: {
     title: (client) => `Authorize ${client}`,
-    lead: (client) => `${client} is requesting access to your JobTracker opportunity watch.`,
+    lead: (client, extended) => `${client} is requesting access to ${extended ? 'your JobTracker data' : 'your JobTracker opportunity watch'}.`,
     unknownClient: 'Unidentified application',
     redirectLabel: 'After your decision, you will be sent back to',
     identityLabel: (host) => `Identity published by ${host}`,
@@ -97,7 +97,8 @@ const T = {
 };
 
 const SCOPE_ICONS = { 'watch:read': Eye, 'opportunities:write': PlusCircle,
-  'applications:read': Eye, 'applications:write': PlusCircle };
+  'applications:read': Eye, 'applications:write': PlusCircle,
+  'interviews:read': Eye, 'interviews:write': PlusCircle };
 const STATUS_ERRORS = { 410: 'expired', 409: 'used', 404: 'notFound' };
 const DECISION_ERRORS = { request_expired: 'expired', request_already_used: 'used', request_not_found: 'notFound' };
 
@@ -250,6 +251,8 @@ export default function OAuthConsentPage() {
     );
   }
   const account = details.account?.email || details.account?.name || '';
+  const extendedScopes = details.scopes.some(({ scope }) => scope.startsWith('applications:') || scope.startsWith('interviews:'));
+  const neverItems = extendedScopes ? t.never.slice(1) : t.never;
   const expires = details.expires_at
     ? new Date(details.expires_at).toLocaleTimeString(language === 'en' ? 'en-GB' : 'fr-FR', { hour: '2-digit', minute: '2-digit' })
     : null;
@@ -278,7 +281,7 @@ export default function OAuthConsentPage() {
         <div className="mb-6 text-center">
           <ShieldCheck className="mx-auto mb-3 h-10 w-10 text-[#c4a052]" aria-hidden="true" />
           <h1 className="font-heading text-2xl font-bold text-white mb-2 break-words">{t.title(client)}</h1>
-          <p className="text-sm text-slate-300" data-testid="consent-lead">{t.lead(client)}</p>
+          <p className="text-sm text-slate-300" data-testid="consent-lead">{t.lead(client, extendedScopes)}</p>
         </div>
 
         <div className="mb-5 rounded-xl border border-[#c4a052]/30 bg-[#c4a052]/5 px-4 py-3" data-testid="consent-redirect">
@@ -328,7 +331,7 @@ export default function OAuthConsentPage() {
         <section className="mb-5" aria-labelledby="consent-never-title">
           <h2 id="consent-never-title" className="mb-2 text-sm font-semibold text-white">{t.notAllowed(client)}</h2>
           <ul className="space-y-1.5">
-            {t.never.map((item) => (
+            {neverItems.map((item) => (
               <li key={item} className="flex gap-2 text-sm text-slate-400">
                 <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
                 <span>{item}</span>

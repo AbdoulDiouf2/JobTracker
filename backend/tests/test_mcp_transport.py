@@ -111,7 +111,8 @@ async def test_initialize_list_and_call(client, mcp_on):
     assert [t["name"] for t in tools] == ["jobtracker_ping", "get_watch_preferences", "create_opportunities",
                                           "list_recent_opportunities", "get_watch_status", "report_watch_run",
                                           "list_applications", "get_application", "create_application",
-                                          "update_application", "delete_application"]
+                                          "update_application", "delete_application", "list_interviews",
+                                          "get_interview", "create_interview", "update_interview", "delete_interview"]
     assert tools[0]["annotations"]["readOnlyHint"] is True
     assert tools[0]["annotations"]["destructiveHint"] is False
 

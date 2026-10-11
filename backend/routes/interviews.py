@@ -1,311 +1,105 @@
-"""
-JobTracker SaaS - Routes des entretiens
-"""
-
-from fastapi import APIRouter, HTTPException, status, Depends, Query
-from typing import Optional, List
-from datetime import datetime, timezone, timedelta
-
-from models import (
-    Interview, InterviewCreate, InterviewUpdate, InterviewResponse,
-    InterviewStatus, InterviewType, InterviewFormat
-)
+"""REST adapter for the shared interview service."""
+from datetime import datetime, timezone
+from typing import List, Literal, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict
+from models import InterviewCreate, InterviewFormat, InterviewResponse, InterviewStatus, InterviewType, InterviewUpdate
+from services import interview_service
 from utils.auth import get_current_user
 
 router = APIRouter(prefix="/interviews", tags=["Interviews"])
 
-
 def get_db():
-    """Dependency injection pour la DB"""
     pass
 
-
 def calculate_time_remaining(interview_date: datetime) -> tuple:
-    """Calcule le temps restant et le niveau d'urgence"""
-    now = datetime.now(timezone.utc)
-    
-    if isinstance(interview_date, str):
-        interview_date = datetime.fromisoformat(interview_date.replace('Z', '+00:00'))
-    
-    if interview_date.tzinfo is None:
-        interview_date = interview_date.replace(tzinfo=timezone.utc)
-    
-    diff = interview_date - now
-    
-    if diff.total_seconds() < 0:
-        return "Passé", "passed"
-    
-    days = diff.days
-    hours, remainder = divmod(diff.seconds, 3600)
-    minutes = remainder // 60
-    
-    # Calculer l'urgence
-    total_hours = diff.total_seconds() / 3600
-    if total_hours < 1:
-        urgency = "danger"
-        time_str = f"{minutes} min"
-    elif total_hours < 24:
-        urgency = "warning"
-        time_str = f"{hours}h {minutes}min"
-    elif days < 7:
-        urgency = "info"
-        time_str = f"{days}j {hours}h"
-    else:
-        urgency = "normal"
-        time_str = f"{days} jours"
-    
-    return time_str, urgency
+    return interview_service.calculate_time_remaining(interview_date)
 
+def _http_error(exc: interview_service.InterviewError):
+    code = {"not_found": 404, "invalid_arguments": 400, "conflict": 409,
+            "temporarily_unavailable": 503}.get(exc.code, 500)
+    raise HTTPException(status_code=code, detail=str(exc)) from exc
+
+def _legacy(item, user_id):
+    return {**item, "user_id": user_id}
+
+class HistoricalInterviewResponse(BaseModel):
+    """Validate legacy rows which may lack newer required response fields."""
+    model_config = ConfigDict(extra="allow")
+    id: str
+    user_id: str
+    candidature_id: str
+    statut: InterviewStatus
+    type_entretien: InterviewType
+    format_entretien: InterviewFormat
+    date_entretien: datetime
+
+class InvalidHistoricalInterviewResponse(HistoricalInterviewResponse):
+    """Validate the existing anomaly response without changing normal REST schemas."""
+    date_entretien: None
+    date_warning: Literal["invalid_historical_date"]
+
+def _rest_result(value):
+    items = value if isinstance(value, list) else [value]
+    if any("date_warning" in item for item in items):
+        for item in items:
+            model = InvalidHistoricalInterviewResponse if "date_warning" in item else HistoricalInterviewResponse
+            model.model_validate(item)
+        return JSONResponse(content=jsonable_encoder(value))
+    return value
 
 @router.get("", response_model=List[InterviewResponse])
-async def list_interviews(
-    status: Optional[InterviewStatus] = None,
-    interview_type: Optional[InterviewType] = None,
-    interview_format: Optional[InterviewFormat] = None,
-    candidature_id: Optional[str] = None,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Liste tous les entretiens"""
-    filter_query = {"user_id": current_user["user_id"]}
-    
-    if status:
-        filter_query["statut"] = status.value
-    if interview_type:
-        filter_query["type_entretien"] = interview_type.value
-    if interview_format:
-        filter_query["format_entretien"] = interview_format.value
-    if candidature_id:
-        filter_query["candidature_id"] = candidature_id
-    
-    cursor = db.interviews.find(filter_query, {"_id": 0}).sort("date_entretien", 1)
-    interviews = await cursor.to_list(length=500)
-    
-    # Enrichir avec les infos de candidature et le temps restant
-    enriched = []
-    for interview in interviews:
-        # Récupérer la candidature
-        application = await db.applications.find_one(
-            {"id": interview["candidature_id"]},
-            {"_id": 0, "entreprise": 1, "poste": 1}
-        )
-        
-        interview["entreprise"] = application["entreprise"] if application else "N/A"
-        interview["poste"] = application["poste"] if application else "N/A"
-        
-        # Calculer le temps restant si planifié
-        if interview["statut"] == "planned":
-            time_remaining, urgency = calculate_time_remaining(interview["date_entretien"])
-            interview["time_remaining"] = time_remaining
-            interview["urgency"] = urgency
-        else:
-            interview["time_remaining"] = None
-            interview["urgency"] = None
-        
-        enriched.append(interview)
-    
-    return enriched
-
+async def list_interviews(status: Optional[InterviewStatus] = None,
+                          interview_type: Optional[InterviewType] = None,
+                          interview_format: Optional[InterviewFormat] = None,
+                          candidature_id: Optional[str] = None,
+                          current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    items, _ = await interview_service.list_interviews(
+        db, current_user["user_id"], {"status": status, "interview_type": interview_type,
+                                      "interview_format": interview_format, "candidature_id": candidature_id})
+    return _rest_result([_legacy(item, current_user["user_id"]) for item in items])
 
 @router.get("/upcoming", response_model=List[InterviewResponse])
-async def get_upcoming_interviews(
-    limit: int = Query(5, ge=1, le=20),
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Récupère les prochains entretiens planifiés"""
-    now = datetime.now(timezone.utc).isoformat()
-    
-    cursor = db.interviews.find(
-        {
-            "user_id": current_user["user_id"],
-            "statut": "planned",
-            "date_entretien": {"$gte": now}
-        },
-        {"_id": 0}
-    ).sort("date_entretien", 1).limit(limit)
-    
-    interviews = await cursor.to_list(length=limit)
-    
-    # Enrichir
-    enriched = []
-    for interview in interviews:
-        application = await db.applications.find_one(
-            {"id": interview["candidature_id"]},
-            {"_id": 0, "entreprise": 1, "poste": 1}
-        )
-        
-        interview["entreprise"] = application["entreprise"] if application else "N/A"
-        interview["poste"] = application["poste"] if application else "N/A"
-        
-        time_remaining, urgency = calculate_time_remaining(interview["date_entretien"])
-        interview["time_remaining"] = time_remaining
-        interview["urgency"] = urgency
-        
-        enriched.append(interview)
-    
-    return enriched
-
+async def get_upcoming_interviews(limit: int = Query(5, ge=1, le=20),
+                                  current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    items = await interview_service.upcoming_interviews(db, current_user["user_id"], limit)
+    return _rest_result([_legacy(item, current_user["user_id"]) for item in items])
 
 @router.post("", response_model=InterviewResponse, status_code=status.HTTP_201_CREATED)
-async def create_interview(
-    interview_data: InterviewCreate,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Crée un nouvel entretien"""
-    # Vérifier que la candidature existe et appartient à l'utilisateur
-    application = await db.applications.find_one(
-        {"id": interview_data.candidature_id, "user_id": current_user["user_id"], "deleting": {"$ne": True}}
-    )
-    
-    if not application:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Candidature non trouvée"
-        )
-    
-    interview = Interview(
-        **interview_data.model_dump(),
-        user_id=current_user["user_id"]
-    )
-    
-    interview_dict = interview.model_dump()
-    # Convertir les datetimes et enums
-    interview_dict['date_entretien'] = interview_dict['date_entretien'].isoformat()
-    interview_dict['created_at'] = interview_dict['created_at'].isoformat()
-    interview_dict['statut'] = interview_dict['statut'].value if hasattr(interview_dict['statut'], 'value') else interview_dict['statut']
-    interview_dict['type_entretien'] = interview_dict['type_entretien'].value if hasattr(interview_dict['type_entretien'], 'value') else interview_dict['type_entretien']
-    interview_dict['format_entretien'] = interview_dict['format_entretien'].value if hasattr(interview_dict['format_entretien'], 'value') else interview_dict['format_entretien']
-    
-    await db.interviews.insert_one(interview_dict)
-    # Une suppression peut avoir commencé entre la vérification et l'insertion.
-    still_active = await db.applications.find_one(
-        {"id": interview_data.candidature_id, "user_id": current_user["user_id"],
-         "deleting": {"$ne": True}}, {"_id": 1}
-    )
-    if not still_active:
-        await db.interviews.delete_one({"id": interview.id, "user_id": current_user["user_id"]})
-        raise HTTPException(status_code=404, detail="Candidature non trouvée")
-    
-    # Retourner enrichi
-    response = interview.model_dump()
-    response["entreprise"] = application["entreprise"]
-    response["poste"] = application["poste"]
-    
-    time_remaining, urgency = calculate_time_remaining(interview.date_entretien)
-    response["time_remaining"] = time_remaining
-    response["urgency"] = urgency
-    
-    return response
-
+async def create_interview(interview_data: InterviewCreate,
+                           current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    try:
+        result, _ = await interview_service.create_interview(db, current_user["user_id"], interview_data)
+        return _legacy(result, current_user["user_id"])
+    except interview_service.InterviewError as exc:
+        _http_error(exc)
 
 @router.get("/{interview_id}", response_model=InterviewResponse)
-async def get_interview(
-    interview_id: str,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Récupère un entretien par ID"""
-    interview = await db.interviews.find_one(
-        {"id": interview_id, "user_id": current_user["user_id"]},
-        {"_id": 0}
-    )
-    
-    if not interview:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entretien non trouvé"
-        )
-    
-    # Enrichir
-    application = await db.applications.find_one(
-        {"id": interview["candidature_id"]},
-        {"_id": 0, "entreprise": 1, "poste": 1}
-    )
-    
-    interview["entreprise"] = application["entreprise"] if application else "N/A"
-    interview["poste"] = application["poste"] if application else "N/A"
-    
-    if interview["statut"] == "planned":
-        time_remaining, urgency = calculate_time_remaining(interview["date_entretien"])
-        interview["time_remaining"] = time_remaining
-        interview["urgency"] = urgency
-    
-    return interview
-
+async def get_interview(interview_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    try:
+        return _rest_result(_legacy(await interview_service.get_interview(db, current_user["user_id"], interview_id), current_user["user_id"]))
+    except interview_service.InterviewError as exc:
+        _http_error(exc)
 
 @router.put("/{interview_id}", response_model=InterviewResponse)
-async def update_interview(
-    interview_id: str,
-    interview_update: InterviewUpdate,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Met à jour un entretien"""
-    existing = await db.interviews.find_one(
-        {"id": interview_id, "user_id": current_user["user_id"]}
-    )
-    
-    if not existing:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entretien non trouvé"
-        )
-    
-    update_data = {k: v for k, v in interview_update.model_dump().items() if v is not None}
-    
-    if not update_data:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Aucune donnée à mettre à jour"
-        )
-    
-    # Convertir les enums et dates
-    for key, value in update_data.items():
-        if hasattr(value, 'value'):
-            update_data[key] = value.value
-        elif isinstance(value, datetime):
-            update_data[key] = value.isoformat()
-    
-    await db.interviews.update_one(
-        {"id": interview_id},
-        {"$set": update_data}
-    )
-    
-    return await get_interview(interview_id, current_user, db)
-
+async def update_interview(interview_id: str, interview_update: InterviewUpdate,
+                           current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    try:
+        return _rest_result(_legacy(await interview_service.update_interview(db, current_user["user_id"], interview_id, interview_update), current_user["user_id"]))
+    except interview_service.InterviewError as exc:
+        _http_error(exc)
 
 @router.delete("/{interview_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_interview(
-    interview_id: str,
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Supprime un entretien"""
-    result = await db.interviews.delete_one(
-        {"id": interview_id, "user_id": current_user["user_id"]}
-    )
-    
-    if result.deleted_count == 0:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Entretien non trouvé"
-        )
-
+async def delete_interview(interview_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    try:
+        await interview_service.delete_interview(db, current_user["user_id"], interview_id)
+    except interview_service.InterviewError as exc:
+        _http_error(exc)
 
 @router.delete("/reset/all", status_code=status.HTTP_200_OK)
-async def reset_all_interviews(
-    current_user: dict = Depends(get_current_user),
-    db = Depends(get_db)
-):
-    """Supprime TOUS les entretiens de l'utilisateur"""
-    user_id = current_user["user_id"]
-    
-    result = await db.interviews.delete_many({"user_id": user_id})
-    
-    return {
-        "success": True,
-        "deleted_interviews": result.deleted_count,
-        "message": f"{result.deleted_count} entretien(s) supprimé(s)"
-    }
+async def reset_all_interviews(current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    result = await db.interviews.delete_many({"user_id": current_user["user_id"]})
+    return {"success": True, "deleted_interviews": result.deleted_count,
+            "message": f"{result.deleted_count} entretien(s) supprimé(s)"}
