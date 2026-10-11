@@ -39,12 +39,14 @@ GRANTS = "oauth_grants"
 TOKENS = "oauth_tokens"
 
 LEGACY_SCOPES = ("watch:read", "opportunities:write")
-SUPPORTED_SCOPES = (*LEGACY_SCOPES, "applications:read", "applications:write")
+SUPPORTED_SCOPES = (*LEGACY_SCOPES, "applications:read", "applications:write", "interviews:read", "interviews:write")
 SCOPE_DESCRIPTIONS = {
     "watch:read": "Lire tes critères de veille, l'état du service et un résumé de tes opportunités récentes",
     "opportunities:write": "Ajouter de nouvelles opportunités (statut « nouveau ») et le compte-rendu de chaque veille",
     "applications:read": "Lire toutes les données de tes candidatures, y compris notes et contacts",
     "applications:write": "Créer, modifier et supprimer définitivement tes candidatures et leurs entretiens associés",
+    "interviews:read": "Lire tes entretiens et leur historique de statuts",
+    "interviews:write": "Créer, modifier et supprimer tes entretiens",
 }
 ACCESS_PREFIX = "jt_oat_"
 REFRESH_PREFIX = "jt_ort_"

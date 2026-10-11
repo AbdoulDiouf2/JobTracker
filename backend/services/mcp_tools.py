@@ -1,5 +1,5 @@
 """
-JobTracker SaaS - Outils MCP métier de la veille ChatGPT (Lot 2, spécification §4 et §5)
+JobTracker SaaS - Catalogue des outils MCP métier.
 
 Catalogue indépendant du SDK `mcp` : définitions (schémas, scopes, annotations) et
 exécution. Le transport (`utils/mcp_transport.py`) les expose et vérifie le scope AVANT
@@ -9,7 +9,7 @@ l'appel ; ici, chaque outil :
   validation stricte, quotas atomiques, déduplication et idempotence ;
 - répond `{"error": {...}}` (isError) sans jamais renvoyer l'écho des valeurs reçues.
 
-JobTracker ne cherche AUCUNE offre : ChatGPT effectue les recherches et envoie ses résultats.
+JobTracker ne cherche aucune offre ; les clients de veille envoient leurs résultats.
 """
 
 import logging
@@ -19,13 +19,14 @@ from typing import Awaitable, Callable, Optional
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pymongo.errors import PyMongoError
 
-from services import mcp_application_service, opportunity_service, watch_ingest_service, watch_preferences_service
+from services import mcp_application_service, mcp_interview_service, opportunity_service, watch_ingest_service, watch_preferences_service
 from services.watch_ingest_service import WatchNotEnabled, WatchRequestError
 
 logger = logging.getLogger("jobtracker.mcp")
 
 READ, WRITE = "watch:read", "opportunities:write"
 APP_READ, APP_WRITE = "applications:read", "applications:write"
+INTERVIEW_READ, INTERVIEW_WRITE = "interviews:read", "interviews:write"
 
 RUN_ID_HELP = (
     "run_id : `veille-AAAAMMJJ-HHMM-prog` (tâche programmée ; HHMM = heure PRÉVUE du créneau) ou "
@@ -54,6 +55,7 @@ class ToolSpec:
     idempotent: bool
     handler: Callable[..., Awaitable[dict]]
     destructive: bool = False
+    output_schema: Optional[dict] = None
 
 
 def _details(error: ValidationError) -> list:
@@ -118,7 +120,7 @@ async def _application_action(db, user_id: str, arguments: dict, client_id: str,
 
 
 # ============================================
-# SCHÉMAS D'ENTRÉE (exposés à ChatGPT ; la validation réelle est côté serveur)
+# SCHÉMAS D'ENTRÉE (exposés aux clients MCP ; la validation réelle est côté serveur)
 # ============================================
 
 _EMPTY = {"type": "object", "properties": {}, "additionalProperties": False}
@@ -303,6 +305,123 @@ TOOLS = [
     ),
 ]
 
+_INTERVIEW_ID = {"type": "string", "minLength": 1}
+_INTERVIEW_DATE = {"type": "string", "format": "date-time",
+                   "pattern": r"(?:Z|z|[+-][0-9]{2}:[0-9]{2})$"}
+_INTERVIEW_TYPE = {"type": "string", "enum": ["rh", "technical", "manager", "final", "other"]}
+_INTERVIEW_FORMAT = {"type": "string", "enum": ["phone", "video", "in_person"]}
+_INTERVIEW_STATUS = {"type": "string", "enum": ["planned", "completed", "cancelled"]}
+_INTERVIEW_CREATE_FIELDS = {
+    "candidature_id": _INTERVIEW_ID,
+    "date_entretien": _INTERVIEW_DATE,
+    "type_entretien": _INTERVIEW_TYPE,
+    "format_entretien": _INTERVIEW_FORMAT,
+    "lieu_entretien": _STR(500),
+    "interviewer": _STR(200),
+    "commentaire": _STR(2000),
+}
+_INTERVIEW_CHANGES = {key: value for key, value in _INTERVIEW_CREATE_FIELDS.items()
+                      if key != "candidature_id"}
+_INTERVIEW_CHANGES["statut"] = _INTERVIEW_STATUS
+for _nullable_interview in ("lieu_entretien", "interviewer", "commentaire"):
+    _INTERVIEW_CHANGES[_nullable_interview] = {
+        "anyOf": [_INTERVIEW_CHANGES[_nullable_interview], {"type": "null"}]}
+
+_NULLABLE_TEXT = {"type": ["string", "null"]}
+_INTERVIEW_OUTPUT = {"type": "object", "additionalProperties": False,
+    "required": ["id", "candidature_id", "entreprise", "poste", "date_entretien",
+                 "type_entretien", "format_entretien", "lieu_entretien", "interviewer",
+                 "commentaire", "statut", "created_at", "time_remaining", "urgency"],
+    "properties": {
+        "id": _INTERVIEW_ID, "candidature_id": _INTERVIEW_ID,
+        "entreprise": _NULLABLE_TEXT, "poste": _NULLABLE_TEXT,
+        "date_entretien": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+        "type_entretien": _INTERVIEW_TYPE, "format_entretien": _INTERVIEW_FORMAT,
+        "lieu_entretien": _NULLABLE_TEXT, "interviewer": _NULLABLE_TEXT,
+        "commentaire": _NULLABLE_TEXT, "statut": _INTERVIEW_STATUS,
+        "created_at": {"anyOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+        "time_remaining": _NULLABLE_TEXT,
+        "urgency": {"anyOf": [{"type": "string", "enum": ["danger", "warning", "info", "normal", "passed"]},
+                              {"type": "null"}]},
+        "date_warning": {"type": "string", "const": "invalid_historical_date"},
+    }}
+_INTERVIEW_DETAIL_OUTPUT = {**_INTERVIEW_OUTPUT,
+    "required": [*_INTERVIEW_OUTPUT["required"], "status_history"],
+    "properties": {**_INTERVIEW_OUTPUT["properties"], "status_history": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False,
+        "required": ["event_id", "event_type", "previous_status", "new_status", "changed_at", "source", "client_id"],
+        "properties": {"event_id": {"type": "string"},
+            "event_type": {"type": "string", "enum": ["created", "status_changed"]},
+            "previous_status": {"anyOf": [_INTERVIEW_STATUS, {"type": "null"}]},
+            "new_status": _INTERVIEW_STATUS,
+            "changed_at": {"type": "string", "format": "date-time"},
+            "source": {"type": "string"}, "client_id": _NULLABLE_TEXT}}}}}
+_OUTPUT_LIST = {"type": "object", "additionalProperties": False,
+    "required": ["items", "page", "per_page", "total"],
+    "properties": {"items": {"type": "array", "items": _INTERVIEW_OUTPUT},
+                   "page": {"type": "integer", "minimum": 1},
+                   "per_page": {"type": "integer", "minimum": 1, "maximum": 100},
+                   "total": {"type": "integer", "minimum": 0}}}
+_OUTPUT_DETAIL = {"type": "object", "additionalProperties": False,
+                  "required": ["interview"], "properties": {"interview": _INTERVIEW_DETAIL_OUTPUT}}
+_OUTPUT_CREATE = {"type": "object", "additionalProperties": False,
+    "required": ["interview", "created", "replayed"],
+    "properties": {"interview": _INTERVIEW_OUTPUT, "created": {"type": "boolean"},
+                   "replayed": {"type": "boolean"}}}
+_OUTPUT_UPDATE = {"type": "object", "additionalProperties": False,
+                  "required": ["interview"], "properties": {"interview": _INTERVIEW_OUTPUT}}
+_OUTPUT_DELETE = {"type": "object", "additionalProperties": False,
+    "required": ["deleted", "interview_id"],
+    "properties": {"deleted": {"type": "boolean", "const": True}, "interview_id": _INTERVIEW_ID}}
+
+TOOLS.extend([
+    ToolSpec(
+        name="list_interviews", title="JobTracker : lister les entretiens",
+        description="Liste paginée des entretiens du compte, avec filtres et ordre chronologique.",
+        scope=INTERVIEW_READ, input_schema={"type": "object", "additionalProperties": False,
+            "properties": {"status": _INTERVIEW_STATUS, "interview_type": _INTERVIEW_TYPE,
+                "interview_format": _INTERVIEW_FORMAT, "candidature_id": _INTERVIEW_ID,
+                "page": {"type": "integer", "minimum": 1, "default": 1},
+                "per_page": {"type": "integer", "minimum": 1, "maximum": 100, "default": 20}}},
+        read_only=True, idempotent=True, handler=mcp_interview_service.list_interviews,
+        output_schema=_OUTPUT_LIST),
+    ToolSpec(
+        name="get_interview", title="JobTracker : lire un entretien",
+        description="Lit un entretien du compte et son historique de statuts.",
+        scope=INTERVIEW_READ, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["interview_id"], "properties": {"interview_id": _INTERVIEW_ID}},
+        read_only=True, idempotent=True, handler=mcp_interview_service.get_interview,
+        output_schema=_OUTPUT_DETAIL),
+    ToolSpec(
+        name="create_interview", title="JobTracker : créer un entretien",
+        description="Crée un entretien pour une candidature du compte ; request_id permet un rejeu sûr.",
+        scope=INTERVIEW_WRITE, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["interview"], "properties": {
+                "interview": {"type": "object", "additionalProperties": False,
+                    "required": ["candidature_id", "date_entretien", "type_entretien", "format_entretien"],
+                    "properties": _INTERVIEW_CREATE_FIELDS},
+                "request_id": {"type": "string", "minLength": 1, "maxLength": 128}}},
+        read_only=False, idempotent=False, handler=mcp_interview_service.create_interview,
+        output_schema=_OUTPUT_CREATE),
+    ToolSpec(
+        name="update_interview", title="JobTracker : modifier un entretien",
+        description="Modifie partiellement un entretien du compte ; conserve l'historique des statuts.",
+        scope=INTERVIEW_WRITE, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["interview_id", "changes"], "properties": {
+                "interview_id": _INTERVIEW_ID,
+                "changes": {"type": "object", "additionalProperties": False,
+                    "minProperties": 1, "properties": _INTERVIEW_CHANGES}}},
+        read_only=False, idempotent=False, handler=mcp_interview_service.update_interview,
+        output_schema=_OUTPUT_UPDATE),
+    ToolSpec(
+        name="delete_interview", title="JobTracker : supprimer un entretien",
+        description="Supprime définitivement un entretien du compte, sans supprimer sa candidature.",
+        scope=INTERVIEW_WRITE, input_schema={"type": "object", "additionalProperties": False,
+            "required": ["interview_id"], "properties": {"interview_id": _INTERVIEW_ID}},
+        read_only=False, idempotent=False, destructive=True, handler=mcp_interview_service.delete_interview,
+        output_schema=_OUTPUT_DELETE),
+])
+
 TOOLS_BY_NAME = {t.name: t for t in TOOLS}
 
 
@@ -338,6 +457,10 @@ async def call_tool(db, user_id: str, name: str, arguments, client_id: Optional[
         error = {"code": "watch_not_enabled"}
     except mcp_application_service.ApplicationToolError as e:
         error = {"code": e.code, "details": e.details}
+    except mcp_interview_service.InterviewToolError as e:
+        error = {"code": e.code, "details": e.details}
+    except mcp_interview_service.interview_service.InterviewError as e:
+        error = {"code": e.code}
     except PyMongoError as e:
         logger.warning("mcp_tool name=%s user_id=%s db_error=%s", name, user_id, type(e).__name__)
         error = {"code": "temporarily_unavailable", "retryable": True}

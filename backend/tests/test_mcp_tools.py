@@ -33,7 +33,8 @@ MCP_HEADERS = {"Accept": "application/json, text/event-stream", "Content-Type": 
 BOTH = ("watch:read", "opportunities:write")
 BUSINESS = ["get_watch_preferences", "create_opportunities", "list_recent_opportunities",
             "get_watch_status", "report_watch_run", "list_applications", "get_application",
-            "create_application", "update_application", "delete_application"]
+            "create_application", "update_application", "delete_application", "list_interviews",
+            "get_interview", "create_interview", "update_interview", "delete_interview"]
 
 
 @pytest.fixture(autouse=True)
