@@ -301,6 +301,10 @@ async def create_calendar_event(
     db = Depends(get_db)
 ):
     """Create a new calendar event"""
+    if event.interview_id and not await db.interviews.find_one(
+        {"id": event.interview_id, "user_id": current_user["user_id"]}, {"_id": 1}
+    ):
+        raise HTTPException(status_code=404, detail="Entretien non trouvé")
     creds = await get_google_credentials(current_user["user_id"], db)
     
     if not creds:
@@ -355,10 +359,12 @@ async def create_calendar_event(
     
     # If linked to interview, save the Google event ID
     if event.interview_id:
-        await db.interviews.update_one(
-            {"id": event.interview_id},
+        updated = await db.interviews.update_one(
+            {"id": event.interview_id, "user_id": current_user["user_id"]},
             {"$set": {"google_calendar_event_id": created["id"]}}
         )
+        if not updated.matched_count:
+            raise HTTPException(status_code=409, detail="Entretien supprimé pendant la synchronisation")
     
     return CalendarEventResponse(
         id=created["id"],
@@ -438,7 +444,7 @@ async def sync_interview_to_calendar(
     
     # Get application for context
     application = await db.applications.find_one(
-        {"id": interview.get("candidature_id")},
+        {"id": interview.get("candidature_id"), "user_id": user_id},
         {"_id": 0, "entreprise": 1, "poste": 1}
     )
     
@@ -476,7 +482,7 @@ Géré par JobTracker"""
         description=description,
         start_time=start_time,
         end_time=end_time,
-        location=interview.get("lieu_lien"),
+        location=interview.get("lieu_entretien") or interview.get("lieu_lien"),
         interview_id=interview_id
     )
     

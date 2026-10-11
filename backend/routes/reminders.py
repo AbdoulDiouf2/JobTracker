@@ -3,12 +3,14 @@ JobTracker SaaS - Système de Rappels Automatiques
 Gère l'envoi de notifications push pour les entretiens à venir
 """
 
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Request
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 import uuid
 import os
 import json
+import hmac
+from config import settings, secret_problems
 
 router = APIRouter(prefix="/reminders", tags=["Reminders"])
 
@@ -114,7 +116,7 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
     }).to_list(100)
     
     for interview in interviews:
-        interview_id = str(interview.get("_id", interview.get("id", "")))
+        interview_id = str(interview.get("id", interview.get("_id", "")))
         date_str = interview.get("date_entretien")
         
         if not date_str:
@@ -146,10 +148,11 @@ async def process_reminders_for_user(db, user_id: str) -> dict:
             candidature_id = interview.get("candidature_id") or interview.get("application_id")
             if candidature_id:
                 try:
-                    from bson import ObjectId
-                    candidature = await db.applications.find_one({"_id": ObjectId(candidature_id)})
+                    candidature = await db.applications.find_one({"id": candidature_id, "user_id": user_id})
                     if not candidature:
-                        candidature = await db.applications.find_one({"id": candidature_id})
+                        from bson import ObjectId
+                        if ObjectId.is_valid(candidature_id):
+                            candidature = await db.applications.find_one({"_id": ObjectId(candidature_id), "user_id": user_id})
                     if candidature:
                         entreprise = entreprise or candidature.get("entreprise", "Entreprise")
                         poste = poste or candidature.get("poste", "Poste")
@@ -251,14 +254,25 @@ async def process_my_reminders(
 
 @router.post("/process-all")
 async def process_all_reminders(
+    request: Request,
     background_tasks: BackgroundTasks,
     db = Depends(get_db)
 ):
     """
     Traite les rappels pour TOUS les utilisateurs.
     Endpoint à appeler via un cron job externe (toutes les 15 minutes par exemple).
-    Note: Pas de protection auth pour permettre l'appel par cron.
+    Le cron doit fournir Authorization: Bearer <CRON_SECRET>.
     """
+    secret = settings.CRON_SECRET
+    if secret_problems(secret):
+        raise HTTPException(status_code=503, detail="Traitement des rappels indisponible")
+    scheme, separator, token = request.headers.get("authorization", "").partition(" ")
+    if scheme.lower() != "bearer" or not separator or not hmac.compare_digest(token, secret):
+        raise HTTPException(
+            status_code=401,
+            detail="Non autorisé",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     # Récupérer tous les utilisateurs ayant des entretiens planifiés
     pipeline = [
         {"$match": {"statut": "planned"}},
@@ -305,11 +319,8 @@ async def get_reminder_status(
     })
     
     # Prochains entretiens
-    upcoming = await db.interviews.find({
-        "user_id": current_user["user_id"],
-        "statut": "planned",
-        "date_entretien": {"$gte": now.isoformat()}
-    }).sort("date_entretien", 1).limit(5).to_list(5)
+    from services.interview_service import upcoming_interviews
+    upcoming = await upcoming_interviews(db, current_user["user_id"], 5)
     
     upcoming_list = []
     for interview in upcoming:
@@ -321,10 +332,12 @@ async def get_reminder_status(
                 else:
                     interview_date = date_str
                 
+                if interview_date.tzinfo is None:
+                    interview_date = interview_date.replace(tzinfo=timezone.utc)
                 hours_until = (interview_date - now).total_seconds() / 3600
                 
                 upcoming_list.append({
-                    "id": str(interview.get("_id", interview.get("id", ""))),
+                    "id": str(interview.get("id", interview.get("_id", ""))),
                     "entreprise": interview.get("entreprise"),
                     "poste": interview.get("poste"),
                     "date": date_str,

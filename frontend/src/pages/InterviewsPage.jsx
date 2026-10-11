@@ -16,6 +16,7 @@ import {
   ChevronLeft, ChevronRight, LayoutGrid, CalendarDays, ChevronDown, X, CalendarPlus, Search
 } from 'lucide-react';
 import { useInterviews } from '../hooks/useInterviews';
+import { toInterviewLocalInput, fromInterviewLocalInput, hasValidInterviewDate, formatInterviewDate } from '../lib/interviewDate';
 import { useApplications } from '../hooks/useApplications';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../i18n';
@@ -125,9 +126,8 @@ const InterviewCard = ({ interview, onEdit, onDelete, onViewDetails, onStatusCha
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2 text-slate-300">
           <Calendar size={14} className="text-slate-500" />
-          {format(new Date(interview.date_entretien), 'EEEE dd MMMM yyyy à HH:mm', { 
-            locale: language === 'fr' ? fr : enUS 
-          })}
+          {formatInterviewDate(interview.date_entretien, 'EEEE dd MMMM yyyy à HH:mm',
+            language === 'fr' ? fr : enUS, language === 'fr' ? 'Date invalide' : 'Invalid date')}
         </div>
         
         <div className="flex items-center gap-4 text-slate-400">
@@ -220,7 +220,7 @@ const CalendarView = ({ interviews, currentDate, onDateChange, onDayClick, onInt
   }[language];
 
   const getInterviewsForDay = (day) => {
-    return interviews.filter(i => isSameDay(new Date(i.date_entretien), day));
+    return interviews.filter(i => hasValidInterviewDate(i.date_entretien) && isSameDay(new Date(i.date_entretien), day));
   };
 
   const navigatePrev = () => {
@@ -443,6 +443,7 @@ const CalendarView = ({ interviews, currentDate, onDateChange, onDayClick, onInt
           const monthStart = startOfMonth(month);
           const monthEnd = endOfMonth(month);
           const monthInterviews = interviews.filter(i => {
+            if (!hasValidInterviewDate(i.date_entretien)) return false;
             const date = new Date(i.date_entretien);
             return date >= monthStart && date <= monthEnd;
           });
@@ -638,9 +639,8 @@ const InterviewDetailModal = ({ interview, isOpen, onClose, onEdit, onStatusChan
             <div className="flex items-center gap-3 text-gold">
               <Calendar size={20} className="flex-shrink-0" />
               <span className="font-medium text-lg">
-                {format(new Date(interview.date_entretien), "EEEE dd MMMM yyyy 'à' HH:mm", { 
-                  locale: language === 'fr' ? fr : enUS 
-                })}
+                {formatInterviewDate(interview.date_entretien, "EEEE dd MMMM yyyy 'à' HH:mm",
+                  language === 'fr' ? fr : enUS, language === 'fr' ? 'Date invalide' : 'Invalid date')}
               </span>
             </div>
             {interview.time_remaining && interview.statut === 'planned' && (
@@ -762,11 +762,14 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
     if (editingInterview) {
       Object.entries(editingInterview).forEach(([key, value]) => {
         if (key === 'date_entretien' && value) {
-          setValue(key, value.slice(0, 16));
+          setValue(key, toInterviewLocalInput(value));
         } else if (value) {
           setValue(key, value);
         }
       });
+      if (!hasValidInterviewDate(editingInterview.date_entretien)) {
+        setValue('date_entretien', '');
+      }
       // Find and set the selected application
       const app = applications.find(a => a.id === editingInterview.candidature_id);
       if (app) {
@@ -777,7 +780,7 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
       reset({
         type_entretien: 'technical',
         format_entretien: 'video',
-        date_entretien: new Date().toISOString().slice(0, 16)
+        date_entretien: format(new Date(), "yyyy-MM-dd'T'HH:mm")
       });
       if (prefillApp) {
         setSelectedApp(prefillApp);
@@ -800,7 +803,7 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
   const handleFormSubmit = (data) => {
     const formattedData = {
       ...data,
-      date_entretien: new Date(data.date_entretien).toISOString()
+      date_entretien: fromInterviewLocalInput(data.date_entretien)
     };
     onSubmit(formattedData);
   };
@@ -887,6 +890,7 @@ const InterviewFormModal = ({ isOpen, onClose, onSubmit, editingInterview, prefi
             <Input
               {...register('date_entretien')}
               type="datetime-local"
+              required
               className="bg-slate-900/50 border-slate-700 text-white"
             />
           </div>

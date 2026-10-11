@@ -109,21 +109,13 @@ async def list_applications(
     enriched_apps = []
     for app in applications:
         # Compter les entretiens
-        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"]})
+        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"], "user_id": current_user["user_id"]})
         
         # Prochain entretien
-        next_interview = await db.interviews.find_one(
-            {
-                "candidature_id": app["id"],
-                "statut": "planned",
-                "date_entretien": {"$gte": datetime.now(timezone.utc).isoformat()}
-            },
-            {"_id": 0, "date_entretien": 1},
-            sort=[("date_entretien", 1)]
-        )
+        from services.interview_service import next_interview_date
         
         app["interviews_count"] = interviews_count
-        app["next_interview"] = next_interview["date_entretien"] if next_interview else None
+        app["next_interview"] = await next_interview_date(db, current_user["user_id"], app["id"])
 
         enriched_apps.append(app)
     
@@ -189,21 +181,13 @@ async def get_application(
         )
     
     # Compter les entretiens
-    interviews_count = await db.interviews.count_documents({"candidature_id": application_id})
+    interviews_count = await db.interviews.count_documents({"candidature_id": application_id, "user_id": current_user["user_id"]})
     
     # Prochain entretien
-    next_interview = await db.interviews.find_one(
-        {
-            "candidature_id": application_id,
-            "statut": "planned",
-            "date_entretien": {"$gte": datetime.now(timezone.utc).isoformat()}
-        },
-        {"_id": 0, "date_entretien": 1},
-        sort=[("date_entretien", 1)]
-    )
+    from services.interview_service import next_interview_date
     
     application["interviews_count"] = interviews_count
-    application["next_interview"] = next_interview["date_entretien"] if next_interview else None
+    application["next_interview"] = await next_interview_date(db, current_user["user_id"], application_id)
     
     # Calculer si une relance est recommandée
     needs_followup = False
@@ -388,7 +372,7 @@ async def list_favorites(
     
     # Enrichir avec les infos d'entretiens
     for app in favorites:
-        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"]})
+        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"], "user_id": current_user["user_id"]})
         app["interviews_count"] = interviews_count
         app["next_interview"] = None
     

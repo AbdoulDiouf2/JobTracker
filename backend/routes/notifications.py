@@ -180,14 +180,9 @@ async def get_upcoming_reminders(
     now = datetime.now(timezone.utc)
     in_24h = now + timedelta(hours=24)
     
-    interviews = await db.interviews.find({
-        "user_id": current_user["user_id"],
-        "statut": "planned",
-        "date_entretien": {
-            "$gte": now.isoformat(),
-            "$lte": in_24h.isoformat()
-        }
-    }, {"_id": 0}).sort("date_entretien", 1).to_list(10)
+    from services.interview_service import find_interviews_between
+    interviews = await find_interviews_between(db, current_user["user_id"], now, in_24h,
+                                               limit=10, end_inclusive=True)
     
     return interviews
 
@@ -219,16 +214,16 @@ async def generate_reminders(
         in_24h = now + timedelta(hours=24)
         in_25h = now + timedelta(hours=25)
         
-        interviews_24h = await db.interviews.find({
-            "user_id": current_user["user_id"],
-            "statut": "planned",
-            "date_entretien": {
-                "$gte": in_24h.isoformat(),
-                "$lte": in_25h.isoformat()
-            }
-        }, {"_id": 0}).to_list(100)
+        from services.interview_service import find_interviews_between
+        interviews_24h = await find_interviews_between(db, current_user["user_id"], in_24h, in_25h,
+                                                       limit=100, end_inclusive=True)
         
         for interview in interviews_24h:
+            application = await db.applications.find_one(
+                {"id": interview.get("candidature_id"), "user_id": current_user["user_id"]},
+                {"entreprise": 1, "poste": 1})
+            entreprise = (application or {}).get("entreprise") or interview.get("entreprise") or "JobTracker"
+            poste = (application or {}).get("poste") or interview.get("poste") or ""
             # Check if notification already exists
             existing = await db.notifications.find_one({
                 "user_id": current_user["user_id"],
@@ -241,8 +236,8 @@ async def generate_reminders(
                     "id": str(uuid.uuid4()),
                     "user_id": current_user["user_id"],
                     "type": "interview_reminder_24h",
-                    "title": f"🔔 Entretien dans 24h - {interview['entreprise']}",
-                    "message": f"Votre entretien {interview.get('type_entretien', '')} chez {interview['entreprise']} pour le poste {interview['poste']} est prévu demain.",
+                    "title": f"🔔 Entretien dans 24h - {entreprise}",
+                    "message": f"Votre entretien {interview.get('type_entretien', '')} chez {entreprise} pour le poste {poste} est prévu demain.",
                     "interview_id": interview["id"],
                     "read": False,
                     "created_at": now.isoformat()
@@ -254,16 +249,14 @@ async def generate_reminders(
         in_1h = now + timedelta(hours=1)
         in_2h = now + timedelta(hours=2)
         
-        interviews_1h = await db.interviews.find({
-            "user_id": current_user["user_id"],
-            "statut": "planned",
-            "date_entretien": {
-                "$gte": in_1h.isoformat(),
-                "$lte": in_2h.isoformat()
-            }
-        }, {"_id": 0}).to_list(100)
+        interviews_1h = await find_interviews_between(db, current_user["user_id"], in_1h, in_2h,
+                                                      limit=100, end_inclusive=True)
         
         for interview in interviews_1h:
+            application = await db.applications.find_one(
+                {"id": interview.get("candidature_id"), "user_id": current_user["user_id"]},
+                {"entreprise": 1})
+            entreprise = (application or {}).get("entreprise") or interview.get("entreprise") or "JobTracker"
             existing = await db.notifications.find_one({
                 "user_id": current_user["user_id"],
                 "interview_id": interview["id"],
@@ -275,8 +268,8 @@ async def generate_reminders(
                     "id": str(uuid.uuid4()),
                     "user_id": current_user["user_id"],
                     "type": "interview_reminder_1h",
-                    "title": f"⚠️ Entretien dans 1h - {interview['entreprise']}",
-                    "message": f"Votre entretien {interview.get('type_entretien', '')} chez {interview['entreprise']} commence bientôt !",
+                    "title": f"⚠️ Entretien dans 1h - {entreprise}",
+                    "message": f"Votre entretien {interview.get('type_entretien', '')} chez {entreprise} commence bientôt !",
                     "interview_id": interview["id"],
                     "read": False,
                     "created_at": now.isoformat()
