@@ -52,8 +52,15 @@ async def test_crud_filters_and_isolation(api, db):
 
 async def test_scopes_and_create_validation(api, db):
     old = await owner(db, scopes=("watch:read", "opportunities:write"))
+    old_grant = await db[oauth.GRANTS].find_one({"id": old["grant_id"]})
+    await oauth.set_client_scopes(db, old_grant["client_id"], list(oauth.SUPPORTED_SCOPES))
     response = await rpc(api, old["token"], "tools/call", {"name": "list_applications", "arguments": {}})
     assert response.status_code == 403
+    assert response.json() == {"error": "insufficient_scope", "scope": "applications:read"}
+    assert 'scope="applications:read"' in response.headers["www-authenticate"]
+    assert 'resource_metadata="https://jobtracker.maadec.com/.well-known/oauth-protected-resource/api/mcp"' in response.headers["www-authenticate"]
+    assert (await db[oauth.GRANTS].find_one({"id": old["grant_id"]}))["scopes"] == [
+        "watch:read", "opportunities:write"]
     alice = await owner(db, scopes=APP_SCOPES, watch_enabled=False)
     error, result = await call(api, alice, "create_application", {
         "status": "pending", "application": {"entreprise": "Acme", "poste": "Analyst"}})

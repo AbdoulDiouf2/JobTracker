@@ -107,6 +107,10 @@ async def test_catalogue_annotations_and_schemas(api, db):
     who = await owner(db)
     tools = {t["name"]: t for t in (await rpc(api, who["token"], "tools/list")).json()["result"]["tools"]}
     assert list(tools) == ["jobtracker_ping"] + BUSINESS
+    assert tools["jobtracker_ping"]["securitySchemes"] == [{"type": "oauth2", "scopes": ["watch:read"]}]
+    for name in BUSINESS:
+        assert tools[name]["securitySchemes"] == [
+            {"type": "oauth2", "scopes": [mcp_tools.TOOLS_BY_NAME[name].scope]}]
     for name in ("get_watch_preferences", "list_recent_opportunities", "get_watch_status"):
         assert tools[name]["annotations"]["readOnlyHint"] is True
     for name in ("create_opportunities", "report_watch_run"):
@@ -359,6 +363,8 @@ async def test_scopes(api, db, granted, tool, allowed):
     else:
         assert r.status_code == 403 and r.json()["error"] == "insufficient_scope"
         assert 'error="insufficient_scope"' in r.headers["www-authenticate"]
+        assert 'error_description=' in r.headers["www-authenticate"]
+        assert f'scope="{mcp_tools.TOOLS_BY_NAME[tool].scope}"' in r.headers["www-authenticate"]
     assert await db.opportunities.count_documents({}) == 0
 
 
@@ -366,8 +372,17 @@ async def test_scope_rechecked_at_tool_level(api, db, monkeypatch):
     """Défense en profondeur : si le contrôle du transport était contourné, l'outil refuse."""
     monkeypatch.setattr(mcp_transport, "_missing_scope", lambda body, granted: None)
     who = await owner(db, scopes=("watch:read",))
-    error, out = await call(api, who, "create_opportunities", {"run_id": run_id(), "opportunities": [offer(1)]})
-    assert error is True and out["error"] == {"code": "insufficient_scope", "scope": "opportunities:write"}
+    r = await rpc(api, who["token"], "tools/call", {"name": "create_opportunities",
+                                                      "arguments": {"run_id": run_id(), "opportunities": [offer(1)]}})
+    result = r.json()["result"]
+    assert r.status_code == 200 and result["isError"] is True
+    assert json.loads(result["content"][0]["text"])["error"] == {
+        "code": "insufficient_scope", "scope": "opportunities:write"}
+    challenge = result["_meta"]["mcp/www_authenticate"]
+    assert len(challenge) == 1
+    assert 'error="insufficient_scope"' in challenge[0]
+    assert 'error_description=' in challenge[0]
+    assert 'scope="opportunities:write"' in challenge[0]
     assert await db.opportunities.count_documents({}) == 0
 
 

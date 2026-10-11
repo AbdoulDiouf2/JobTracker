@@ -86,11 +86,13 @@ def _build_server():
     from mcp import types
     from mcp.server import Server
 
-    def tool_result(payload: dict, is_error: bool) -> types.CallToolResult:
+    def tool_result(payload: dict, is_error: bool, required_scope: Optional[str] = None) -> types.CallToolResult:
         return types.CallToolResult(
             content=[types.TextContent(type="text", text=json.dumps(payload, ensure_ascii=False))],
             structured_content=None if is_error else payload,
             is_error=is_error,
+            meta={"mcp/www_authenticate": [_auth_challenge("insufficient_scope", required_scope)]}
+            if required_scope else None,
         )
 
     ping_tool = types.Tool(
@@ -128,7 +130,8 @@ def _build_server():
             return tool_result({"error": {"code": "unknown_tool"}}, True)
         # Défense en profondeur : identité et scope revérifiés au plus près de l'outil
         if principal is None or spec.scope not in principal.scopes:
-            return tool_result({"error": {"code": "insufficient_scope", "scope": spec.scope}}, True)
+            return tool_result({"error": {"code": "insufficient_scope", "scope": spec.scope}},
+                               True, required_scope=spec.scope)
         payload, is_error = await mcp_tools.call_tool(db_provider(), principal.user_id, spec.name, params.arguments,
                                                       client_id=principal.client_id)
         return tool_result(payload, is_error)
@@ -194,14 +197,21 @@ def _bearer(scope) -> Optional[str]:
     return None
 
 
-def _challenge(error: Optional[str] = None, scope_needed: Optional[str] = None) -> list:
-    """En-tête WWW-Authenticate (RFC 6750 / RFC 9728) : où trouver les métadonnées."""
+def _auth_challenge(error: Optional[str] = None, scope_needed: Optional[str] = None) -> str:
+    """Défi partagé entre HTTP et _meta MCP, sans dépendance à un jeton."""
     parts = []
     if error:
         parts.append(f'error="{error}"')
+    if error == "insufficient_scope":
+        parts.append('error_description="Additional authorization is required for this tool"')
     parts.append(f'resource_metadata="{oauth_service.resource_metadata_url()}"')
     parts.append(f'scope="{scope_needed or " ".join(oauth_service.SUPPORTED_SCOPES)}"')
-    return [(b"www-authenticate", ("Bearer " + ", ".join(parts)).encode())]
+    return "Bearer " + ", ".join(parts)
+
+
+def _challenge(error: Optional[str] = None, scope_needed: Optional[str] = None) -> list:
+    """En-tête WWW-Authenticate (RFC 6750 / RFC 9728) : où trouver les métadonnées."""
+    return [(b"www-authenticate", _auth_challenge(error, scope_needed).encode())]
 
 
 async def _read_body(receive) -> Optional[bytes]:
@@ -250,6 +260,69 @@ def _missing_scope(body: bytes, granted: tuple) -> Optional[str]:
     return None
 
 
+def _lists_tools(body: bytes) -> bool:
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    messages = payload if isinstance(payload, list) else [payload]
+    return any(isinstance(message, dict) and message.get("method") == "tools/list" for message in messages)
+
+
+def _add_tool_security(body: bytes) -> bytes:
+    """mcp 2.3.0 ne possède pas securitySchemes sur Tool : compléter le JSON émis."""
+    try:
+        payload = json.loads(body)
+    except (ValueError, UnicodeDecodeError):
+        return body
+    messages = payload if isinstance(payload, list) else [payload]
+    changed = False
+    for message in messages:
+        if not isinstance(message, dict) or not isinstance(message.get("result"), dict):
+            continue
+        tools = message["result"].get("tools")
+        if not isinstance(tools, list):
+            continue
+        for tool in tools:
+            if isinstance(tool, dict) and tool.get("name") in TOOL_SCOPES:
+                tool["securitySchemes"] = [{"type": "oauth2", "scopes": [TOOL_SCOPES[tool["name"]]]}]
+                changed = True
+    return json.dumps(payload, separators=(",", ":"), ensure_ascii=False).encode() if changed else body
+
+
+def _security_send(send):
+    """Complète uniquement la réponse JSON de tools/list, sans toucher au SDK ni aux erreurs HTTP."""
+    start = None
+    chunks = []
+    passthrough = False
+
+    async def send_with_security(event):
+        nonlocal start, passthrough
+        if event["type"] == "http.response.start":
+            content_type = next((value for name, value in event.get("headers", [])
+                                 if name.lower() == b"content-type"), b"")
+            passthrough = b"application/json" not in content_type.lower()
+            if passthrough:
+                await send(event)
+            else:
+                start = event
+            return
+        if event["type"] != "http.response.body" or passthrough:
+            await send(event)
+            return
+        chunks.append(event.get("body", b""))
+        if event.get("more_body", False):
+            return
+        body = _add_tool_security(b"".join(chunks))
+        headers = [(name, value) for name, value in start.get("headers", [])
+                   if name.lower() != b"content-length"]
+        headers.append((b"content-length", str(len(body)).encode()))
+        await send({**start, "headers": headers})
+        await send({"type": "http.response.body", "body": body})
+
+    return send_with_security
+
+
 class McpEndpoint:
     """Application ASGI montée sur `/api/mcp` (classe : Starlette la traite comme ASGI brute)."""
 
@@ -290,6 +363,8 @@ class McpEndpoint:
                 await _send_json(send, 403, {"error": "insufficient_scope", "scope": needed},
                                  _challenge("insufficient_scope", needed))
                 return
+            if _lists_tools(body):
+                send = _security_send(send)
             receive = _replay(body, receive)
 
         reset = current_principal.set(principal)

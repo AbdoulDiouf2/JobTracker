@@ -62,6 +62,31 @@ Une veille désactivée laisse désormais le jeton valide : les outils de veille
 `watch_not_enabled` dans le résultat MCP au lieu d'un HTTP 401. Les clients qui utilisaient
 401 comme signal de déconnexion doivent adapter ce cas.
 
+### Configuration ChatGPT pour la lecture des candidatures
+
+Le dépôt JobTracker ne contient pas le manifeste `mcp.json` de l'application ChatGPT : ses
+`baseScopes` et `defaultScopes` enregistrés doivent être vérifiés dans la configuration de
+l'application côté ChatGPT. La liste `allowed_scopes` du client JobTracker est un plafond ; elle
+ne modifie ni la demande `scope` envoyée par ChatGPT ni un grant déjà consenti.
+
+Pour demander la lecture des candidatures sans l'écriture, conserver le même `clientId`, la
+même méthode d'authentification et la même redirection, puis définir dans
+`extensions["com.openai"].auth` du serveur MCP de `mcp.json` :
+
+```json
+{
+  "baseScopes": ["watch:read", "opportunities:write", "applications:read"],
+  "defaultScopes": []
+}
+```
+
+Le tableau vide empêche l'ajout de scopes par défaut ; `applications:write` ne doit figurer
+dans aucun autre réglage de scopes de cette application. Selon la documentation OpenAI, une
+version du manifeste peut être téléversée sur l'application existante ; vérifier ensuite les
+réglages OAuth enregistrés avant de reconnecter. La configuration du client confidentiel et
+son secret restent distincts du manifeste. Un nouveau consentement est requis pour obtenir
+`applications:read` ; aucun grant existant n'est élargi automatiquement.
+
 ## P1 — Multi-client (clients confidentiels)
 
 - Plusieurs clients enregistrés, chacun avec `client_id` (`jt_oc_…`), secret (`jt_ocs_…`,
