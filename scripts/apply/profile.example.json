@@ -1,0 +1,13 @@
+{
+  "first_name": "PRENOM",
+  "last_name": "NOM",
+  "email": "email@example.com",
+  "phone": "06 00 00 00 00",
+  "city": "VILLE",
+  "linkedin": "https://linkedin.com/in/...",
+  "github": "https://github.com/...",
+  "portfolio": "https://...",
+  "availability": "À COMPLÉTER (date de début)",
+  "salary_expectation": "À COMPLÉTER",
+  "cv_path": "/chemin/local/vers/CV_Abdoul_Ahad_10_26.pdf"
+}

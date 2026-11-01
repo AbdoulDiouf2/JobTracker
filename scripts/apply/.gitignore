@@ -1,0 +1,5 @@
+profile.json
+results.json
+shot-*.png
+.browser-profile/
+node_modules/
