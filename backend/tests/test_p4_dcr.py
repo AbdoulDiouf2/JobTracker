@@ -91,6 +91,35 @@ async def test_observation_advertises_but_refuses_and_records_only_host(api, db,
     assert CALLBACK not in str(observation)
 
 
+async def test_observation_records_safe_host_before_rejecting_other_metadata(api, db):
+    await policy(db, observation=True)
+    response = await register(api, registration(
+        token_endpoint_auth_method="client_secret_basic",
+        software_statement="untrusted",
+    ))
+    assert response.status_code == 400
+    assert response.json()["error"] == "invalid_client_metadata"
+    assert await db.oauth_clients.count_documents({}) == 0
+    observation = await db[dcr_service.OBSERVATIONS].find_one({})
+    assert set(observation) >= {"host", "count", "first_seen_at", "last_seen_at", "expires_at"}
+    assert observation["host"] == "callback.composio.example"
+    assert CALLBACK not in str(observation)
+    assert "client_secret_basic" not in str(observation)
+    assert "untrusted" not in str(observation)
+
+
+@pytest.mark.parametrize("redirect_uris", [
+    ["http://callback.composio.example/oauth/callback"],
+    ["https://Callback.Composio.Example/oauth/callback"],
+    ["https://*.composio.example/oauth/callback"],
+])
+async def test_observation_never_records_unsafe_or_noncanonical_host(api, db, redirect_uris):
+    await policy(db, observation=True)
+    response = await register(api, registration(redirect_uris=redirect_uris))
+    assert response.status_code == 400
+    assert await db[dcr_service.OBSERVATIONS].count_documents({}) == 0
+
+
 async def test_admin_policy_requires_exact_lowercase_host_and_exclusive_modes(api, admin):
     base = "/api/admin/oauth/dcr-policy"
     initial = (await api.get(base, headers=admin)).json()

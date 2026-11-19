@@ -119,11 +119,28 @@ def _string_list(value, field: str, required: bool = True) -> List[str]:
     return list(dict.fromkeys(value))
 
 
-def validate_metadata(body) -> dict:
-    from services.oauth_service import MAX_REDIRECT_URIS, validate_client_name, validate_redirect_uri
+def validate_redirect_metadata(body) -> dict:
+    from services.oauth_service import MAX_REDIRECT_URIS, validate_redirect_uri
 
     if not isinstance(body, dict):
         raise DcrError("invalid_client_metadata", "objet JSON attendu")
+    try:
+        raw_uris = _string_list(body.get("redirect_uris"), "redirect_uris")
+        if len(raw_uris) > MAX_REDIRECT_URIS:
+            raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
+        uris = [validate_redirect_uri(uri) for uri in raw_uris]
+    except ValueError as exc:
+        raise DcrError("invalid_redirect_uri", str(exc))
+    return {
+        "redirect_uris": uris,
+        "redirect_hosts": list(dict.fromkeys(urlsplit(uri).hostname for uri in uris)),
+    }
+
+
+def validate_metadata(body) -> dict:
+    from services.oauth_service import validate_client_name
+
+    redirects = validate_redirect_metadata(body)
     if any(k in body for k in UNSUPPORTED_METADATA):
         raise DcrError("invalid_client_metadata", "métadonnée client non prise en charge")
     # RFC 7591 rend client_name facultatif. Le callback exact reste l'identité de confiance
@@ -132,13 +149,6 @@ def validate_metadata(body) -> dict:
         name = validate_client_name(body.get("client_name", "Client DCR"))
     except ValueError as exc:
         raise DcrError("invalid_client_metadata", str(exc))
-    try:
-        raw_uris = _string_list(body.get("redirect_uris"), "redirect_uris")
-        if len(raw_uris) > MAX_REDIRECT_URIS:
-            raise ValueError(f"{MAX_REDIRECT_URIS} redirect_uri au plus")
-        uris = [validate_redirect_uri(uri) for uri in raw_uris]
-    except ValueError as exc:
-        raise DcrError("invalid_redirect_uri", str(exc))
 
     auth_method = body.get("token_endpoint_auth_method", "none")
     if auth_method != "none":
@@ -151,8 +161,7 @@ def validate_metadata(body) -> dict:
         raise DcrError("invalid_client_metadata", "response_types doit contenir uniquement code")
     return {
         "client_name": name,
-        "redirect_uris": uris,
-        "redirect_hosts": list(dict.fromkeys(urlsplit(uri).hostname for uri in uris)),
+        **redirects,
         "token_endpoint_auth_method": "none",
         "grant_types": grants,
         "response_types": responses,
@@ -215,14 +224,22 @@ async def register(db, body, source: str) -> dict:
     if not advertised(policy):
         raise DcrError("temporarily_unavailable", "enregistrement dynamique désactivé", 503)
     await check_rate_limit(db, source)
-    metadata = validate_metadata(body)
 
     if policy.get("observation_mode") is True:
-        await _observe(db, metadata["redirect_hosts"])
+        # L'observation sert à découvrir le callback réel d'un client tiers. Une métadonnée
+        # annexe incompatible ne doit pas empêcher cette découverte : seules les redirect_uris
+        # sont validées ici, et seul leur hôte HTTPS normalisé est conservé.
+        redirects = validate_redirect_metadata(body)
+        await _observe(db, redirects["redirect_hosts"])
+        try:
+            validate_metadata(body)
+        except DcrError as err:
+            logger.info("oauth_dcr_observation metadata_result=%s", err.error)
         raise DcrError(
             "invalid_client_metadata",
             "hôte de retour observé mais non encore approuvé par l'administrateur",
         )
+    metadata = validate_metadata(body)
     if any(host not in policy["allowed_redirect_hosts"] for host in metadata["redirect_hosts"]):
         logger.info("oauth_dcr_register result=host_refused hosts=%s", ",".join(metadata["redirect_hosts"]))
         raise DcrError("invalid_redirect_uri", "hôte de retour non approuvé")
