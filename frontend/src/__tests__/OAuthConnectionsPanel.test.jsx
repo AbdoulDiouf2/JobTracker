@@ -44,12 +44,23 @@ let server;
 beforeEach(() => {
   jest.clearAllMocks();
   useAuth.mockReturnValue({ isAdmin: true });
-  server = { status: statusOf(), clients: [], grants: [], tokens: [] };
+  server = {
+    status: statusOf(), clients: [], grants: [], tokens: [],
+    cimd: { enabled: false, allowed_hosts: [], default_scopes: ['watch:read'], operational: false },
+    dcr: {
+      enabled: false, observation_mode: false, allowed_redirect_hosts: [],
+      default_scopes: ['watch:read', 'opportunities:write', 'applications:read', 'applications:write',
+        'interviews:read', 'interviews:write'],
+      operational: false, advertised: false, observed_hosts: [],
+    },
+  };
   api.get.mockImplementation((url) => {
     const data = {
       '/api/admin/oauth/status': server.status,
       '/api/admin/oauth/clients': { items: server.clients },
       '/api/admin/oauth/grants': { items: server.grants },
+      '/api/admin/oauth/cimd-policy': server.cimd,
+      '/api/admin/oauth/dcr-policy': server.dcr,
       '/api/agent-tokens': server.tokens,
     }[url];
     return data === undefined ? Promise.reject(new Error(url)) : Promise.resolve({ data });
@@ -661,5 +672,57 @@ describe('Connexions OAuth / MCP — identité publiée (P3, CIMD)', () => {
     expect(within(details).getByTestId(`oauth-scopes-${CC}`)).toBeInTheDocument();
     await user.click(within(details).getByTestId(`oauth-deactivate-${CC}`));
     expect(await screen.findByRole('alertdialog')).toHaveTextContent('Désactiver Claude Code ?');
+  });
+});
+
+describe('Connexions OAuth / MCP — inscription dynamique (P4, DCR)', () => {
+  const DCR_ID = 'jt_oc_Composio123';
+  const CALLBACK = 'https://callback.composio.example/oauth/callback';
+
+  test('mode observation puis activation avec callback observé et six scopes', async () => {
+    const user = userEvent.setup();
+    server.dcr = {
+      ...server.dcr, observation_mode: true, advertised: true,
+      observed_hosts: [{ host: 'callback.composio.example', count: 1, last_seen_at: '2026-11-19T10:00:00Z' }],
+    };
+    api.put.mockImplementation(async (url, body) => {
+      server.dcr = { ...body, operational: body.enabled, advertised: body.enabled || body.observation_mode,
+        observed_hosts: server.dcr.observed_hosts };
+      return { data: server.dcr };
+    });
+    renderPanel();
+    const card = await screen.findByTestId('oauth-dcr');
+    expect(within(card).getByTestId('oauth-dcr-state')).toHaveTextContent('Observation');
+    expect(within(card).getByTestId('oauth-dcr-observed')).toHaveTextContent('callback.composio.example (1)');
+    await user.click(within(card).getByTestId('oauth-dcr-observation'));
+    await user.click(within(card).getByTestId('oauth-dcr-enabled'));
+    await fill(user, within(card).getByTestId('oauth-dcr-hosts'), 'callback.composio.example');
+    await user.click(within(card).getByTestId('oauth-dcr-save'));
+    const confirm = await screen.findByRole('alertdialog');
+    expect(confirm).toHaveTextContent('PKCE et le consentement restent obligatoires');
+    await user.click(within(confirm).getByTestId('oauth-confirm'));
+    await waitFor(() => expect(api.put).toHaveBeenCalledWith('/api/admin/oauth/dcr-policy', {
+      enabled: true,
+      observation_mode: false,
+      allowed_redirect_hosts: ['callback.composio.example'],
+      default_scopes: ['watch:read', 'opportunities:write', 'applications:read', 'applications:write',
+        'interviews:read', 'interviews:write'],
+    }));
+    expect(toast.success).toHaveBeenCalledWith('Politique DCR enregistrée');
+  });
+
+  test('client DCR : badge, aucun secret et callbacks non modifiables', async () => {
+    const user = userEvent.setup();
+    server.clients = [clientOf({
+      client_id: DCR_ID, name: 'Composio', client_type: 'public', registration: 'dcr',
+      redirect_uris: [CALLBACK], dcr_redirect_hosts: ['callback.composio.example'],
+      allowed_scopes: ['watch:read'], active_grants: 0,
+    })];
+    renderPanel();
+    expect(await screen.findByTestId(`oauth-client-dcr-${DCR_ID}`)).toHaveTextContent('Inscription dynamique');
+    const details = await expand(user, DCR_ID);
+    expect(details).toHaveTextContent('callback.composio.example');
+    expect(within(details).queryByTestId(`oauth-redirect-input-${DCR_ID}`)).toBeNull();
+    expect(within(details).queryByTestId(`oauth-rotate-${DCR_ID}`)).toBeNull();
   });
 });

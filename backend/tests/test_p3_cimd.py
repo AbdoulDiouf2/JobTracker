@@ -152,7 +152,7 @@ async def test_admin_cimd_interview_scope_requires_approved_host_and_explicit_po
 # Découverte et politique
 # ============================================
 
-async def test_cimd_announced_only_when_operational_and_no_dcr(api, db, web):
+async def test_cimd_announced_only_when_operational_and_dcr_disabled_by_default(api, db, web):
     meta = await discovery(api)
     assert meta["client_id_metadata_document_supported"] is False and "registration_endpoint" not in meta
     await allow(db, hosts=[], enabled=True)  # activée sans hôte : non opérationnelle
@@ -161,7 +161,8 @@ async def test_cimd_announced_only_when_operational_and_no_dcr(api, db, web):
     meta = await discovery(api)
     assert meta["client_id_metadata_document_supported"] is True and "none" in meta["token_endpoint_auth_methods_supported"]
     assert "registration_endpoint" not in meta
-    assert (await api.post("/api/oauth/register", json={"redirect_uris": ["https://x.example.com/cb"]})).status_code in (404, 405)
+    # La route P4 existe, mais reste fermée tant que sa politique DCR n'est pas activée.
+    assert (await api.post("/api/oauth/register", json={"redirect_uris": ["https://x.example.com/cb"]})).status_code == 503
 
 
 async def test_disabled_policy_or_unlisted_host_refuses_without_network(api, db, web):

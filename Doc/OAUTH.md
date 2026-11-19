@@ -1,7 +1,7 @@
-# OAuth 2.1 du connecteur MCP (P1, P2, P3)
+# OAuth 2.1 du connecteur MCP (P1, P2, P3, P4)
 
 JobTracker est son propre **serveur d'autorisation** et la **ressource protégée** MCP.
-Code : `backend/services/oauth_service.py`, `backend/services/cimd_service.py`,
+Code : `backend/services/oauth_service.py`, `backend/services/cimd_service.py`, `backend/services/dcr_service.py`,
 `backend/routes/oauth.py`, `backend/routes/admin.py`, page `frontend/src/pages/OAuthConsentPage.jsx`.
 
 > Ne pas confondre avec la connexion des **utilisateurs** à JobTracker (e-mail/mot de passe ou
@@ -13,6 +13,7 @@ Code : `backend/services/oauth_service.py`, `backend/services/cimd_service.py`,
 |---|---|---|
 | GET | `/.well-known/oauth-protected-resource[/api/mcp]` | Métadonnées de la ressource (RFC 9728) |
 | GET | `/.well-known/oauth-authorization-server` | Métadonnées du serveur (RFC 8414) |
+| POST | `/api/oauth/register` | Enregistrement dynamique d'un client public (RFC 7591, P4) |
 | GET | `/api/oauth/authorize` | Demande d'autorisation → page `/oauth/consent` |
 | GET | `/api/oauth/requests/{id}` | Détail pour la page de consentement (session web) |
 | POST | `/api/oauth/consent` | Décision → URL de continuation (jamais le code) |
@@ -195,27 +196,55 @@ Pour couper les accès existants après un changement de politique : désactiver
 - Avant le premier consentement approuvé, chaque `/authorize` relit le document (limite 10/min/IP).
 - Codex peut publier un document par `callback_id` : un client par document.
 
-## Pourquoi pas de DCR
+## P4 — Dynamic Client Registration (DCR)
 
-L'enregistrement dynamique (RFC 7591) n'est **pas implémenté** et `registration_endpoint` est
-absent :
+Le DCR RFC 7591 permet à Composio d'obtenir automatiquement un `client_id`. Il est **désactivé par
+défaut** et géré séparément de CIMD dans `platform_settings.oauth_dcr_policy`.
 
-- aucun client ciblé n'en a besoin : Claude Code, Codex et VS Code utilisent CIMD lorsqu'il est
-  annoncé ; ChatGPT et Claude web utilisent des clients pré-enregistrés ;
-- la spécification MCP le rend facultatif (« MAY », conservé pour compatibilité) et privilégie CIMD ;
-- un point d'inscription ouvert multiplierait les clients et la surface d'attaque.
+### Profil accepté
 
-Conséquence : un client qui ne connaît **que** DCR ne peut pas se connecter.
+- clients **publics uniquement**, `token_endpoint_auth_method: none`, aucun secret émis ;
+- `authorization_code` obligatoire, `refresh_token` permis, `response_types: ["code"]` ;
+- PKCE S256 reste obligatoire à `/authorize` ;
+- 1 à 10 URI HTTPS exactes, sans port, requête, fragment, identifiants ou joker ;
+- hôte de chaque URI présent dans l'allowlist exacte administrée ;
+- scopes fixés par la politique serveur, indépendamment du champ `scope` soumis à l'inscription ;
+- métadonnées sensibles ou non prises en charge (`software_statement`, `jwks`, secrets) refusées.
+
+`registration_endpoint` n'est annoncé que dans l'un de ces deux états :
+
+1. **observation** : l'endpoint valide la demande, mémorise uniquement l'hôte du callback, puis
+   refuse l'inscription ; les observations expirent après 30 jours et l'interface affiche les
+   50 plus récentes. Ce mode sert à découvrir le callback Composio sans ouvrir le DCR ;
+2. **actif** : au moins un hôte exact est approuvé et les inscriptions sont autorisées.
+
+Les modes observation et actif sont mutuellement exclusifs. Le nom `Composio` n'est pas une preuve
+d'identité : la restriction repose exclusivement sur l'hôte HTTPS exact du callback.
+
+### Cycle de vie et contrôles d'abus
+
+- requête JSON limitée à 16 Kio et rafale limitée par SlowAPI ;
+- compteur persistant : 10 inscriptions par heure et par source pseudonymisée avec HMAC ;
+- deux demandes identiques pendant la période d'attente réutilisent le même client ;
+- client sans consentement : expiration automatique après 24 h ;
+- premier consentement approuvé : expiration retirée et date du premier grant enregistrée ;
+- changement d'allowlist : nouvelles autorisations et échanges en cours refusés ;
+- désactivation d'un client DCR : grants et jetons révoqués comme pour les autres clients ;
+- interrupteur d'urgence MCP : inscription, autorisation, jetons et MCP coupés ensemble.
+
+Les URI d'un client DCR ne sont pas modifiables par les routes manuelles d'administration. Les
+scopes peuvent être réduits ou élargis selon les règles communes ; un élargissement nécessite
+toujours un nouveau consentement.
 
 ## Administration
 
 Paramètres → API / Agents → **Connexions OAuth / MCP** (admin) : état du service et interrupteur,
-politique CIMD, cartes repliables par client (type, statut, permissions, adresses de retour,
+politiques CIMD et DCR, cartes repliables par client (type, statut, permissions, adresses de retour,
 régénération du secret pour les confidentiels, désactivation), liste et révocation des
-autorisations. Routes : `/api/admin/oauth/{status,clients,grants,cimd-policy}`,
+autorisations. Routes : `/api/admin/oauth/{status,clients,grants,cimd-policy,dcr-policy}`,
 `/api/admin/settings/mcp-kill-switch`. Script de secours : `backend/scripts/manage_oauth_client.py`.
 
 ## Tests
 
 `test_oauth.py`, `test_admin_oauth.py`, `test_p1_multiclient.py`, `test_p2_public_clients.py`,
-`test_p3_cimd.py`, `test_a0_activation.py`.
+`test_p3_cimd.py`, `test_p4_dcr.py`, `test_a0_activation.py`.

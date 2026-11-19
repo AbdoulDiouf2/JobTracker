@@ -19,7 +19,7 @@ production par un usage réel · **E** envisagé, non implémenté.
 | OAuth P3 : CIMD | ✓ | ✓ | ✓ | **Claude Code validé le 9 octobre 2026** (connexion, lecture) |
 | Codex via CIMD | ✓ | ✓ | — | Non validé en connexion réelle |
 | VS Code via CIMD | ✓ | ✓ | — | Non validé en connexion réelle |
-| DCR (enregistrement dynamique) | — | — | — | Non implémenté (décision D-P3-2) |
+| DCR (enregistrement dynamique) | — | — | P4 | Implémenté, désactivé par défaut et limité par allowlist |
 | Écran des critères et de l'historique de veille | — | — | — | **E** (API seulement) |
 | Filtres Métier / Date de publication / Compétences | — | — | — | **E** : données non enregistrées |
 | Planificateur (rappels) sur Vercel | — | — | — | Ne tourne pas (`lifespan` absent) ; déclenchement manuel |
@@ -62,7 +62,7 @@ Les rapports détaillés de chaque étape sont archivés dans [archives/lot2/](.
 | D-P2-3 | Clé d'exécution `run_id#client_id`, quota journalier commun | Pas de collision entre agents ; plafond global inchangé |
 | D-P2-4 | Scopes effectifs = autorisation ∩ client, recalculés à chaque appel | Réduction immédiate, jamais d'élargissement implicite |
 | D-P3-1 | CIMD sous politique de confiance désactivée par défaut, lecture seule par défaut | Pas d'accès ouvert à un client inconnu |
-| D-P3-2 | **DCR non implémenté** | Aucun client ciblé n'en a besoin ; surface d'attaque ; MCP le rend facultatif |
+| D-P3-2 | **DCR initialement non implémenté, décision remplacée par P4** | Composio Custom MCP exige DCR ; ajout d'un profil public restreint, fermé par défaut, avec observation et allowlist |
 | D-P3-3 | `localhost` admis seulement pour CIMD | Requis par Claude Code et Codex |
 | D-P3-4 | Client CIMD créé après consentement approuvé ; politique revérifiée à l'émission et à l'échange du code | Pas d'enregistrement anonyme ; aucune autorisation après retrait d'un domaine |
 | D-P3-5 | Changement de politique sans effet sur les jetons existants | Pas de coupure surprise ; coupure explicite par désactivation du client |

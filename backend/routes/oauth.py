@@ -9,6 +9,7 @@ Points d'entrée :
   GET  /api/oauth/authorize            (ChatGPT, navigateur)  -> page de consentement
   GET  /api/oauth/requests/{id}        (JWT webapp)            détails pour le consentement
   POST /api/oauth/consent              (JWT webapp)            décision -> URL de retour
+  POST /api/oauth/register             (DCR RFC 7591)          création d'un client public
   POST /api/oauth/token                (client authentifié ou public + PKCE)  code -> jetons, rotation
   POST /api/oauth/revoke               (client authentifié)    RFC 7009
   GET  /api/oauth/grants               (JWT webapp)            connexions de l'utilisateur
@@ -17,6 +18,7 @@ Métadonnées : /.well-known/oauth-protected-resource[/api/mcp], /.well-known/oa
 """
 
 import base64
+import json
 import logging
 from typing import Optional
 from urllib.parse import unquote
@@ -83,6 +85,14 @@ def oauth_error_response(err: OAuthError) -> JSONResponse:
     return JSONResponse(status_code=err.status_code, content=body, headers=headers)
 
 
+def dcr_error_response(err) -> JSONResponse:
+    return JSONResponse(
+        status_code=err.status_code,
+        content={"error": err.error, "error_description": err.description},
+        headers=SECURE,
+    )
+
+
 def client_credentials(request: Request, form: dict) -> tuple:
     """client_secret_basic (prioritaire), client_secret_post, ou identifiant seul pour un client public."""
     auth = request.headers.get("authorization", "")
@@ -95,6 +105,40 @@ def client_credentials(request: Request, form: dict) -> tuple:
         except (ValueError, UnicodeDecodeError):
             raise OAuthError("invalid_client", "En-tête Basic invalide", status_code=401)
     return form.get("client_id"), form.get("client_secret")
+
+
+# ============================================
+# ENREGISTREMENT DYNAMIQUE
+# ============================================
+
+@router.post("/register", include_in_schema=False, status_code=status.HTTP_201_CREATED)
+@limiter.limit(settings.OAUTH_RATE_LIMIT)
+async def register(request: Request, db=Depends(oauth_available)):
+    from services import dcr_service
+
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        return dcr_error_response(dcr_service.DcrError(
+            "invalid_client_metadata", "Content-Type application/json requis"))
+    chunks = []
+    size = 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > dcr_service.MAX_BODY_BYTES:
+            return dcr_error_response(dcr_service.DcrError(
+                "invalid_client_metadata", "corps de requête trop volumineux"))
+        chunks.append(chunk)
+    raw = b"".join(chunks)
+    try:
+        body = json.loads(raw)
+        created = await dcr_service.register(
+            db, body, request.client.host if request.client else "unknown")
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        return dcr_error_response(dcr_service.DcrError(
+            "invalid_client_metadata", "JSON invalide"))
+    except dcr_service.DcrError as err:
+        return dcr_error_response(err)
+    return JSONResponse(status_code=status.HTTP_201_CREATED, content=created, headers=SECURE)
 
 
 # ============================================
@@ -245,7 +289,9 @@ async def protected_resource_metadata(db=Depends(discovery_available)):
 
 @well_known_router.get("/.well-known/oauth-authorization-server")
 async def authorization_server_metadata(db=Depends(discovery_available)):
-    from services import cimd_service
+    from services import cimd_service, dcr_service
     # CIMD annoncé uniquement si la politique de l'administrateur le rend opérationnel (P3.1)
     cimd = cimd_service.operational(await cimd_service.get_policy(db))
-    return JSONResponse(content=oauth_service.authorization_server_metadata(cimd_supported=cimd))
+    dcr = dcr_service.advertised(await dcr_service.get_policy(db))
+    return JSONResponse(content=oauth_service.authorization_server_metadata(
+        cimd_supported=cimd, dcr_supported=dcr))

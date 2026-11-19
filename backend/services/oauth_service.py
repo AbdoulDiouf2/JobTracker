@@ -127,11 +127,10 @@ def protected_resource_metadata() -> dict:
     }
 
 
-def authorization_server_metadata(cimd_supported: bool = False) -> dict:
-    """`cimd_supported` : vrai seulement si la politique CIMD est opérationnelle (P3.1).
-    Aucun `registration_endpoint` : l'enregistrement dynamique (DCR) n'est pas proposé."""
+def authorization_server_metadata(cimd_supported: bool = False, dcr_supported: bool = False) -> dict:
+    """Fonctionnalités annoncées seulement lorsque leurs politiques sont opérationnelles."""
     base = issuer()
-    return {
+    metadata = {
         "issuer": base,
         "authorization_endpoint": f"{base}/api/oauth/authorize",
         "token_endpoint": f"{base}/api/oauth/token",
@@ -146,6 +145,9 @@ def authorization_server_metadata(cimd_supported: bool = False) -> dict:
         "authorization_response_iss_parameter_supported": True,
         "client_id_metadata_document_supported": bool(cimd_supported),
     }
+    if dcr_supported:
+        metadata["registration_endpoint"] = f"{base}/api/oauth/register"
+    return metadata
 
 
 def parse_scopes(raw: Optional[str]) -> List[str]:
@@ -177,6 +179,22 @@ async def ensure_indexes(db) -> None:
     if key in _indexed_dbs:
         return
     await db[CLIENTS].create_index("client_id", unique=True, name="oauth_client_unique")
+    await db[CLIENTS].create_index(
+        "expires_at", expireAfterSeconds=0, name="oauth_dcr_pending_ttl",
+        partialFilterExpression={"registration": "dcr"},
+    )
+    await db[CLIENTS].create_index(
+        "dcr.request_fingerprint", name="oauth_dcr_fingerprint",
+        partialFilterExpression={"registration": "dcr"},
+    )
+    await db["oauth_dcr_attempts"].create_index(
+        [("source_hash", 1), ("bucket", 1)], unique=True, name="oauth_dcr_attempt_unique")
+    await db["oauth_dcr_attempts"].create_index(
+        "expires_at", expireAfterSeconds=0, name="oauth_dcr_attempt_ttl")
+    await db["oauth_dcr_observations"].create_index(
+        "host", unique=True, name="oauth_dcr_observation_host")
+    await db["oauth_dcr_observations"].create_index(
+        "expires_at", expireAfterSeconds=0, name="oauth_dcr_observation_ttl")
     await db[REQUESTS].create_index("id", unique=True, name="oauth_request_unique")
     await db[REQUESTS].create_index("expires_at", expireAfterSeconds=0, name="oauth_request_ttl")
     await db[CODES].create_index("code_hash", unique=True, name="oauth_code_unique")
@@ -430,8 +448,8 @@ async def add_redirect_uri(db, client_id: str, uri: str) -> List[str]:
                                         {"_id": 0, "redirect_uris": 1, "client_type": 1, "registration": 1})
     if not client:
         raise ValueError("client inconnu")
-    if client.get("registration") == "cimd":
-        raise ValueError("adresses de retour fournies par le document de l'éditeur (CIMD) : non modifiables")
+    if client.get("registration") in ("cimd", "dcr"):
+        raise ValueError("adresses de retour gérées par l'enregistrement du client : non modifiables")
     uri = validate_client_redirect(uri, client_type_of(client))
     if uri in client["redirect_uris"]:
         return client["redirect_uris"]
@@ -448,8 +466,8 @@ async def remove_redirect_uri(db, client_id: str, uri: str) -> List[str]:
     client = await db[CLIENTS].find_one({"client_id": client_id}, {"_id": 0, "redirect_uris": 1, "registration": 1})
     if not client:
         raise ValueError("client inconnu")
-    if client.get("registration") == "cimd":
-        raise ValueError("adresses de retour fournies par le document de l'éditeur (CIMD) : non modifiables")
+    if client.get("registration") in ("cimd", "dcr"):
+        raise ValueError("adresses de retour gérées par l'enregistrement du client : non modifiables")
     uris = list(client.get("redirect_uris") or [])
     if uri not in uris:
         raise ValueError("redirect_uri inconnue pour ce client")
@@ -516,10 +534,13 @@ async def list_clients(db) -> List[dict]:
             "secret_rotated_at": _aware(c.get("secret_rotated_at")), "active_grants": active_grants,
             "client_type": kind, "allowed_scopes": client_scopes(c),
             "token_endpoint_auth_method": "none" if kind == PUBLIC else "client_secret_basic",
-            # Origine : manual (administration, script) | cimd (document publié par l'éditeur)
+            # Origine : manual | cimd (identité publiée) | dcr (RFC 7591)
             "registration": c.get("registration") or "manual",
             "metadata_host": c.get("metadata_host"),
             "metadata_fetched_at": _aware(c.get("metadata_fetched_at")),
+            "dcr_redirect_hosts": (c.get("dcr") or {}).get("redirect_hosts"),
+            "dcr_first_grant_at": _aware((c.get("dcr") or {}).get("first_grant_at")),
+            "expires_at": _aware(c.get("expires_at")),
         })
     return items
 
@@ -528,7 +549,11 @@ async def get_active_client(db, client_id: Optional[str]) -> Optional[dict]:
     # 512 : un client_id CIMD est une URL (les identifiants jt_oc_ restent courts)
     if not client_id or not isinstance(client_id, str) or len(client_id) > 512:
         return None
-    return await db[CLIENTS].find_one({"client_id": client_id, "active": True}, {"_id": 0})
+    client = await db[CLIENTS].find_one({"client_id": client_id, "active": True}, {"_id": 0})
+    if client and client.get("registration") == "dcr" and client.get("expires_at") and \
+            _aware(client["expires_at"]) <= _now():
+        return None
+    return client
 
 
 async def authenticate_client(db, client_id: Optional[str], client_secret: Optional[str]) -> dict:
@@ -571,6 +596,10 @@ async def create_authorization_request(db, params: dict) -> dict:
         client = await get_active_client(db, client_id)
     if not client:
         raise OAuthError("invalid_client", "Client inconnu")
+    if client.get("registration") == "dcr":
+        from services import dcr_service
+        if not await dcr_service.client_allowed(db, client):
+            raise OAuthError("invalid_client", "Client DCR non approuvé")
     redirect_uri = params.get("redirect_uri")
     # Correspondance exacte ; port dynamique toléré UNIQUEMENT pour l'adresse locale d'un client public
     if not match_redirect_uri(client, redirect_uri):
@@ -691,6 +720,13 @@ async def complete(db, ticket: str) -> str:
                 not await cimd_service.persist_client(db, req["client_snapshot"]):
             logger.info("oauth_consent result=cimd_not_allowed user_id=%s", user_id)
             return error_redirect(req["redirect_uri"], "access_denied", req.get("state"), "Application non approuvée")
+    elif req.get("client_registration") == "dcr":
+        from services import dcr_service
+        client = await get_active_client(db, req["client_id"])
+        if not client or not await dcr_service.client_allowed(db, client):
+            logger.info("oauth_consent result=dcr_not_allowed user_id=%s", user_id)
+            return error_redirect(req["redirect_uri"], "access_denied", req.get("state"), "Application non approuvée")
+        await dcr_service.mark_consented(db, req["client_id"])
 
     code = secrets.token_urlsafe(32)
     await db[CODES].insert_one({
@@ -766,6 +802,10 @@ async def exchange_code(db, client: dict, form: dict) -> dict:
     if client.get("registration") == "cimd":
         from services import cimd_service
         if not await cimd_service.host_allowed(db, client["client_id"]):
+            raise OAuthError("invalid_grant", "Application non approuvée")
+    elif client.get("registration") == "dcr":
+        from services import dcr_service
+        if not await dcr_service.client_allowed(db, client):
             raise OAuthError("invalid_grant", "Application non approuvée")
     if form.get("redirect_uri") != code_doc["redirect_uri"]:
         raise OAuthError("invalid_grant", "redirect_uri différente")

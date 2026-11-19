@@ -6,7 +6,7 @@ Application SaaS de suivi de recherche d'emploi : candidatures, entretiens, stat
 conseiller IA, et une **boîte de réception d'opportunités** alimentée par des agents IA
 externes (ChatGPT, Claude, Claude Code…) via un serveur **MCP** protégé par **OAuth 2.1**.
 
-Production : <https://jobtracker.maadec.com> (Vercel).
+Production : <https://jobtracker.maadec.com> (Docker Compose sur `maadec-infra-01`).
 
 ## En bref
 
@@ -14,7 +14,7 @@ Production : <https://jobtracker.maadec.com> (Vercel).
 - **Backend** : FastAPI, Pydantic v2, MongoDB via Motor (`backend/`).
 - **MCP** : `https://jobtracker.maadec.com/api/mcp`, six outils (veille et diagnostic).
 - **OAuth** : clients confidentiels (P1), clients publics et retours locaux (P2), Client ID
-  Metadata Documents (P3). Pas d'enregistrement dynamique (DCR).
+  Metadata Documents (P3) et enregistrement dynamique contrôlé (P4/DCR).
 - Les agents **cherchent** les offres ; JobTracker **valide, déduplique et enregistre**.
 
 ## Démarrage rapide
@@ -63,7 +63,8 @@ frontend/           Application React, tests (frontend/src/__tests__)
 chrome-extension/   Extension « JobTracker Clipper »
 landing-page/       Site vitrine
 Doc/                Documentation ; Doc/archives : documents historiques
-vercel.json         Déploiement (frontend statique + backend serverless)
+docker-compose.production.yml  Déploiement de production auto-hébergé
+vercel.json         Ancienne configuration Vercel, conservée pour référence
 ```
 
 ## Auteur

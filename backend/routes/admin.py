@@ -770,6 +770,15 @@ class CimdPolicyUpdate(BaseModel):
     default_scopes: List[OAuthScope] = Field(..., min_length=1, max_length=10)
 
 
+class DcrPolicyUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: StrictBool
+    observation_mode: StrictBool = False
+    allowed_redirect_hosts: List[str] = Field(default_factory=list, max_length=20)
+    default_scopes: List[OAuthScope] = Field(..., min_length=1, max_length=10)
+
+
 @router.get("/oauth/cimd-policy")
 async def get_cimd_policy(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
     """Politique des clients à identité publiée (CIMD) : désactivée par défaut."""
@@ -793,6 +802,41 @@ async def set_cimd_policy(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return {**policy, "operational": cimd_service.operational(policy)}
+
+
+@router.get("/oauth/dcr-policy")
+async def get_dcr_policy(admin_user: dict = Depends(get_webapp_admin), db = Depends(get_db)):
+    """DCR RFC 7591 : fermé par défaut. Le mode observation relève les hôtes sans créer de client."""
+    from services import dcr_service
+    policy = await dcr_service.get_policy(db)
+    return {
+        **policy,
+        "operational": dcr_service.operational(policy),
+        "advertised": dcr_service.advertised(policy),
+        "observed_hosts": await dcr_service.list_observed_hosts(db),
+    }
+
+
+@router.put("/oauth/dcr-policy")
+async def set_dcr_policy(
+    data: DcrPolicyUpdate,
+    admin_user: dict = Depends(get_webapp_admin),
+    db = Depends(get_db),
+):
+    """Configure l'allowlist exacte des callbacks DCR et les scopes admissibles."""
+    from services import dcr_service
+    try:
+        policy = await dcr_service.set_policy(
+            db, data.enabled, data.observation_mode, data.allowed_redirect_hosts,
+            list(data.default_scopes), admin_user["id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    return {
+        **policy,
+        "operational": dcr_service.operational(policy),
+        "advertised": dcr_service.advertised(policy),
+        "observed_hosts": await dcr_service.list_observed_hosts(db),
+    }
 
 
 @router.delete("/oauth/clients/{client_id:path}/redirect-uris")

@@ -10,6 +10,7 @@ code et les tests font foi : signaler l'écart et corriger le document.
 | Connaître les fonctionnalités | [FONCTIONNALITES.md](./FONCTIONNALITES.md) |
 | Utiliser ou intégrer le serveur MCP | [MCP-REFERENCE.md](./MCP-REFERENCE.md) |
 | Comprendre l'OAuth (P1, P2, P3, CIMD) | [OAUTH.md](./OAUTH.md) |
+| Configurer le DCR pour Composio | [PROPOSITION-DCR-COMPOSIO.md](./PROPOSITION-DCR-COMPOSIO.md) |
 | Connecter ChatGPT, Claude, Claude Code, Codex, VS Code | [GUIDES-CONNEXION.md](./GUIDES-CONNEXION.md) |
 | Comprendre et diagnostiquer la veille programmée | [VEILLE-PROGRAMMEE.md](./VEILLE-PROGRAMMEE.md) |
 | Sécurité : frontières, révocation, interrupteur, secrets | [SECURITE.md](./SECURITE.md) |
