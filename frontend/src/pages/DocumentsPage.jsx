@@ -309,27 +309,38 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleDownload = async (doc) => {
+  const downloadAuthenticatedFile = async (path, filename) => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/api/documents/${doc.id}/download`, {
+      const url = path.startsWith('http') ? path : `${API_URL}${path}`;
+      const response = await axios.get(url, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: 'blob'
       });
       
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const objectUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', doc.original_filename || `${doc.name}.pdf`);
+      link.href = objectUrl;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('Error downloading:', error);
       toast.error(t.error);
     }
   };
+
+  const handleDownload = (doc) => downloadAuthenticatedFile(
+    `/api/documents/${doc.id}/download`,
+    doc.original_filename || `${doc.name}.pdf`
+  );
+
+  const handleLetterDownload = (letter) => downloadAuthenticatedFile(
+    letter.download_url,
+    `lettre_motivation_${letter.entreprise || letter.id}_${letter.poste || ''}.pdf`
+  );
 
   const formatFileSize = (bytes) => {
     if (!bytes) return '-';
@@ -632,11 +643,11 @@ export default function DocumentsPage() {
                   </div>
                   
                   <div className="flex items-center gap-2 border-t border-slate-800 pt-3">
-                    {letter.cloudinary_url && (
+                    {letter.download_url && (
                       <Button 
                         size="sm" 
                         variant="ghost"
-                        onClick={() => window.open(letter.cloudinary_url, '_blank')}
+                        onClick={() => handleLetterDownload(letter)}
                         className="text-gold hover:text-gold/80"
                       >
                         <Download size={14} className="mr-1" />

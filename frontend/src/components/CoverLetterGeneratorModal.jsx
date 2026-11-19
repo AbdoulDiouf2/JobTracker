@@ -188,6 +188,28 @@ export default function CoverLetterGeneratorModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = async () => {
+    if (!downloadUrl) return;
+    try {
+      const token = localStorage.getItem('token');
+      const url = downloadUrl.startsWith('http') ? downloadUrl : `${API_URL}${downloadUrl}`;
+      const response = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+        responseType: 'blob',
+      });
+      const objectUrl = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `lettre_motivation_${entreprise}_${poste}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (e) {
+      toast.error(e.response?.data?.detail || 'Erreur de téléchargement');
+    }
+  };
+
   const handleClose = useCallback(() => {
     onClose();
   }, [onClose]);
@@ -508,7 +530,7 @@ export default function CoverLetterGeneratorModal({
               {downloadUrl && (
                 <Button
                   size="sm"
-                  onClick={() => window.open(downloadUrl, '_blank')}
+                  onClick={handleDownload}
                   className="bg-gold hover:bg-gold/90 text-[#020817] font-bold h-9 shadow-lg shadow-gold/10"
                 >
                   <Download size={14} className="mr-1.5" />

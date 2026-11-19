@@ -5,13 +5,16 @@ Stockage via Cloudinary pour persistance sur Vercel/Production.
 """
 
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import FileResponse, Response
+import httpx
 import re
 import io
 import os
+import time
 import uuid
 from pathlib import Path
 from datetime import datetime, timezone
+from urllib.parse import quote
 from xhtml2pdf import pisa
 from jinja2 import Environment, ChainableUndefined
 
@@ -35,6 +38,7 @@ from xml.sax.saxutils import escape
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+import cloudinary.utils
 
 # PDF generation
 from reportlab.lib.pagesizes import A4
@@ -56,6 +60,70 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 def get_db():
     """Dependency injection pour la DB"""
     pass
+
+
+def _asset_format(filename: str, public_id: str) -> str:
+    """Cloudinary exige un format pour son endpoint de téléchargement signé."""
+    suffix = Path(filename or "").suffix.lstrip(".").lower()
+    if not suffix:
+        suffix = Path(public_id or "").suffix.lstrip(".").lower()
+    return suffix or "bin"
+
+
+def _resource_type(document: dict, default: str = "raw") -> str:
+    """Préserve le type des anciens assets, qui n'était pas enregistré en base."""
+    stored_type = document.get("cloudinary_resource_type")
+    if stored_type:
+        return stored_type
+    cloudinary_url = document.get("cloudinary_url") or document.get("url") or ""
+    match = re.search(r"/(?:image|raw|video)/", cloudinary_url)
+    if match:
+        return match.group(0).strip("/")
+    return default
+
+
+async def _cloudinary_file_response(
+    public_id: str,
+    filename: str,
+    media_type: str,
+    resource_type: str = "raw",
+    delivery_type: str = "upload",
+    asset_format: Optional[str] = None,
+) -> Response:
+    """Récupère un asset Cloudinary via une URL signée courte, puis le sert sans exposer le secret."""
+    if not public_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fichier non trouvé")
+    signed_url = cloudinary.utils.private_download_url(
+        public_id,
+        asset_format or _asset_format(filename, public_id),
+        resource_type=resource_type,
+        type=delivery_type,
+        attachment=True,
+        expires_at=int(time.time()) + 300,
+    )
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            upstream = await client.get(signed_url)
+        upstream.raise_for_status()
+    except (httpx.HTTPError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Le stockage du document a refusé le téléchargement",
+        )
+    if len(upstream.content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Le fichier stocké dépasse la taille autorisée",
+        )
+    encoded_name = quote(filename or "document", safe="")
+    return Response(
+        content=upstream.content,
+        media_type=media_type or upstream.headers.get("content-type", "application/octet-stream"),
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_name}",
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 def generate_cover_letter_pdf(content: str, entreprise: str, poste: str, user_name: str, is_html: bool = False) -> io.BytesIO:
@@ -150,7 +218,10 @@ async def upload_cover_letter_to_cloudinary(pdf_buffer: io.BytesIO, user_id: str
 
         return {
             "url": url,
-            "public_id": upload_result.get("public_id")
+            "public_id": upload_result.get("public_id"),
+            "resource_type": upload_result.get("resource_type", "raw"),
+            "format": upload_result.get("format", "pdf"),
+            "delivery_type": upload_result.get("type", "upload"),
         }
     except Exception as e:
         print(f"Error uploading to Cloudinary: {e}")
@@ -208,13 +279,17 @@ async def upload_document(
     doc_id = str(uuid.uuid4())
     
     try:
-        # Upload to Cloudinary
-        # Auto will detect images as "image", PDFs as "image" (better for viewing) and docs as "raw"
-        resource_type = "auto"
+        # Les documents non-images restent des assets raw. Leur extension doit faire partie du
+        # public_id Cloudinary, sinon le téléchargement signé ne peut pas retrouver le format.
+        resource_type = "image" if file.content_type.startswith("image/") else "raw"
+        extension = Path(file.filename or "").suffix.lower()
+        public_id = f"jobtracker/{user_id}/{doc_id}"
+        if resource_type == "raw" and extension:
+            public_id += extension
         
         upload_result = cloudinary.uploader.upload(
             file.file,
-            public_id=f"jobtracker/{user_id}/{doc_id}",
+            public_id=public_id,
             resource_type=resource_type,
             use_filename=True,
             unique_filename=False,
@@ -224,6 +299,9 @@ async def upload_document(
         
         cloudinary_url = upload_result.get("secure_url")
         cloudinary_public_id = upload_result.get("public_id")
+        cloudinary_resource_type = upload_result.get("resource_type")
+        cloudinary_format = upload_result.get("format") or extension.lstrip(".")
+        cloudinary_delivery_type = upload_result.get("type", "upload")
         
     except Exception as e:
         raise HTTPException(
@@ -250,6 +328,9 @@ async def upload_document(
         "is_default": is_default,
         "cloudinary_url": cloudinary_url,
         "cloudinary_public_id": cloudinary_public_id,
+        "cloudinary_resource_type": cloudinary_resource_type,
+        "cloudinary_format": cloudinary_format,
+        "cloudinary_delivery_type": cloudinary_delivery_type,
         "file_path": None,  # No longer using filesystem
         "file_size": file_size,
         "mime_type": file.content_type,
@@ -633,6 +714,7 @@ async def generate_cover_letter_from_template(
     letter_id = str(uuid.uuid4())
     cloudinary_url = None
     cloudinary_public_id = None
+    cloudinary_data = None
     
     if save_as_pdf:
         try:
@@ -667,6 +749,9 @@ async def generate_cover_letter_from_template(
         "generated_by": "template",
         "cloudinary_url": cloudinary_url,
         "cloudinary_public_id": cloudinary_public_id,
+        "cloudinary_resource_type": (cloudinary_data or {}).get("resource_type"),
+        "cloudinary_format": (cloudinary_data or {}).get("format"),
+        "cloudinary_delivery_type": (cloudinary_data or {}).get("delivery_type", "upload"),
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -678,7 +763,9 @@ async def generate_cover_letter_from_template(
         "entreprise": entreprise,
         "poste": poste,
         "template_name": template.get("name"),
-        "download_url": cloudinary_url,
+        "download_url": (
+            f"/api/documents/cover-letters/{letter_id}/download" if cloudinary_public_id else None
+        ),
         "created_at": letter["created_at"]
     }
 
@@ -696,6 +783,16 @@ async def list_generated_cover_letters(
         {"_id": 0}
     ).sort("created_at", -1).to_list(100)
     
+    for letter in letters:
+        letter["download_url"] = (
+            f"/api/documents/cover-letters/{letter['id']}/download"
+            if letter.get("cloudinary_public_id") else None
+        )
+        letter.pop("cloudinary_url", None)
+        letter.pop("cloudinary_public_id", None)
+        letter.pop("cloudinary_resource_type", None)
+        letter.pop("cloudinary_format", None)
+        letter.pop("cloudinary_delivery_type", None)
     return letters
 
 
@@ -719,7 +816,40 @@ async def get_generated_cover_letter(
             detail="Lettre non trouvée"
         )
     
+    letter["download_url"] = (
+        f"/api/documents/cover-letters/{letter_id}/download"
+        if letter.get("cloudinary_public_id") else None
+    )
+    letter.pop("cloudinary_url", None)
+    letter.pop("cloudinary_public_id", None)
+    letter.pop("cloudinary_resource_type", None)
+    letter.pop("cloudinary_format", None)
+    letter.pop("cloudinary_delivery_type", None)
     return letter
+
+
+@router.get("/cover-letters/{letter_id}/download")
+async def download_generated_cover_letter(
+    letter_id: str,
+    current_user: dict = Depends(get_current_user),
+    db = Depends(get_db),
+):
+    """Télécharge une lettre via JobTracker ; aucune URL Cloudinary permanente n'est exposée."""
+    letter = await db.generated_cover_letters.find_one({
+        "id": letter_id,
+        "user_id": current_user["user_id"],
+    })
+    if not letter:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Lettre non trouvée")
+    filename = f"lettre_motivation_{letter_id}.pdf"
+    return await _cloudinary_file_response(
+        letter.get("cloudinary_public_id"),
+        filename,
+        "application/pdf",
+        _resource_type(letter),
+        letter.get("cloudinary_delivery_type") or "upload",
+        letter.get("cloudinary_format") or "pdf",
+    )
 
 
 @router.delete("/cover-letters/{letter_id}")
@@ -1112,6 +1242,9 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             "tone": tone,
             "cloudinary_url": cloudinary_data.get("url") if cloudinary_data else None,
             "cloudinary_public_id": cloudinary_data.get("public_id") if cloudinary_data else None,
+            "cloudinary_resource_type": cloudinary_data.get("resource_type") if cloudinary_data else None,
+            "cloudinary_format": cloudinary_data.get("format") if cloudinary_data else None,
+            "cloudinary_delivery_type": cloudinary_data.get("delivery_type", "upload") if cloudinary_data else None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         
@@ -1123,7 +1256,10 @@ Génère UNIQUEMENT la lettre, sans introduction ni commentaire."""
             "entreprise": entreprise,
             "poste": poste,
             "template_name": letter["template_name"],
-            "download_url": letter["cloudinary_url"],
+            "download_url": (
+                f"/api/documents/cover-letters/{letter_id}/download"
+                if letter["cloudinary_public_id"] else None
+            ),
             "created_at": letter["created_at"]
         }
     
@@ -1187,7 +1323,7 @@ async def download_document(
     current_user: dict = Depends(get_current_user),
     db = Depends(get_db)
 ):
-    """Download a document file - redirects to Cloudinary URL or serves from filesystem"""
+    """Télécharge un document via JobTracker, sans exposer une URL Cloudinary permanente."""
     user_id = current_user["user_id"]
     
     document = await db.documents.find_one(
@@ -1201,9 +1337,17 @@ async def download_document(
             detail="Document non trouvé"
         )
     
-    # If document has Cloudinary URL, redirect to it
-    if document.get("cloudinary_url"):
-        return RedirectResponse(url=document["cloudinary_url"], status_code=302)
+    if document.get("cloudinary_public_id"):
+        mime_type = document.get("mime_type") or "application/octet-stream"
+        default_resource_type = "image" if mime_type.startswith("image/") else "raw"
+        return await _cloudinary_file_response(
+            document["cloudinary_public_id"],
+            document.get("original_filename") or document.get("name") or "document",
+            mime_type,
+            _resource_type(document, default_resource_type),
+            document.get("cloudinary_delivery_type") or "upload",
+            document.get("cloudinary_format"),
+        )
     
     # Legacy: check for file_path (old documents before Cloudinary)
     if document.get("file_path"):
