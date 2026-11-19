@@ -151,7 +151,7 @@ async def test_admin_policy_requires_exact_lowercase_host_and_exclusive_modes(ap
     ({"redirect_uris": []}, "invalid_client_metadata"),
     ({"redirect_uris": ["http://callback.composio.example/x"]}, "invalid_redirect_uri"),
     ({"redirect_uris": ["https://evil.example/x"]}, "invalid_redirect_uri"),
-    ({"token_endpoint_auth_method": "client_secret_basic"}, "invalid_client_metadata"),
+    ({"token_endpoint_auth_method": "private_key_jwt"}, "invalid_client_metadata"),
     ({"grant_types": ["client_credentials"]}, "invalid_client_metadata"),
     ({"response_types": ["token"]}, "invalid_client_metadata"),
     ({"software_statement": "x"}, "invalid_client_metadata"),
@@ -176,6 +176,18 @@ async def test_register_is_public_scope_bounded_and_idempotent_while_pending(api
     stored = await db.oauth_clients.find_one({"client_id": first.json()["client_id"]})
     assert stored["client_type"] == "public" and stored["secret_hash"] is None
     assert svc._aware(stored["expires_at"]) > datetime.now(timezone.utc)
+
+
+@pytest.mark.parametrize("requested_method", ["client_secret_basic", "client_secret_post"])
+async def test_confidential_auth_request_is_normalized_to_public_client(api, db, requested_method):
+    await policy(db, enabled=True, hosts=["callback.composio.example"])
+    created = await register(api, registration(token_endpoint_auth_method=requested_method))
+    assert created.status_code == 201
+    assert created.json()["token_endpoint_auth_method"] == "none"
+    assert "client_secret" not in created.json()
+    stored = await db.oauth_clients.find_one({"client_id": created.json()["client_id"]})
+    assert stored["client_type"] == "public"
+    assert stored["secret_hash"] is None
 
 
 async def test_full_authorization_pkce_token_and_mcp_flow(api, db):

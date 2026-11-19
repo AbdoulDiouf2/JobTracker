@@ -151,8 +151,14 @@ def validate_metadata(body) -> dict:
         raise DcrError("invalid_client_metadata", str(exc))
 
     auth_method = body.get("token_endpoint_auth_method", "none")
+    if auth_method not in ("none", "client_secret_basic", "client_secret_post"):
+        raise DcrError("invalid_client_metadata", "token_endpoint_auth_method non pris en charge")
     if auth_method != "none":
-        raise DcrError("invalid_client_metadata", "seuls les clients publics sont acceptés")
+        # RFC 7591 §3.2.1 permet au serveur de remplacer une métadonnée demandée.
+        # Le profil DCR JobTracker reste public : aucun secret n'est généré et la réponse
+        # canonique annonce toujours `none`, même si le client tiers demande une méthode
+        # confidentielle par défaut.
+        logger.info("oauth_dcr_metadata auth_method_normalized_to_public")
     grants = _string_list(body.get("grant_types", ["authorization_code", "refresh_token"]), "grant_types")
     if "authorization_code" not in grants or any(g not in ("authorization_code", "refresh_token") for g in grants):
         raise DcrError("invalid_client_metadata", "grant_types non pris en charge")
