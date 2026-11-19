@@ -917,6 +917,7 @@ export default function ApplicationsPage() {
   const [editingApp, setEditingApp] = useState(null);
   const [viewingApp, setViewingApp] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [filters, setFilters] = useState(
     searchParams.get('needs_followup') === 'true' ? { needs_followup: true } : {}
@@ -935,11 +936,16 @@ export default function ApplicationsPage() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebouncedSearch(searchQuery.trim()), 180);
+    return () => window.clearTimeout(timer);
+  }, [searchQuery]);
+
   const queryClient = useQueryClient();
-  const currentParams = { page: currentPage, search: searchQuery || undefined, ...filters };
+  const currentParams = { page: currentPage, search: debouncedSearch || undefined, ...filters };
 
   const {
-    applications, loading, pagination,
+    applications, loading, fetching, pagination,
     createApplication, updateApplication,
     deleteApplication, toggleFavorite
   } = useApplications(currentParams);
@@ -957,7 +963,7 @@ export default function ApplicationsPage() {
       });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPage, pagination.total_pages, searchQuery, filtersKey]);
+  }, [currentPage, pagination.total_pages, debouncedSearch, filtersKey]);
 
   // Ouvrir automatiquement les détails si un ID est présent dans l'URL
   useEffect(() => {
@@ -981,7 +987,7 @@ export default function ApplicationsPage() {
       subtitle: 'Gérez toutes vos candidatures',
       newApplication: 'Nouvelle candidature',
       editApplication: 'Modifier la candidature',
-      search: 'Rechercher entreprise, poste, lieu, contact...',
+      search: 'Rechercher dans toutes les informations...',
       company: 'Entreprise',
       position: 'Poste',
       jobType: 'Type de poste',
@@ -1009,7 +1015,7 @@ export default function ApplicationsPage() {
       subtitle: 'Manage all your applications',
       newApplication: 'New application',
       editApplication: 'Edit application',
-      search: 'Search company, position, location, contact...',
+      search: 'Search all application details...',
       company: 'Company',
       position: 'Position',
       jobType: 'Job type',
@@ -1160,6 +1166,11 @@ export default function ApplicationsPage() {
     setCurrentPage(page);
   };
 
+  const updateFilters = (updater) => {
+    setCurrentPage(1);
+    setFilters(updater);
+  };
+
   return (
     <div className="space-y-6" data-testid="applications-page">
       {/* Header */}
@@ -1202,15 +1213,25 @@ export default function ApplicationsPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
           <Input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
             placeholder={t.search}
-            className="pl-10 bg-slate-900/50 border-slate-700 text-white w-full"
+            className="pl-10 pr-10 bg-slate-900/50 border-slate-700 text-white w-full"
           />
+          {(fetching || searchQuery.trim() !== debouncedSearch) && (
+            <Loader2
+              className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-gold"
+              size={16}
+              aria-label={language === 'fr' ? 'Recherche en cours' : 'Searching'}
+            />
+          )}
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-4 overflow-x-auto pb-2 xl:pb-0">
           {/* Status Filter */}
-          <Select onValueChange={(v) => setFilters(prev => ({ ...prev, status: v === 'all' ? undefined : v }))}>
+          <Select onValueChange={(v) => updateFilters(prev => ({ ...prev, status: v === 'all' ? undefined : v }))}>
             <SelectTrigger className="w-[150px] sm:w-[180px] bg-slate-900/50 border-slate-700 text-white">
               <SelectValue placeholder={t.status} />
             </SelectTrigger>
@@ -1223,7 +1244,7 @@ export default function ApplicationsPage() {
           </Select>
 
           {/* Type Filter */}
-          <Select onValueChange={(v) => setFilters(prev => ({ ...prev, job_type: v === 'all' ? undefined : v }))}>
+          <Select onValueChange={(v) => updateFilters(prev => ({ ...prev, job_type: v === 'all' ? undefined : v }))}>
             <SelectTrigger className="w-[150px] sm:w-[180px] bg-slate-900/50 border-slate-700 text-white">
               <SelectValue placeholder={t.jobType} />
             </SelectTrigger>
@@ -1246,21 +1267,21 @@ export default function ApplicationsPage() {
             <input 
               type="date"
               className="bg-transparent border-none text-white text-sm focus:ring-0 w-[100px] sm:w-[110px] [&::-webkit-calendar-picker-indicator]:invert"
-              onChange={(e) => setFilters(prev => ({ ...prev, date_from: e.target.value || undefined }))}
+              onChange={(e) => updateFilters(prev => ({ ...prev, date_from: e.target.value || undefined }))}
               placeholder="Du"
             />
             <span className="text-slate-500">-</span>
             <input 
               type="date" 
               className="bg-transparent border-none text-white text-sm focus:ring-0 w-[100px] sm:w-[110px] [&::-webkit-calendar-picker-indicator]:invert"
-              onChange={(e) => setFilters(prev => ({ ...prev, date_to: e.target.value || undefined }))}
+              onChange={(e) => updateFilters(prev => ({ ...prev, date_to: e.target.value || undefined }))}
               placeholder="Au"
             />
           </div>
 
           {/* Favorites Filter */}
           <button
-            onClick={() => setFilters(prev => ({ ...prev, is_favorite: prev.is_favorite ? undefined : true }))}
+            onClick={() => updateFilters(prev => ({ ...prev, is_favorite: prev.is_favorite ? undefined : true }))}
             className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium border transition-colors ${
               filters.is_favorite
                 ? 'bg-gold/10 border-gold/40 text-gold'
@@ -1278,7 +1299,7 @@ export default function ApplicationsPage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                setFilters({});
+                updateFilters({});
                 setSearchQuery('');
               }}
               className="text-slate-400 hover:text-white"
@@ -1296,7 +1317,7 @@ export default function ApplicationsPage() {
           <Mail size={14} />
           <span>{language === 'fr' ? 'Filtre actif : candidatures à relancer (en attente depuis +14 jours)' : 'Active filter: applications needing follow-up (pending for 14+ days)'}</span>
           <button
-            onClick={() => setFilters({})}
+            onClick={() => updateFilters({})}
             className="ml-auto text-orange-400 hover:text-white transition-colors"
           >
             <X size={14} />

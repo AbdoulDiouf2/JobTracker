@@ -4,10 +4,11 @@ import { api } from '../contexts/AuthContext';
 export const useApplications = (params = {}) => {
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isFetching, isError, error } = useQuery({
     queryKey: ['applications', params],
-    queryFn: () => api.get('/api/applications', { params }).then(r => r.data),
+    queryFn: ({ signal }) => api.get('/api/applications', { params, signal }).then(r => r.data),
     placeholderData: (prev) => prev,
+    staleTime: 30 * 1000,
   });
 
   const createApplication = useMutation({
@@ -81,6 +82,7 @@ export const useApplications = (params = {}) => {
       total_pages: data?.total_pages ?? 0,
     },
     loading: isLoading,
+    fetching: isFetching,
     isError,
     error: error?.response?.data?.detail ?? null,
     createApplication,

@@ -16,8 +16,20 @@ from utils.auth import get_current_user
 from services.application_service import (
     create_application_record, check_to_apply_exit, ApplicationTransitionError
 )
+from services.interview_service import utc_date
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
+
+APPLICATION_SEARCH_FIELDS = (
+    "entreprise", "poste", "type_poste", "lieu", "moyen", "lien",
+    "commentaire", "reponse", "contact_name", "contact_email",
+    "description_poste", "competences", "experience_requise", "cv_id",
+    "source", "history.details", "history.old_value", "history.new_value",
+)
+APPLICATION_SCALAR_SEARCH_FIELDS = (
+    "salaire_min", "salaire_max", "match_score", "followup_count",
+    "days_before_reminder", "date_candidature", "date_reponse",
+)
 
 
 def get_db():
@@ -31,7 +43,7 @@ async def list_applications(
     per_page: int = Query(20, ge=1, le=100),
     sort_by: str = Query("date_candidature"),
     sort_order: str = Query("desc"),
-    search: Optional[str] = None,
+    search: Optional[str] = Query(None, max_length=200),
     status: Optional[ApplicationStatus] = None,
     job_type: Optional[str] = None,
     method: Optional[str] = None,
@@ -46,18 +58,34 @@ async def list_applications(
     # Construire le filtre
     filter_query = {"user_id": current_user["user_id"], "deleting": {"$ne": True}}
     
-    if search:
-        search_regex = {"$regex": re.escape(search), "$options": "i"}
-        filter_query["$or"] = [
-            {"entreprise": search_regex},
-            {"poste": search_regex},
-            {"lieu": search_regex},
-            {"contact_name": search_regex},
-            {"contact_email": search_regex},
-            {"description_poste": search_regex},
-            {"competences": search_regex},
-            {"experience_requise": search_regex},
-        ]
+    if search and (terms := search.strip().split()[:12]):
+        # Chaque mot peut se trouver dans un champ différent : « acme data » trouve par
+        # exemple entreprise=Acme + poste=Data Engineer, quel que soit leur ordre.
+        search_clauses = []
+        for term in terms:
+            escaped_term = re.escape(term)
+            field_clauses = [
+                {field: {"$regex": escaped_term, "$options": "i"}}
+                for field in APPLICATION_SEARCH_FIELDS
+            ]
+            field_clauses.extend({
+                "$expr": {
+                    "$regexMatch": {
+                        "input": {
+                            "$convert": {
+                                "input": f"${field}",
+                                "to": "string",
+                                "onError": "",
+                                "onNull": "",
+                            }
+                        },
+                        "regex": escaped_term,
+                        "options": "i",
+                    }
+                }
+            } for field in APPLICATION_SCALAR_SEARCH_FIELDS)
+            search_clauses.append({"$or": field_clauses})
+        filter_query["$and"] = search_clauses
     
     if status:
         filter_query["reponse"] = status.value
@@ -105,18 +133,37 @@ async def list_applications(
         cursor = db.applications.find(filter_query, {"_id": 0}).sort(sort_by, sort_direction).skip(skip).limit(per_page)
         applications = await cursor.to_list(length=per_page)
     
-    # Enrichir avec les infos d'entretiens
+    # Une seule lecture remplace les deux requêtes par candidature qui ralentissaient
+    # fortement la recherche (jusqu'à 40 lectures supplémentaires par page).
+    application_ids = [app["id"] for app in applications]
+    interview_meta = {
+        app_id: {"count": 0, "next": None}
+        for app_id in application_ids
+    }
+    if application_ids:
+        interview_rows = await db.interviews.find(
+            {
+                "user_id": current_user["user_id"],
+                "candidature_id": {"$in": application_ids},
+            },
+            {"_id": 0, "candidature_id": 1, "statut": 1, "date_entretien": 1},
+        ).to_list(length=None)
+        now = datetime.now(timezone.utc)
+        for interview in interview_rows:
+            meta = interview_meta.get(interview.get("candidature_id"))
+            if meta is None:
+                continue
+            meta["count"] += 1
+            date = utc_date(interview.get("date_entretien"))
+            if interview.get("statut") == "planned" and date and date >= now:
+                if meta["next"] is None or date < meta["next"]:
+                    meta["next"] = date
+
     enriched_apps = []
     for app in applications:
-        # Compter les entretiens
-        interviews_count = await db.interviews.count_documents({"candidature_id": app["id"], "user_id": current_user["user_id"]})
-        
-        # Prochain entretien
-        from services.interview_service import next_interview_date
-        
-        app["interviews_count"] = interviews_count
-        app["next_interview"] = await next_interview_date(db, current_user["user_id"], app["id"])
-
+        meta = interview_meta[app["id"]]
+        app["interviews_count"] = meta["count"]
+        app["next_interview"] = meta["next"].isoformat() if meta["next"] else None
         enriched_apps.append(app)
     
     total_pages = (total + per_page - 1) // per_page
